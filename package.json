@@ -1,0 +1,20 @@
+{
+  "name": "pos_rocketseat-tech360-financy",
+  "private": true,
+  "packageManager": "pnpm@10.5.0",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev": "pnpm -r --parallel run dev",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "check": "pnpm -r run check",
+    "format": "biome format .",
+    "biome": "biome check ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3"
+  }
+}
