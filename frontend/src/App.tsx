@@ -1,10 +1,11 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Dashboard } from "./pages/Dashboard";
 import { Categories } from "./pages/Categories";
 import { Transactions } from "./pages/Transactions";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
@@ -22,11 +23,19 @@ export default function App() {
       />
       <Route
         path="/categories"
-        element={isAuthenticated ? <Categories /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute>
+            <Categories />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/transactions"
-        element={isAuthenticated ? <Transactions /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute>
+            <Transactions />
+          </ProtectedRoute>
+        }
       />
     </Routes>
   );
