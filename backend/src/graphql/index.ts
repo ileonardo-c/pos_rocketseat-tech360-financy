@@ -5,6 +5,7 @@ import { categoryQueries } from "@/graphql/queries/category";
 import { storageMutations } from "@/graphql/mutations/storage";
 import { transactionMutations } from "@/graphql/mutations/transaction";
 import { transactionQueries } from "@/graphql/queries/transaction";
+import type { Transaction } from "@prisma/client";
 
 export const typeDefs = `
   type User {
@@ -119,8 +120,8 @@ export const resolvers = {
     ...storageMutations,
   },
   Transaction: {
-    date: ({ date }) => date.toISOString(),
-    createdAt: ({ createdAt }) => createdAt.toISOString(),
-    updatedAt: ({ updatedAt }) => updatedAt.toISOString(),
+    date: ({ date }: Transaction) => date.toISOString(),
+    createdAt: ({ createdAt }: Transaction) => createdAt.toISOString(),
+    updatedAt: ({ updatedAt }: Transaction) => updatedAt.toISOString(),
   },
 };
