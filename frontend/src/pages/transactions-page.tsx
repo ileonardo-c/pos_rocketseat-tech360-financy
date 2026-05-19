@@ -68,9 +68,16 @@ const emptyFilter: TransactionFilter = {
   to: "",
 };
 
-const toDateInput = (isoString: string) => {
-  const date = new Date(isoString);
-  return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
+const toLocalDateInput = (value: string | Date) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -129,9 +136,10 @@ export const TransactionsPage = () => {
     [transactionsData?.transactions],
   );
 
-  if ((categoriesLoading || transactionsLoading) && categories.length === 0 && transactions.length === 0) {
-    return <main>Carregando transações...</main>;
-  }
+  const isInitialLoading =
+    (categoriesLoading || transactionsLoading) &&
+    categories.length === 0 &&
+    transactions.length === 0;
 
   const filteredTransactions = useMemo(() => {
     const normalizedQuery = filter.query.trim().toLowerCase();
@@ -143,7 +151,7 @@ export const TransactionsPage = () => {
         return false;
       }
 
-      const transactionDate = toDateInput(transaction.date);
+      const transactionDate = toLocalDateInput(transaction.date);
       if (filter.from && transactionDate < filter.from) {
         return false;
       }
@@ -206,7 +214,9 @@ export const TransactionsPage = () => {
       {transactionsError ? <p>Erro ao carregar transações.</p> : null}
       {actionError ? <p>{actionError}</p> : null}
 
-      {categories.length === 0 ? (
+      {isInitialLoading ? (
+        <p>Carregando transações...</p>
+      ) : categories.length === 0 ? (
         <p>Crie uma categoria antes de cadastrar transações.</p>
       ) : (
         <form
@@ -582,7 +592,7 @@ export const TransactionsPage = () => {
                               description: transaction.description ?? "",
                               amount: String(transaction.amount),
                               type: transaction.type,
-                              date: toDateInput(transaction.date),
+                              date: toLocalDateInput(transaction.date),
                               categoryId: transaction.categoryId,
                             });
                           }}
