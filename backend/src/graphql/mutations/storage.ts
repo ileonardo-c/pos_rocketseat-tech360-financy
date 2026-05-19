@@ -1,7 +1,7 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
-import { StorageService } from "@/features/storage/storage-service";
-import type { GraphQLContext } from "@/context";
+import type { GraphQLContext } from "../../context";
+import { StorageService } from "../../features/storage/storage-service";
 
 const createS3Client = () => {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
