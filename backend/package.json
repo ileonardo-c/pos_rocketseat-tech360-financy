@@ -21,7 +21,7 @@
     "fastify": "^4.29.0",
     "graphql": "^16.9.0",
     "jsonwebtoken": "^9.0.2",
-    "mercurius": "^16.6.0"
+    "mercurius": "^14.0.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
