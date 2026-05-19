@@ -12,9 +12,9 @@ Não use `\n` literal no texto do PR.
 
 ---
 
-## 🔨 Alterações Realizadas
+## 🔨 Tipo de Mudança
 
-<!-- Marque as caixas aplicáveis com um "x", ex: [x] -->
+<!-- Marque APENAS as caixas aplicáveis com "x". Não adicione itens extras aqui. -->
 
 - [ ] ✨ Nova funcionalidade (Feature)
 - [ ] 🐛 Correção de Bug (Bug Fix)
@@ -22,6 +22,16 @@ Não use `\n` literal no texto do PR.
 - [ ] 📚 Atualização de Documentação
 
 ---
+
+## 📋 O que foi alterado?
+<!--
+Liste aqui as mudanças específicas realizadas, uma por linha. Exemplos:
+- Criado helper `getRequiredEnv` para variáveis obrigatórias
+- Removido fallback inseguro de JWT em `auth.service.ts`
+- `AuthService` agora retorna erro `409` para e-mail duplicado
+-->
+
+-
 
 ## ✅ Checklist
 
@@ -35,8 +45,9 @@ Não use `\n` literal no texto do PR.
 ---
 
 ## 📷 Screenshots / Demo (se aplicável)
-<!-- 
-Adicione imagens, GIFs ou vídeos curtos mostrando o "Antes" e o "Depois" da sua alteração.
-Isso ajuda muito os revisores, especialmente em alterações de Front-end!
-Se não houver alterações visuais, você pode apagar esta seção.
+<!--
+Adicione imagens, GIFs ou vídeos curtos mostrando o "Antes" e o "Depois".
+Se não houver alterações visuais, apague esta seção.
 -->
+
+<!-- Ao publicar atualizações após correções, mencione `@copilot` e `@codex review` para nova rodada de análise. -->
