@@ -93,6 +93,30 @@ export const TRANSACTIONS_QUERY = gql`
   }
 `;
 
+export const DASHBOARD_CATEGORIES_QUERY = gql`
+  query DashboardCategories {
+    categories {
+      id
+    }
+  }
+`;
+
+export const DASHBOARD_TRANSACTIONS_QUERY = gql`
+  query DashboardTransactions {
+    transactions {
+      id
+      title
+      amount
+      type
+      date
+      category {
+        id
+        name
+      }
+    }
+  }
+`;
+
 export const CREATE_TRANSACTION_MUTATION = gql`
   mutation CreateTransaction($input: CreateTransactionInput!) {
     createTransaction(input: $input) {

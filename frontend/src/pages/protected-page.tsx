@@ -1,6 +1,10 @@
+import { useMemo } from "react";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useQuery } from "@apollo/client";
-import { CATEGORIES_QUERY, TRANSACTIONS_QUERY } from "@/lib/graphql/operations";
+import {
+  DASHBOARD_CATEGORIES_QUERY,
+  DASHBOARD_TRANSACTIONS_QUERY,
+} from "@/lib/graphql/operations";
 import { Link } from "react-router-dom";
 
 type Category = {
@@ -33,11 +37,11 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
   const { data: categoriesData, loading: categoriesLoading, error: categoriesError } =
-    useQuery<CategoriesNode>(CATEGORIES_QUERY, {
+    useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
       fetchPolicy: "cache-and-network",
     });
   const { data: transactionsData, loading: transactionsLoading, error: transactionsError } =
-    useQuery<TransactionsNode>(TRANSACTIONS_QUERY, {
+    useQuery<TransactionsNode>(DASHBOARD_TRANSACTIONS_QUERY, {
       fetchPolicy: "cache-and-network",
     });
 
@@ -48,17 +52,41 @@ export const ProtectedPage = () => {
   const categories = categoriesData?.categories ?? [];
   const transactions = transactionsData?.transactions ?? [];
 
-  const incomeTotal = transactions
-    .filter((transaction) => transaction.type === "INCOME")
-    .reduce((total, transaction) => total + transaction.amount, 0);
-  const expenseTotal = transactions
-    .filter((transaction) => transaction.type === "EXPENSE")
-    .reduce((total, transaction) => total + transaction.amount, 0);
-  const balance = incomeTotal - expenseTotal;
+  const { incomeTotal, expenseTotal, balance } = useMemo(() => {
+    const totals = transactions.reduce(
+      (accumulator, transaction) => {
+        if (transaction.type === "INCOME") {
+          accumulator.incomeTotal += transaction.amount;
+        } else {
+          accumulator.expenseTotal += transaction.amount;
+        }
+        return accumulator;
+      },
+      { incomeTotal: 0, expenseTotal: 0 },
+    );
 
-  const latestTransactions = [...transactions]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+    return {
+      incomeTotal: totals.incomeTotal,
+      expenseTotal: totals.expenseTotal,
+      balance: totals.incomeTotal - totals.expenseTotal,
+    };
+  }, [transactions]);
+
+  const latestTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+
+  if ((categoriesLoading || transactionsLoading) && categories.length === 0 && transactions.length === 0) {
+    return (
+      <main className="dashboard">
+        <header className="dashboard-header">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Bem-vindo, {user.name}</p>
+          </div>
+        </header>
+        <p>Carregando visão consolidada...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="dashboard">
@@ -76,10 +104,6 @@ export const ProtectedPage = () => {
         <Link to="/categories">Gerenciar categorias</Link>
         <Link to="/transactions">Gerenciar transações</Link>
       </nav>
-
-      {(categoriesLoading || transactionsLoading) && transactions.length === 0 ? (
-        <p>Carregando visão consolidada...</p>
-      ) : null}
 
       {categoriesError || transactionsError ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
