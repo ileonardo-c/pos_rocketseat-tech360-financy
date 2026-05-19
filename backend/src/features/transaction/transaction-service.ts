@@ -33,7 +33,7 @@ export class TransactionService {
       throw new AppError("Nao autenticado", 401);
     }
 
-    const payload = this.normalizeCreateInput(input);
+    const payload = this.normalizeCreateInput(ctx.userId, input);
     await this.validateCategoryOwnership(ctx.userId, payload.categoryId);
 
     return this.repository.create(ctx.userId, payload);
@@ -75,7 +75,7 @@ export class TransactionService {
     return true;
   }
 
-  private normalizeCreateInput(input: TransactionInput) {
+  private normalizeCreateInput(userId: string, input: TransactionInput) {
     const title = (input.title ?? "").trim();
     if (!title) {
       throw new AppError("Titulo da transacao eh obrigatorio", 400);
@@ -92,6 +92,8 @@ export class TransactionService {
       throw new AppError("Categoria eh obrigatoria", 400);
     }
 
+    const receipt = this.normalizeReceiptFields(userId, input.receiptKey, input.receiptUrl);
+
     return {
       title,
       description: input.description?.trim() || null,
@@ -99,12 +101,11 @@ export class TransactionService {
       type: parsedType,
       date,
       categoryId,
-      receiptKey: this.parseOptionalString(input.receiptKey),
-      receiptUrl: this.parseOptionalString(input.receiptUrl),
+      ...receipt,
     };
   }
 
-  private normalizeUpdateInput(input: TransactionUpdateInput, _id: string, _userId: string) {
+  private normalizeUpdateInput(input: TransactionUpdateInput, _id: string, userId: string) {
     const payload: {
       title?: string;
       description?: string | null;
@@ -151,12 +152,10 @@ export class TransactionService {
       payload.categoryId = categoryId;
     }
 
-    if (input.receiptKey !== undefined) {
-      payload.receiptKey = this.parseOptionalString(input.receiptKey);
-    }
-
-    if (input.receiptUrl !== undefined) {
-      payload.receiptUrl = this.parseOptionalString(input.receiptUrl);
+    if (input.receiptKey !== undefined || input.receiptUrl !== undefined) {
+      const receipt = this.normalizeReceiptFields(userId, input.receiptKey, input.receiptUrl);
+      payload.receiptKey = receipt.receiptKey;
+      payload.receiptUrl = receipt.receiptUrl;
     }
 
     return payload;
@@ -169,6 +168,36 @@ export class TransactionService {
 
     const normalized = value.trim();
     return normalized.length > 0 ? normalized : null;
+  }
+
+  private normalizeReceiptFields(userId: string, receiptKeyInput?: string | null, _receiptUrlInput?: string | null) {
+    const receiptKey = this.parseOptionalString(receiptKeyInput);
+    if (!receiptKey) {
+      return { receiptKey: null, receiptUrl: null };
+    }
+
+    if (!this.isReceiptKeyOwnedByUser(userId, receiptKey)) {
+      throw new AppError("Comprovante invalido para este usuario", 403);
+    }
+
+    return {
+      receiptKey,
+      receiptUrl: this.buildPublicReceiptUrl(receiptKey),
+    };
+  }
+
+  private isReceiptKeyOwnedByUser(userId: string, receiptKey: string) {
+    return receiptKey.startsWith(`users/${userId}/`);
+  }
+
+  private buildPublicReceiptUrl(receiptKey: string) {
+    const endpoint = process.env.S3_ENDPOINT?.trim();
+    const bucket = process.env.S3_BUCKET?.trim();
+    if (!endpoint || !bucket) {
+      throw new AppError("Configuracao S3 faltando", 500);
+    }
+
+    return `${endpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
   }
 
   private parseType(type: TransactionType): TransactionType {

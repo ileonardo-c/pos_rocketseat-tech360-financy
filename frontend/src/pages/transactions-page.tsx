@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -136,6 +136,7 @@ export const TransactionsPage = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
   const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
+  const editingIdRef = useRef<string | null>(null);
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
@@ -150,6 +151,10 @@ export const TransactionsPage = () => {
     awaitRefetchQueries: true,
   });
   const [requestUploadUrl] = useMutation<UploadMutationResult>(REQUEST_UPLOAD_URL_MUTATION);
+
+  useEffect(() => {
+    editingIdRef.current = editingId;
+  }, [editingId]);
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
@@ -247,6 +252,28 @@ export const TransactionsPage = () => {
       receiptKey: payload.key,
       receiptUrl: payload.publicUrl,
     };
+  };
+
+  const handleEditReceiptUpload = async (transactionId: string, file: File) => {
+    try {
+      setActionError(null);
+      setUploadingEditReceipt(true);
+      const uploaded = await uploadReceipt(file);
+
+      if (editingIdRef.current !== transactionId) {
+        return;
+      }
+
+      setEditingForm((prev) => ({
+        ...prev,
+        receiptKey: uploaded.receiptKey,
+        receiptUrl: uploaded.receiptUrl,
+      }));
+    } catch {
+      setActionError("Não foi possível enviar o comprovante.");
+    } finally {
+      setUploadingEditReceipt(false);
+    }
   };
 
   const isCreateDisabled =
@@ -679,21 +706,8 @@ export const TransactionsPage = () => {
                             return;
                           }
 
-                          try {
-                            setActionError(null);
-                            setUploadingEditReceipt(true);
-                            const uploaded = await uploadReceipt(file);
-                            setEditingForm((prev) => ({
-                              ...prev,
-                              receiptKey: uploaded.receiptKey,
-                              receiptUrl: uploaded.receiptUrl,
-                            }));
-                          } catch {
-                            setActionError("Não foi possível enviar o comprovante.");
-                          } finally {
-                            setUploadingEditReceipt(false);
-                            event.target.value = "";
-                          }
+                          await handleEditReceiptUpload(transaction.id, file);
+                          event.target.value = "";
                         }}
                       />
 
