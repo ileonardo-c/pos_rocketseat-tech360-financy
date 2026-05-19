@@ -43,6 +43,14 @@ type TransactionForm = {
   categoryId: string;
 };
 
+type TransactionFilter = {
+  query: string;
+  type: "ALL" | "INCOME" | "EXPENSE";
+  categoryId: string;
+  from: string;
+  to: string;
+};
+
 const emptyForm: TransactionForm = {
   title: "",
   description: "",
@@ -50,6 +58,14 @@ const emptyForm: TransactionForm = {
   type: "EXPENSE",
   date: "",
   categoryId: "",
+};
+
+const emptyFilter: TransactionFilter = {
+  query: "",
+  type: "ALL",
+  categoryId: "",
+  from: "",
+  to: "",
 };
 
 const toDateInput = (isoString: string) => {
@@ -91,6 +107,7 @@ export const TransactionsPage = () => {
   const [form, setForm] = useState<TransactionForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
+  const [filter, setFilter] = useState<TransactionFilter>(emptyFilter);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
@@ -116,6 +133,60 @@ export const TransactionsPage = () => {
     return <main>Carregando transações...</main>;
   }
 
+  const filteredTransactions = useMemo(() => {
+    const normalizedQuery = filter.query.trim().toLowerCase();
+    return transactions.filter((transaction) => {
+      if (filter.type !== "ALL" && transaction.type !== filter.type) {
+        return false;
+      }
+      if (filter.categoryId && transaction.categoryId !== filter.categoryId) {
+        return false;
+      }
+
+      const transactionDate = toDateInput(transaction.date);
+      if (filter.from && transactionDate < filter.from) {
+        return false;
+      }
+      if (filter.to && transactionDate > filter.to) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = [
+        transaction.title,
+        transaction.description ?? "",
+        transaction.category?.name ?? "",
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+  }, [transactions, filter]);
+
+  const { incomeTotal, expenseTotal, balance } = useMemo(() => {
+    const totals = filteredTransactions.reduce(
+      (accumulator, transaction) => {
+        if (transaction.type === "INCOME") {
+          accumulator.income += transaction.amount;
+        } else {
+          accumulator.expense += transaction.amount;
+        }
+        return accumulator;
+      },
+      { income: 0, expense: 0 },
+    );
+
+    return {
+      incomeTotal: totals.income,
+      expenseTotal: totals.expense,
+      balance: totals.income - totals.expense,
+    };
+  }, [filteredTransactions]);
+
   const isCreateDisabled =
     creating ||
     !form.title.trim() ||
@@ -125,7 +196,7 @@ export const TransactionsPage = () => {
     categories.length === 0;
 
   return (
-    <main>
+    <main className="transactions-layout">
       <p>
         <Link to="/">Voltar</Link>
       </p>
@@ -150,7 +221,6 @@ export const TransactionsPage = () => {
               await createTransaction({
                 variables: { input: buildTransactionPayload(form) },
               });
-
               setForm(emptyForm);
             } catch {
               setActionError("Não foi possível criar a transação.");
@@ -258,12 +328,120 @@ export const TransactionsPage = () => {
         </form>
       )}
 
+      <section className="transactions-filters">
+        <h2>Filtros</h2>
+        <div className="transactions-filter-grid">
+          <label>
+            Busca
+            <input
+              placeholder="Título, descrição ou categoria"
+              type="text"
+              value={filter.query}
+              onChange={(event) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  query: event.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <label>
+            Tipo
+            <select
+              value={filter.type}
+              onChange={(event) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  type: event.target.value as TransactionFilter["type"],
+                }))
+              }
+            >
+              <option value="ALL">Todos</option>
+              <option value="INCOME">Receita</option>
+              <option value="EXPENSE">Despesa</option>
+            </select>
+          </label>
+
+          <label>
+            Categoria
+            <select
+              value={filter.categoryId}
+              onChange={(event) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  categoryId: event.target.value,
+                }))
+              }
+            >
+              <option value="">Todas</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            De
+            <input
+              type="date"
+              value={filter.from}
+              onChange={(event) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  from: event.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <label>
+            Até
+            <input
+              type="date"
+              value={filter.to}
+              onChange={(event) =>
+                setFilter((prev) => ({
+                  ...prev,
+                  to: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </div>
+
+        <button type="button" onClick={() => setFilter(emptyFilter)}>
+          Limpar filtros
+        </button>
+      </section>
+
+      <section className="transactions-summary-grid">
+        <article className="transactions-summary-card">
+          <h3>Total filtrado</h3>
+          <p>{filteredTransactions.length}</p>
+        </article>
+        <article className="transactions-summary-card">
+          <h3>Receitas filtradas</h3>
+          <p>{currencyFormatter.format(incomeTotal)}</p>
+        </article>
+        <article className="transactions-summary-card">
+          <h3>Despesas filtradas</h3>
+          <p>{currencyFormatter.format(expenseTotal)}</p>
+        </article>
+        <article className="transactions-summary-card">
+          <h3>Saldo filtrado</h3>
+          <p>{currencyFormatter.format(balance)}</p>
+        </article>
+      </section>
+
       <section>
-        {transactions.length === 0 ? (
-          <p>Nenhuma transação encontrada.</p>
+        {filteredTransactions.length === 0 ? (
+          <p>Nenhuma transação encontrada para os filtros aplicados.</p>
         ) : (
           <ul>
-            {transactions.map((transaction) => {
+            {filteredTransactions.map((transaction) => {
               const isEditing = editingId === transaction.id;
               const isUpdateDisabled =
                 updating ||
