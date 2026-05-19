@@ -13,7 +13,14 @@ export class AuthRepository {
     });
   }
 
-  findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
+    const exactMatch = await this.prisma.user.findUnique({
+      where: { email },
+    });
+    if (exactMatch) {
+      return exactMatch;
+    }
+
     return this.prisma.user.findFirst({
       where: {
         email: {
