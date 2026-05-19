@@ -3,6 +3,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { useQuery } from "@apollo/client";
 import {
   DASHBOARD_CATEGORIES_QUERY,
+  DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY,
   DASHBOARD_TRANSACTION_SUMMARY_QUERY,
   DASHBOARD_TRANSACTIONS_QUERY,
 } from "@/lib/graphql/operations";
@@ -49,6 +50,18 @@ type TransactionSummaryNode = {
   };
 };
 
+type TransactionCategorySummaryNode = {
+  transactionCategorySummary: Array<{
+    categoryId: string;
+    categoryName: string;
+    total: number;
+    count: number;
+    incomeTotal: number;
+    expenseTotal: number;
+    balance: number;
+  }>;
+};
+
 const toDateInput = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -92,6 +105,20 @@ export const ProtectedPage = () => {
         },
       },
     });
+  const {
+    data: categorySummaryData,
+    loading: categorySummaryLoading,
+    error: categorySummaryError,
+  } = useQuery<TransactionCategorySummaryNode>(DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      filter: {
+        from: summaryFilter.from || null,
+        to: summaryFilter.to || null,
+      },
+      limit: 5,
+    },
+  });
 
   if (!user) {
     return <div>Fazendo autenticação...</div>;
@@ -102,7 +129,8 @@ export const ProtectedPage = () => {
   const isInitialLoading =
     (categoriesLoading && categoriesData === undefined) ||
     (transactionsLoading && transactionsData === undefined) ||
-    (summaryLoading && summaryData === undefined);
+    (summaryLoading && summaryData === undefined) ||
+    (categorySummaryLoading && categorySummaryData === undefined);
 
   const summary = summaryData?.transactionSummary ?? {
     incomeTotal: 0,
@@ -111,6 +139,11 @@ export const ProtectedPage = () => {
     totalCount: 0,
     byType: [],
   };
+  const categorySummary = categorySummaryData?.transactionCategorySummary ?? [];
+  const totalCategoryVolume = useMemo(
+    () => categorySummary.reduce((accumulator, category) => accumulator + category.total, 0),
+    [categorySummary],
+  );
 
   const latestTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
@@ -145,7 +178,7 @@ export const ProtectedPage = () => {
         <Link to="/transactions">Gerenciar transações</Link>
       </nav>
 
-      {categoriesError || transactionsError || summaryError ? (
+      {categoriesError || transactionsError || summaryError || categorySummaryError ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
 
@@ -223,6 +256,38 @@ export const ProtectedPage = () => {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="dashboard-category-ranking">
+        <h2>Top categorias no período</h2>
+        {categorySummary.length === 0 ? (
+          <p>Sem movimentações no período selecionado.</p>
+        ) : (
+          <ul>
+            {categorySummary.map((category) => {
+              const percentage =
+                totalCategoryVolume > 0 ? (category.total / totalCategoryVolume) * 100 : 0;
+
+              return (
+                <li key={category.categoryId}>
+                  <div className="dashboard-category-ranking-header">
+                    <strong>{category.categoryName}</strong>
+                    <span>{currencyFormatter.format(category.total)}</span>
+                  </div>
+                  <div className="dashboard-category-ranking-meta">
+                    <span>{category.count} lançamento(s)</span>
+                    <span>Saldo: {currencyFormatter.format(category.balance)}</span>
+                  </div>
+                  <div
+                    aria-hidden="true"
+                    className="dashboard-category-ranking-bar"
+                    style={{ width: `${Math.max(percentage, 4)}%` }}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="dashboard-recent">
