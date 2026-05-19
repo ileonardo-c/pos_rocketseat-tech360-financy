@@ -39,14 +39,21 @@ export class TransactionRepository {
     });
   }
 
-  findAllByUserForSummary(
+  groupSummaryByTypeForUser(
     userId: string,
     filters: {
       from?: Date;
       to?: Date;
     },
-  ): Promise<Array<{ amount: number; type: TransactionType }>> {
-    return this.prisma.transaction.findMany({
+  ): Promise<
+    Array<{
+      type: TransactionType;
+      _sum: { amount: number | null };
+      _count: { _all: number };
+    }>
+  > {
+    return this.prisma.transaction.groupBy({
+      by: ["type"],
       where: {
         userId,
         date: {
@@ -54,9 +61,11 @@ export class TransactionRepository {
           ...(filters.to ? { lte: filters.to } : {}),
         },
       },
-      select: {
+      _sum: {
         amount: true,
-        type: true,
+      },
+      _count: {
+        _all: true,
       },
     });
   }

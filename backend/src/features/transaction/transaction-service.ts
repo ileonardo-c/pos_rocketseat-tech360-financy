@@ -100,42 +100,30 @@ export class TransactionService {
     }
 
     const filters = this.normalizeSummaryInput(input);
-    const transactions = await this.repository.findAllByUserForSummary(ctx.userId, filters);
+    const grouped = await this.repository.groupSummaryByTypeForUser(ctx.userId, filters);
+    const incomeGroup = grouped.find((item) => item.type === "INCOME");
+    const expenseGroup = grouped.find((item) => item.type === "EXPENSE");
 
-    const summary = transactions.reduce(
-      (accumulator, transaction) => {
-        if (transaction.type === "INCOME") {
-          accumulator.incomeTotal += transaction.amount;
-          accumulator.incomeCount += 1;
-        } else {
-          accumulator.expenseTotal += transaction.amount;
-          accumulator.expenseCount += 1;
-        }
-        return accumulator;
-      },
-      {
-        incomeTotal: 0,
-        expenseTotal: 0,
-        incomeCount: 0,
-        expenseCount: 0,
-      },
-    );
+    const incomeTotal = incomeGroup?._sum.amount ?? 0;
+    const expenseTotal = expenseGroup?._sum.amount ?? 0;
+    const incomeCount = incomeGroup?._count._all ?? 0;
+    const expenseCount = expenseGroup?._count._all ?? 0;
 
     return {
-      incomeTotal: summary.incomeTotal,
-      expenseTotal: summary.expenseTotal,
-      balance: summary.incomeTotal - summary.expenseTotal,
-      totalCount: transactions.length,
+      incomeTotal,
+      expenseTotal,
+      balance: incomeTotal - expenseTotal,
+      totalCount: incomeCount + expenseCount,
       byType: [
         {
           type: "INCOME",
-          total: summary.incomeTotal,
-          count: summary.incomeCount,
+          total: incomeTotal,
+          count: incomeCount,
         },
         {
           type: "EXPENSE",
-          total: summary.expenseTotal,
-          count: summary.expenseCount,
+          total: expenseTotal,
+          count: expenseCount,
         },
       ],
     };
@@ -295,8 +283,8 @@ export class TransactionService {
   }
 
   private normalizeSummaryInput(input?: TransactionSummaryInput) {
-    const from = this.parseOptionalDate(input?.from);
-    const to = this.parseOptionalDate(input?.to);
+    const from = this.parseOptionalDate(input?.from, "start");
+    const to = this.parseOptionalDate(input?.to, "end");
 
     if (from && to && from.getTime() > to.getTime()) {
       throw new AppError("Periodo invalido: data inicial maior que data final", 400);
@@ -308,12 +296,17 @@ export class TransactionService {
     };
   }
 
-  private parseOptionalDate(value?: string | null) {
+  private parseOptionalDate(value: string | null | undefined, boundary: "start" | "end") {
     if (!value) {
       return undefined;
     }
 
-    const parsed = new Date(value.trim());
+    const normalized = value.trim();
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(normalized);
+    const parsedValue =
+      boundary === "end" && isDateOnly ? `${normalized}T23:59:59.999Z` : normalized;
+
+    const parsed = new Date(parsedValue);
     if (Number.isNaN(parsed.getTime())) {
       throw new AppError("Data invalida no filtro", 400);
     }
