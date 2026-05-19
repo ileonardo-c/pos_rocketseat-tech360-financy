@@ -122,6 +122,9 @@ const buildSearchParamsFromFilter = (filter: TransactionFilter) => {
   return searchParams;
 };
 
+const filterToSearchString = (filter: TransactionFilter) =>
+  buildSearchParamsFromFilter(filter).toString();
+
 const toLocalDateInput = (value: string | Date) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -152,6 +155,7 @@ const buildTransactionPayload = (form: TransactionForm) => ({
 
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const {
     data: categoriesData,
     loading: categoriesLoading,
@@ -198,14 +202,23 @@ export const TransactionsPage = () => {
   }, [editingId]);
 
   useEffect(() => {
+    const parsedFilter = parseFilterFromSearchParams(searchParams);
+    const parsedSearchString = filterToSearchString(parsedFilter);
+
+    setFilter((currentFilter) =>
+      filterToSearchString(currentFilter) === parsedSearchString ? currentFilter : parsedFilter,
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
     const nextSearchParams = buildSearchParamsFromFilter(filter);
-    const current = searchParams.toString();
+    const current = searchParamsString;
     const next = nextSearchParams.toString();
 
     if (current !== next) {
       setSearchParams(nextSearchParams, { replace: true });
     }
-  }, [filter, searchParams, setSearchParams]);
+  }, [filter, searchParamsString, setSearchParams]);
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
