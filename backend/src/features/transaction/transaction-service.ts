@@ -11,6 +11,8 @@ type TransactionInput = {
   type: TransactionType;
   date: string;
   categoryId: string;
+  receiptKey?: string | null;
+  receiptUrl?: string | null;
 };
 
 type TransactionUpdateInput = Partial<TransactionInput>;
@@ -97,6 +99,8 @@ export class TransactionService {
       type: parsedType,
       date,
       categoryId,
+      receiptKey: this.parseOptionalString(input.receiptKey),
+      receiptUrl: this.parseOptionalString(input.receiptUrl),
     };
   }
 
@@ -108,6 +112,8 @@ export class TransactionService {
       type?: TransactionType;
       date?: Date;
       categoryId?: string;
+      receiptKey?: string | null;
+      receiptUrl?: string | null;
     } = {};
 
     if (input.title !== undefined) {
@@ -145,7 +151,24 @@ export class TransactionService {
       payload.categoryId = categoryId;
     }
 
+    if (input.receiptKey !== undefined) {
+      payload.receiptKey = this.parseOptionalString(input.receiptKey);
+    }
+
+    if (input.receiptUrl !== undefined) {
+      payload.receiptUrl = this.parseOptionalString(input.receiptUrl);
+    }
+
     return payload;
+  }
+
+  private parseOptionalString(value?: string | null) {
+    if (value === undefined || value === null) {
+      return null;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private parseType(type: TransactionType): TransactionType {

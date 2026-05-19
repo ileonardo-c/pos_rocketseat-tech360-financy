@@ -6,6 +6,7 @@ import {
   CATEGORIES_QUERY,
   CREATE_TRANSACTION_MUTATION,
   DELETE_TRANSACTION_MUTATION,
+  REQUEST_UPLOAD_URL_MUTATION,
   TRANSACTIONS_QUERY,
   UPDATE_TRANSACTION_MUTATION,
 } from "@/lib/graphql/operations";
@@ -22,6 +23,8 @@ type Transaction = {
   amount: number;
   type: "INCOME" | "EXPENSE";
   date: string;
+  receiptKey: string | null;
+  receiptUrl: string | null;
   categoryId: string;
   category: Category | null;
 };
@@ -41,6 +44,8 @@ type TransactionForm = {
   type: "INCOME" | "EXPENSE";
   date: string;
   categoryId: string;
+  receiptKey: string;
+  receiptUrl: string;
 };
 
 type TransactionFilter = {
@@ -51,6 +56,15 @@ type TransactionFilter = {
   to: string;
 };
 
+type UploadMutationResult = {
+  requestUploadUrl: {
+    url: string;
+    key: string;
+    publicUrl: string;
+    expiresIn: number;
+  };
+};
+
 const emptyForm: TransactionForm = {
   title: "",
   description: "",
@@ -58,6 +72,8 @@ const emptyForm: TransactionForm = {
   type: "EXPENSE",
   date: "",
   categoryId: "",
+  receiptKey: "",
+  receiptUrl: "",
 };
 
 const emptyFilter: TransactionFilter = {
@@ -92,6 +108,8 @@ const buildTransactionPayload = (form: TransactionForm) => ({
   type: form.type,
   date: new Date(`${form.date}T00:00:00`).toISOString(),
   categoryId: form.categoryId,
+  receiptKey: form.receiptKey.trim() || null,
+  receiptUrl: form.receiptUrl.trim() || null,
 });
 
 export const TransactionsPage = () => {
@@ -116,6 +134,8 @@ export const TransactionsPage = () => {
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
   const [filter, setFilter] = useState<TransactionFilter>(emptyFilter);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
+  const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
@@ -129,6 +149,7 @@ export const TransactionsPage = () => {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
     awaitRefetchQueries: true,
   });
+  const [requestUploadUrl] = useMutation<UploadMutationResult>(REQUEST_UPLOAD_URL_MUTATION);
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
@@ -195,8 +216,42 @@ export const TransactionsPage = () => {
     };
   }, [filteredTransactions]);
 
+  const uploadReceipt = async (file: File) => {
+    const uploadResponse = await requestUploadUrl({
+      variables: {
+        input: {
+          fileName: file.name,
+          contentType: file.type || "application/octet-stream",
+        },
+      },
+    });
+
+    const payload = uploadResponse.data?.requestUploadUrl;
+    if (!payload) {
+      throw new Error("Falha ao gerar URL de upload.");
+    }
+
+    const putResponse = await fetch(payload.url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+      },
+      body: file,
+    });
+
+    if (!putResponse.ok) {
+      throw new Error("Falha ao enviar comprovante.");
+    }
+
+    return {
+      receiptKey: payload.key,
+      receiptUrl: payload.publicUrl,
+    };
+  };
+
   const isCreateDisabled =
     creating ||
+    uploadingCreateReceipt ||
     !form.title.trim() ||
     !form.amount ||
     !form.date ||
@@ -332,8 +387,59 @@ export const TransactionsPage = () => {
             </select>
           </label>
 
+          <label>
+            Comprovante
+            <input
+              accept=".pdf,image/*"
+              type="file"
+              onChange={async (event) => {
+                const file = event.target.files?.[0];
+                if (!file) {
+                  return;
+                }
+
+                try {
+                  setActionError(null);
+                  setUploadingCreateReceipt(true);
+                  const uploaded = await uploadReceipt(file);
+                  setForm((prev) => ({
+                    ...prev,
+                    receiptKey: uploaded.receiptKey,
+                    receiptUrl: uploaded.receiptUrl,
+                  }));
+                } catch {
+                  setActionError("Não foi possível enviar o comprovante.");
+                } finally {
+                  setUploadingCreateReceipt(false);
+                  event.target.value = "";
+                }
+              }}
+            />
+          </label>
+
+          {form.receiptUrl ? (
+            <p>
+              Comprovante anexado.{" "}
+              <a href={form.receiptUrl} rel="noreferrer" target="_blank">
+                Abrir
+              </a>{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  setForm((prev) => ({
+                    ...prev,
+                    receiptKey: "",
+                    receiptUrl: "",
+                  }))
+                }
+              >
+                Remover
+              </button>
+            </p>
+          ) : null}
+
           <button disabled={isCreateDisabled} type="submit">
-            Criar transação
+            {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
           </button>
         </form>
       )}
@@ -455,6 +561,7 @@ export const TransactionsPage = () => {
               const isEditing = editingId === transaction.id;
               const isUpdateDisabled =
                 updating ||
+                uploadingEditReceipt ||
                 !editingForm.title.trim() ||
                 !editingForm.amount ||
                 !editingForm.date ||
@@ -563,8 +670,55 @@ export const TransactionsPage = () => {
                         ))}
                       </select>
 
+                      <input
+                        accept=".pdf,image/*"
+                        type="file"
+                        onChange={async (event) => {
+                          const file = event.target.files?.[0];
+                          if (!file) {
+                            return;
+                          }
+
+                          try {
+                            setActionError(null);
+                            setUploadingEditReceipt(true);
+                            const uploaded = await uploadReceipt(file);
+                            setEditingForm((prev) => ({
+                              ...prev,
+                              receiptKey: uploaded.receiptKey,
+                              receiptUrl: uploaded.receiptUrl,
+                            }));
+                          } catch {
+                            setActionError("Não foi possível enviar o comprovante.");
+                          } finally {
+                            setUploadingEditReceipt(false);
+                            event.target.value = "";
+                          }
+                        }}
+                      />
+
+                      {editingForm.receiptUrl ? (
+                        <p>
+                          <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
+                            Abrir comprovante
+                          </a>{" "}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingForm((prev) => ({
+                                ...prev,
+                                receiptKey: "",
+                                receiptUrl: "",
+                              }))
+                            }
+                          >
+                            Remover comprovante
+                          </button>
+                        </p>
+                      ) : null}
+
                       <button disabled={isUpdateDisabled} type="submit">
-                        Salvar
+                        {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
                       </button>
                       <button
                         type="button"
@@ -584,6 +738,15 @@ export const TransactionsPage = () => {
                       {transaction.category?.name ?? "Sem categoria"} -{" "}
                       {new Date(transaction.date).toLocaleDateString("pt-BR")}
                       {transaction.description ? ` - ${transaction.description}` : ""}
+                      {transaction.receiptUrl ? (
+                        <>
+                          {" "}
+                          -{" "}
+                          <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                            Comprovante
+                          </a>
+                        </>
+                      ) : null}
                       <div>
                         <button
                           type="button"
@@ -596,6 +759,8 @@ export const TransactionsPage = () => {
                               type: transaction.type,
                               date: toLocalDateInput(transaction.date),
                               categoryId: transaction.categoryId,
+                              receiptKey: transaction.receiptKey ?? "",
+                              receiptUrl: transaction.receiptUrl ?? "",
                             });
                           }}
                         >

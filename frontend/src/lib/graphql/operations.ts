@@ -81,6 +81,8 @@ export const TRANSACTIONS_QUERY = gql`
       amount
       type
       date
+      receiptKey
+      receiptUrl
       userId
       categoryId
       category {
@@ -126,6 +128,8 @@ export const CREATE_TRANSACTION_MUTATION = gql`
       amount
       type
       date
+      receiptKey
+      receiptUrl
       userId
       categoryId
       category {
@@ -147,6 +151,8 @@ export const UPDATE_TRANSACTION_MUTATION = gql`
       amount
       type
       date
+      receiptKey
+      receiptUrl
       userId
       categoryId
       category {
@@ -162,5 +168,16 @@ export const UPDATE_TRANSACTION_MUTATION = gql`
 export const DELETE_TRANSACTION_MUTATION = gql`
   mutation DeleteTransaction($id: ID!) {
     deleteTransaction(id: $id)
+  }
+`;
+
+export const REQUEST_UPLOAD_URL_MUTATION = gql`
+  mutation RequestUploadUrl($input: UploadInput!) {
+    requestUploadUrl(input: $input) {
+      url
+      key
+      publicUrl
+      expiresIn
+    }
   }
 `;

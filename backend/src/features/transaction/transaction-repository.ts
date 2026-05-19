@@ -48,6 +48,8 @@ export class TransactionRepository {
       type: TransactionType;
       date: Date;
       categoryId: string;
+      receiptKey?: string | null;
+      receiptUrl?: string | null;
     },
   ): Promise<Transaction> {
     return this.prisma.transaction.create({
@@ -70,6 +72,8 @@ export class TransactionRepository {
       type?: TransactionType;
       date?: Date;
       categoryId?: string;
+      receiptKey?: string | null;
+      receiptUrl?: string | null;
     },
   ): Promise<Transaction> {
     return this.prisma.transaction.update({

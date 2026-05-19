@@ -42,6 +42,8 @@ model Transaction {
   amount      Float
   type        TransactionType
   date        DateTime        @default(now())
+  receiptKey  String?
+  receiptUrl  String?
   userId      String
   categoryId  String
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
