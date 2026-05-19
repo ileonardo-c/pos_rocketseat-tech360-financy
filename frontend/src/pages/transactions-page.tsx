@@ -1,6 +1,6 @@
+import { useMutation, useQuery } from "@apollo/client";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery } from "@apollo/client";
 
 import {
   CATEGORIES_QUERY,
@@ -578,9 +578,11 @@ export const TransactionsPage = () => {
                     </form>
                   ) : (
                     <>
-                      <strong>{transaction.title}</strong> - {transaction.type === "INCOME" ? "Receita" : "Despesa"} -
-                      {" "} {currencyFormatter.format(transaction.amount)} - {transaction.category?.name ?? "Sem categoria"} -
-                      {" "} {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                      <strong>{transaction.title}</strong> -{" "}
+                      {transaction.type === "INCOME" ? "Receita" : "Despesa"} -{" "}
+                      {currencyFormatter.format(transaction.amount)} -{" "}
+                      {transaction.category?.name ?? "Sem categoria"} -{" "}
+                      {new Date(transaction.date).toLocaleDateString("pt-BR")}
                       {transaction.description ? ` - ${transaction.description}` : ""}
                       <div>
                         <button
