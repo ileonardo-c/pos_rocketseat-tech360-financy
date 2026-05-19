@@ -135,6 +135,23 @@ export const DASHBOARD_TRANSACTION_SUMMARY_QUERY = gql`
   }
 `;
 
+export const DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY = gql`
+  query DashboardTransactionCategorySummary(
+    $filter: TransactionSummaryFilterInput
+    $limit: Int
+  ) {
+    transactionCategorySummary(filter: $filter, limit: $limit) {
+      categoryId
+      categoryName
+      total
+      count
+      incomeTotal
+      expenseTotal
+      balance
+    }
+  }
+`;
+
 export const CREATE_TRANSACTION_MUTATION = gql`
   mutation CreateTransaction($input: CreateTransactionInput!) {
     createTransaction(input: $input) {
