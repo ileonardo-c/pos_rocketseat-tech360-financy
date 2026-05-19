@@ -1,0 +1,13 @@
+{
+  "name": "pos_rocketseat-tech360-financy",
+  "private": true,
+  "packageManager": "pnpm@10.5.0",
+  "scripts": {
+    "biome": "biome check .",
+    "format": "biome format .",
+    "check": "biome check ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3"
+  }
+}
