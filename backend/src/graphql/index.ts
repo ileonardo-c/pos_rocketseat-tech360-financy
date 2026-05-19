@@ -1,7 +1,9 @@
 import { authMutations } from "./mutations/auth";
 import { categoryMutations } from "./mutations/category";
+import { transactionMutations } from "./mutations/transaction";
 import { authQueries } from "./queries/auth";
 import { categoryQueries } from "./queries/category";
+import { transactionQueries } from "./queries/transaction";
 
 export const typeDefs = `
   enum TransactionType {
@@ -90,6 +92,7 @@ export const typeDefs = `
   type Query {
     me: User
     categories: [Category!]!
+    transactions: [Transaction!]!
   }
 
   type Mutation {
@@ -98,6 +101,9 @@ export const typeDefs = `
     createCategory(input: CreateCategoryInput!): Category!
     updateCategory(id: ID!, input: UpdateCategoryInput!): Category
     deleteCategory(id: ID!): Boolean!
+    createTransaction(input: CreateTransactionInput!): Transaction!
+    updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction
+    deleteTransaction(id: ID!): Boolean!
   }
 `;
 
@@ -105,10 +111,12 @@ export const resolvers = {
   Query: {
     ...authQueries,
     ...categoryQueries,
+    ...transactionQueries,
   },
   Mutation: {
     ...authMutations,
     ...categoryMutations,
+    ...transactionMutations,
   },
   Transaction: {
     date: (transaction: any) => transaction.date?.toISOString() ?? null,
