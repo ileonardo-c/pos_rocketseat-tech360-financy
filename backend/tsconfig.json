@@ -4,6 +4,10 @@
     "module": "ESNext",
     "moduleResolution": "NodeNext",
     "strict": true,
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["*"]
+    },
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"],

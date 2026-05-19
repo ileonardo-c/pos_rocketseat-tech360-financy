@@ -1,9 +1,10 @@
-import { authMutations } from "./mutations/auth";
-import { authQueries } from "./queries/auth";
-import { categoryMutations } from "./mutations/category";
-import { categoryQueries } from "./queries/category";
-import { transactionMutations } from "./mutations/transaction";
-import { transactionQueries } from "./queries/transaction";
+import { authMutations } from "@/graphql/mutations/auth";
+import { authQueries } from "@/graphql/queries/auth";
+import { categoryMutations } from "@/graphql/mutations/category";
+import { categoryQueries } from "@/graphql/queries/category";
+import { storageMutations } from "@/graphql/mutations/storage";
+import { transactionMutations } from "@/graphql/mutations/transaction";
+import { transactionQueries } from "@/graphql/queries/transaction";
 
 export const typeDefs = `
   type User {
@@ -74,6 +75,18 @@ export const typeDefs = `
     categoryId: String
   }
 
+  input UploadInput {
+    fileName: String!
+    contentType: String!
+  }
+
+  type UploadPayload {
+    url: String!
+    key: String!
+    publicUrl: String!
+    expiresIn: Int!
+  }
+
   type Query {
     me: User
     categories: [Category!]!
@@ -89,6 +102,7 @@ export const typeDefs = `
     createTransaction(input: CreateTransactionInput!): Transaction!
     updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction!
     deleteTransaction(id: ID!): Boolean!
+    requestUploadUrl(input: UploadInput!): UploadPayload!
   }
 `;
 
@@ -102,6 +116,7 @@ export const resolvers = {
     ...authMutations,
     ...categoryMutations,
     ...transactionMutations,
+    ...storageMutations,
   },
   Transaction: {
     date: ({ date }) => date.toISOString(),
