@@ -1,6 +1,0 @@
-services:
-  backend:
-    command: pnpm --filter backend dev
-
-  frontend:
-    command: pnpm --filter frontend dev -- --host 0.0.0.0 --port 5173

@@ -10,7 +10,7 @@ Desafio fullstack de organização financeira com:
 - `backend/` resolução completa da API
 - `frontend/` resolução completa da SPA
 - `docker-compose.yml` para ambiente local com PostgreSQL + MinIO (S3-compatible)
-- `biome.json` e workspace de monorepo para padrão de qualidade e scripts
+- `biome.json` e scripts de qualidade no root
 
 ## Objetivos obrigatórios
 
@@ -20,6 +20,12 @@ Desafio fullstack de organização financeira com:
 - CRUD de categorias
 - Backend e frontend em GraphQL com CORS e `.env.example`
 - Upload opcional local suportado via padrão **AWS S3** em container **MinIO**.
+
+### Início rápido
+
+1. Copie `.env.example` para `.env`.
+2. Suba serviços de infraestrutura:
+   - `docker compose up -d`.
 
 ## Governança
 
