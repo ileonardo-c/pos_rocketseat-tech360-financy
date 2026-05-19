@@ -45,15 +45,9 @@ export class TransactionRepository {
       from?: Date;
       to?: Date;
     },
-  ): Promise<
-    Array<{
-      type: TransactionType;
-      _sum: { amount: number | null };
-      _count: { _all: number };
-    }>
-  > {
+  ) {
     return this.prisma.transaction.groupBy({
-      by: ["type"],
+      by: ["type"] as const,
       where: {
         userId,
         date: {
