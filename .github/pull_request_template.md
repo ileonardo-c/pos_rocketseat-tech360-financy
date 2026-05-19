@@ -5,6 +5,10 @@
 Descreva de forma clara e objetiva o que este PR faz e qual problema ele resolve. Exemplo:
 Adiciona validação de CPF no formulário de cadastro de usuários, evitando que dados inválidos sejam persistidos no banco de dados. 
 -->
+<!-- 
+Use nomes de paths em crase, por exemplo: `node_modules`, `.env.example`, `backend/`.
+Não use `\n` literal no texto do PR.
+-->
 
 ---
 
