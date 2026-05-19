@@ -1,6 +1,7 @@
 import { authMutations } from "./mutations/auth";
 import { categoryMutations } from "./mutations/category";
 import { transactionMutations } from "./mutations/transaction";
+import { uploadMutations } from "./mutations/upload";
 import { authQueries } from "./queries/auth";
 import { categoryQueries } from "./queries/category";
 import { transactionQueries } from "./queries/transaction";
@@ -104,6 +105,7 @@ export const typeDefs = `
     createTransaction(input: CreateTransactionInput!): Transaction!
     updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction
     deleteTransaction(id: ID!): Boolean!
+    requestUploadUrl(input: UploadInput!): UploadPayload!
   }
 `;
 
@@ -117,6 +119,7 @@ export const resolvers = {
     ...authMutations,
     ...categoryMutations,
     ...transactionMutations,
+    ...uploadMutations,
   },
   Transaction: {
     date: (transaction: any) => transaction.date?.toISOString() ?? null,
