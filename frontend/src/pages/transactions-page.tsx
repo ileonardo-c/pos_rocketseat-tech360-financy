@@ -122,8 +122,18 @@ const buildSearchParamsFromFilter = (filter: TransactionFilter) => {
   return searchParams;
 };
 
-const filterToSearchString = (filter: TransactionFilter) =>
-  buildSearchParamsFromFilter(filter).toString();
+const filterFieldMap: Record<keyof TransactionFilter, true> = {
+  query: true,
+  type: true,
+  categoryId: true,
+  from: true,
+  to: true,
+};
+
+const isSameFilter = (left: TransactionFilter, right: TransactionFilter) =>
+  (Object.keys(filterFieldMap) as Array<keyof TransactionFilter>).every(
+    (field) => left[field] === right[field],
+  );
 
 const toLocalDateInput = (value: string | Date) => {
   const date = new Date(value);
@@ -155,7 +165,7 @@ const buildTransactionPayload = (form: TransactionForm) => ({
 
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchParamsString = searchParams.toString();
+  const searchParamsString = useMemo(() => searchParams.toString(), [searchParams]);
   const {
     data: categoriesData,
     loading: categoriesLoading,
@@ -203,10 +213,9 @@ export const TransactionsPage = () => {
 
   useEffect(() => {
     const parsedFilter = parseFilterFromSearchParams(searchParams);
-    const parsedSearchString = filterToSearchString(parsedFilter);
 
     setFilter((currentFilter) =>
-      filterToSearchString(currentFilter) === parsedSearchString ? currentFilter : parsedFilter,
+      isSameFilter(currentFilter, parsedFilter) ? currentFilter : parsedFilter,
     );
   }, [searchParams]);
 
