@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@apollo/client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import {
   CATEGORIES_QUERY,
@@ -65,6 +65,8 @@ type UploadMutationResult = {
   };
 };
 
+type TransactionFilterType = TransactionFilter["type"];
+
 const emptyForm: TransactionForm = {
   title: "",
   description: "",
@@ -82,6 +84,42 @@ const emptyFilter: TransactionFilter = {
   categoryId: "",
   from: "",
   to: "",
+};
+
+const parseFilterFromSearchParams = (searchParams: URLSearchParams): TransactionFilter => {
+  const typeValue = searchParams.get("type");
+  const parsedType: TransactionFilterType =
+    typeValue === "INCOME" || typeValue === "EXPENSE" ? typeValue : "ALL";
+
+  return {
+    query: searchParams.get("query") ?? "",
+    type: parsedType,
+    categoryId: searchParams.get("categoryId") ?? "",
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+  };
+};
+
+const buildSearchParamsFromFilter = (filter: TransactionFilter) => {
+  const searchParams = new URLSearchParams();
+
+  if (filter.query) {
+    searchParams.set("query", filter.query);
+  }
+  if (filter.type !== "ALL") {
+    searchParams.set("type", filter.type);
+  }
+  if (filter.categoryId) {
+    searchParams.set("categoryId", filter.categoryId);
+  }
+  if (filter.from) {
+    searchParams.set("from", filter.from);
+  }
+  if (filter.to) {
+    searchParams.set("to", filter.to);
+  }
+
+  return searchParams;
 };
 
 const toLocalDateInput = (value: string | Date) => {
@@ -113,6 +151,7 @@ const buildTransactionPayload = (form: TransactionForm) => ({
 });
 
 export const TransactionsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     data: categoriesData,
     loading: categoriesLoading,
@@ -132,7 +171,9 @@ export const TransactionsPage = () => {
   const [form, setForm] = useState<TransactionForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
-  const [filter, setFilter] = useState<TransactionFilter>(emptyFilter);
+  const [filter, setFilter] = useState<TransactionFilter>(() =>
+    parseFilterFromSearchParams(searchParams),
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
   const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
@@ -155,6 +196,16 @@ export const TransactionsPage = () => {
   useEffect(() => {
     editingIdRef.current = editingId;
   }, [editingId]);
+
+  useEffect(() => {
+    const nextSearchParams = buildSearchParamsFromFilter(filter);
+    const current = searchParams.toString();
+    const next = nextSearchParams.toString();
+
+    if (current !== next) {
+      setSearchParams(nextSearchParams, { replace: true });
+    }
+  }, [filter, searchParams, setSearchParams]);
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
