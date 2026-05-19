@@ -165,7 +165,7 @@ const buildTransactionPayload = (form: TransactionForm) => ({
 
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchParamsString = useMemo(() => searchParams.toString(), [searchParams]);
+  const searchParamsString = searchParams.toString();
   const {
     data: categoriesData,
     loading: categoriesLoading,
