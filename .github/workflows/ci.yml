@@ -39,13 +39,23 @@ jobs:
         run: |
           set -euo pipefail
           export PORT=4100
-          export JWT_SECRET=test-secret
-          export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/financy
+          export JWT_SECRET="$(openssl rand -hex 32)"
+          export DATABASE_URL=postgresql://localhost:5432/financy
           pnpm --filter backend start &
           SERVER_PID=$!
-          trap "kill $SERVER_PID" EXIT
-          sleep 4
-          curl --fail --silent --show-error http://127.0.0.1:4100/health >/dev/null
+          cleanup() {
+            kill "$SERVER_PID" >/dev/null 2>&1 || true
+            wait "$SERVER_PID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          for _ in {1..30}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4100/health >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Backend nao respondeu /health em 30s"
+          exit 1
 
       - name: Build frontend
         run: pnpm build:frontend
