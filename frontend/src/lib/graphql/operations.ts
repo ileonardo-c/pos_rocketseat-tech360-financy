@@ -152,22 +152,6 @@ export const DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY = gql`
   }
 `;
 
-export const DASHBOARD_TRANSACTION_SUMMARY_QUERY = gql`
-  query DashboardTransactionSummary($filter: TransactionSummaryFilterInput) {
-    transactionSummary(filter: $filter) {
-      incomeTotal
-      expenseTotal
-      balance
-      totalCount
-      byType {
-        type
-        total
-        count
-      }
-    }
-  }
-`;
-
 export const CREATE_TRANSACTION_MUTATION = gql`
   mutation CreateTransaction($input: CreateTransactionInput!) {
     createTransaction(input: $input) {

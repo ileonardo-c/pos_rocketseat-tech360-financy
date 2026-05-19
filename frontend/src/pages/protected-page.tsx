@@ -1,12 +1,12 @@
-import { useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { useQuery } from "@apollo/client";
 import {
   DASHBOARD_CATEGORIES_QUERY,
+  DASHBOARD_TRANSACTIONS_QUERY,
   DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY,
   DASHBOARD_TRANSACTION_SUMMARY_QUERY,
-  DASHBOARD_TRANSACTIONS_QUERY,
 } from "@/lib/graphql/operations";
+import { useQuery } from "@apollo/client";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 type Category = {
@@ -87,24 +87,33 @@ export const ProtectedPage = () => {
   const { user, signout } = useAuth();
   const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() => getCurrentMonthFilter());
 
-  const { data: categoriesData, loading: categoriesLoading, error: categoriesError } =
-    useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
-      fetchPolicy: "cache-and-network",
-    });
-  const { data: transactionsData, loading: transactionsLoading, error: transactionsError } =
-    useQuery<TransactionsNode>(DASHBOARD_TRANSACTIONS_QUERY, {
-      fetchPolicy: "cache-and-network",
-    });
-  const { data: summaryData, loading: summaryLoading, error: summaryError } =
-    useQuery<TransactionSummaryNode>(DASHBOARD_TRANSACTION_SUMMARY_QUERY, {
-      fetchPolicy: "cache-and-network",
-      variables: {
-        filter: {
-          from: summaryFilter.from || null,
-          to: summaryFilter.to || null,
-        },
+  const {
+    data: categoriesData,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
+    fetchPolicy: "cache-and-network",
+  });
+  const {
+    data: transactionsData,
+    loading: transactionsLoading,
+    error: transactionsError,
+  } = useQuery<TransactionsNode>(DASHBOARD_TRANSACTIONS_QUERY, {
+    fetchPolicy: "cache-and-network",
+  });
+  const {
+    data: summaryData,
+    loading: summaryLoading,
+    error: summaryError,
+  } = useQuery<TransactionSummaryNode>(DASHBOARD_TRANSACTION_SUMMARY_QUERY, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      filter: {
+        from: summaryFilter.from || null,
+        to: summaryFilter.to || null,
       },
-    });
+    },
+  });
   const {
     data: categorySummaryData,
     loading: categorySummaryLoading,
