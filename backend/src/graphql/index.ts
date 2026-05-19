@@ -55,6 +55,16 @@ export const typeDefs = `
     byType: [TransactionTypeSummary!]!
   }
 
+  type TransactionCategorySummary {
+    categoryId: ID!
+    categoryName: String!
+    total: Float!
+    count: Int!
+    incomeTotal: Float!
+    expenseTotal: Float!
+    balance: Float!
+  }
+
   input RegisterInput {
     name: String!
     email: String!
@@ -118,6 +128,10 @@ export const typeDefs = `
     categories: [Category!]!
     transactions: [Transaction!]!
     transactionSummary(filter: TransactionSummaryFilterInput): TransactionSummary!
+    transactionCategorySummary(
+      filter: TransactionSummaryFilterInput
+      limit: Int
+    ): [TransactionCategorySummary!]!
   }
 
   type Mutation {

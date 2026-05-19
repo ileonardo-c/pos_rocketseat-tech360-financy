@@ -64,6 +64,48 @@ export class TransactionRepository {
     });
   }
 
+  groupSummaryByCategoryForUser(
+    userId: string,
+    filters: {
+      from?: Date;
+      to?: Date;
+    },
+  ) {
+    return this.prisma.transaction.groupBy({
+      by: ["categoryId", "type"] as const,
+      where: {
+        userId,
+        date: {
+          ...(filters.from ? { gte: filters.from } : {}),
+          ...(filters.to ? { lte: filters.to } : {}),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: {
+        _all: true,
+      },
+    });
+  }
+
+  findCategoriesByIdsForUser(userId: string, ids: string[]) {
+    if (ids.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.prisma.category.findMany({
+      where: {
+        userId,
+        id: { in: ids },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
   create(
     userId: string,
     data: {
