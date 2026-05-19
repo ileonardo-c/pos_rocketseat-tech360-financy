@@ -1,4 +1,5 @@
 import { useAuth } from "@/lib/auth/auth-provider";
+import { Link } from "react-router-dom";
 
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
@@ -11,8 +12,10 @@ export const ProtectedPage = () => {
     <main>
       <h1>Dashboard</h1>
       <p>Bem-vindo, {user.name}</p>
+      <nav>
+        <Link to="/categories">Categorias</Link>
+      </nav>
       <button onClick={signout}>Sair</button>
-      <p>As próximas telas de categorias e transações virão nos PRs seguintes.</p>
     </main>
   );
 };
