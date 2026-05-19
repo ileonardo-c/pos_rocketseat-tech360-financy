@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery } from "@apollo/client";
 
-import { useAuth } from "@/lib/auth/auth-provider";
 import {
   CATEGORIES_QUERY,
   CREATE_TRANSACTION_MUTATION,
@@ -58,27 +57,21 @@ const toDateInput = (isoString: string) => {
   return Number.isNaN(date.getTime()) ? "" : date.toISOString().slice(0, 10);
 };
 
-const buildCreatePayload = (form: TransactionForm) => ({
-  title: form.title.trim(),
-  description: form.description.trim() || null,
-  amount: Number(form.amount),
-  type: form.type,
-  date: new Date(`${form.date}T00:00:00.000Z`).toISOString(),
-  categoryId: form.categoryId,
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
 });
 
-const buildUpdatePayload = (form: TransactionForm) => ({
+const buildTransactionPayload = (form: TransactionForm) => ({
   title: form.title.trim(),
   description: form.description.trim() || null,
   amount: Number(form.amount),
   type: form.type,
-  date: new Date(`${form.date}T00:00:00.000Z`).toISOString(),
+  date: new Date(`${form.date}T00:00:00`).toISOString(),
   categoryId: form.categoryId,
 });
 
 export const TransactionsPage = () => {
-  const { user } = useAuth();
-
   const {
     data: categoriesData,
     loading: categoriesLoading,
@@ -98,6 +91,7 @@ export const TransactionsPage = () => {
   const [form, setForm] = useState<TransactionForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
@@ -118,12 +112,8 @@ export const TransactionsPage = () => {
     [transactionsData?.transactions],
   );
 
-  if (!user) {
-    return <Navigate to="/" replace />;
-  }
-
   if ((categoriesLoading || transactionsLoading) && categories.length === 0 && transactions.length === 0) {
-    return <main>Carregando transacoes...</main>;
+    return <main>Carregando transações...</main>;
   }
 
   const isCreateDisabled =
@@ -139,13 +129,14 @@ export const TransactionsPage = () => {
       <p>
         <Link to="/">Voltar</Link>
       </p>
-      <h1>Transacoes</h1>
+      <h1>Transações</h1>
 
       {categoriesError ? <p>Erro ao carregar categorias.</p> : null}
-      {transactionsError ? <p>Erro ao carregar transacoes.</p> : null}
+      {transactionsError ? <p>Erro ao carregar transações.</p> : null}
+      {actionError ? <p>{actionError}</p> : null}
 
       {categories.length === 0 ? (
-        <p>Crie uma categoria antes de cadastrar transacoes.</p>
+        <p>Crie uma categoria antes de cadastrar transações.</p>
       ) : (
         <form
           onSubmit={async (event) => {
@@ -154,15 +145,20 @@ export const TransactionsPage = () => {
               return;
             }
 
-            await createTransaction({
-              variables: { input: buildCreatePayload(form) },
-            });
+            try {
+              setActionError(null);
+              await createTransaction({
+                variables: { input: buildTransactionPayload(form) },
+              });
 
-            setForm(emptyForm);
+              setForm(emptyForm);
+            } catch {
+              setActionError("Não foi possível criar a transação.");
+            }
           }}
         >
           <label>
-            Titulo
+            Título
             <input
               autoComplete="off"
               required
@@ -173,7 +169,7 @@ export const TransactionsPage = () => {
           </label>
 
           <label>
-            Descricao
+            Descrição
             <input
               autoComplete="off"
               type="text"
@@ -257,14 +253,14 @@ export const TransactionsPage = () => {
           </label>
 
           <button disabled={isCreateDisabled} type="submit">
-            Criar transacao
+            Criar transação
           </button>
         </form>
       )}
 
       <section>
         {transactions.length === 0 ? (
-          <p>Nenhuma transacao encontrada.</p>
+          <p>Nenhuma transação encontrada.</p>
         ) : (
           <ul>
             {transactions.map((transaction) => {
@@ -286,15 +282,20 @@ export const TransactionsPage = () => {
                           return;
                         }
 
-                        await updateTransaction({
-                          variables: {
-                            id: transaction.id,
-                            input: buildUpdatePayload(editingForm),
-                          },
-                        });
+                        try {
+                          setActionError(null);
+                          await updateTransaction({
+                            variables: {
+                              id: transaction.id,
+                              input: buildTransactionPayload(editingForm),
+                            },
+                          });
 
-                        setEditingId(null);
-                        setEditingForm(emptyForm);
+                          setEditingId(null);
+                          setEditingForm(emptyForm);
+                        } catch {
+                          setActionError("Não foi possível atualizar a transação.");
+                        }
                       }}
                     >
                       <input
@@ -390,7 +391,7 @@ export const TransactionsPage = () => {
                   ) : (
                     <>
                       <strong>{transaction.title}</strong> - {transaction.type === "INCOME" ? "Receita" : "Despesa"} -
-                      {" "}R$ {transaction.amount.toFixed(2)} - {transaction.category?.name ?? "Sem categoria"} -
+                      {" "} {currencyFormatter.format(transaction.amount)} - {transaction.category?.name ?? "Sem categoria"} -
                       {" "} {new Date(transaction.date).toLocaleDateString("pt-BR")}
                       {transaction.description ? ` - ${transaction.description}` : ""}
                       <div>
@@ -414,7 +415,19 @@ export const TransactionsPage = () => {
                           disabled={deleting}
                           type="button"
                           onClick={async () => {
-                            await deleteTransaction({ variables: { id: transaction.id } });
+                            const confirmed = window.confirm(
+                              "Deseja realmente excluir esta transação?",
+                            );
+                            if (!confirmed) {
+                              return;
+                            }
+
+                            try {
+                              setActionError(null);
+                              await deleteTransaction({ variables: { id: transaction.id } });
+                            } catch {
+                              setActionError("Não foi possível excluir a transação.");
+                            }
                           }}
                         >
                           Excluir

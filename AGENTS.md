@@ -26,6 +26,13 @@ This repository is a staged monorepo for the Financy challenge. Deliverables are
   - no corrupted UTF-8 characters
   - no local absolute paths, tokens, or secrets
 - For re-review triggers, append mentions when applicable: `@copilot` and `@codex review`.
+- Before publishing PR body:
+  - never leave placeholder `Closes #` empty
+  - if there is no dedicated issue, use `Refs #<PR_NUMBER>`
+  - use `gh pr create --body-file` with UTF-8 text
+- For Codex connector stability:
+  - after opening PR, wait a short sync interval before first `@codex review`
+  - if error mentions missing `refs/pull/<n>/head`, validate with `git ls-remote origin refs/pull/<n>/*` and retry `@codex review` after a new comment or push
 
 ## Language and response style
 - The default language for responses, review comments, suggestions, and summaries must be Brazilian Portuguese (`pt-BR`).
