@@ -17,3 +17,12 @@ This repository is a staged monorepo for the Financy challenge. Deliverables are
 - Monorepo PR: workspace and infra bootstrap only.
 - Backend PR: backend starts (`/health`, `/graphql`) and `.env.example` present.
 - Auth/category/transaction/frontend PRs: functional isolation by user and CRUD behavior.
+
+## PR Comment Standard (gh)
+- When using `gh pr comment` or review replies, publish Markdown-renderable text only.
+- Use this comment order: `Contexto`, `Causa raiz`, `Correcao aplicada`, `Validacao`, `Proximo passo`.
+- Validate preview text before submit:
+  - no literal `\n`
+  - no corrupted UTF-8 characters
+  - no local absolute paths, tokens, or secrets
+- For re-review triggers, append mentions when applicable: `@copilot` and `@codex review`.

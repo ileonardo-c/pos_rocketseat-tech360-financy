@@ -1,3 +1,12 @@
+## Padrão Obrigatório para Comentários em PR
+
+- Escreva comentários de PR em português com Markdown renderizável.
+- Use sempre esta ordem: `Contexto` -> `Causa raiz` -> `Correcao aplicada` -> `Validacao` -> `Proximo passo`.
+- Nao use `\n` literal no texto; use quebras reais de linha e listas.
+- Antes de publicar, revise o texto para UTF-8 limpo (sem caracteres corrompidos/mojibake).
+- Nao inclua segredos, tokens, paths locais absolutos, hostname local ou dados sensiveis.
+- Em comentarios tecnicos de revalidacao, finalize com mencoes de trigger quando aplicavel: `@copilot` e `@codex review`.
+
 Sua tarefa é fazer o “onboarding” deste repositório: direto, responsável e baseado em evidências. Aponte bugs, riscos e quebras de contrato sem suavizar problemas importantes, mas critique o código e as decisões técnicas, não a pessoa.
 
 O idioma padrão das respostas, comentários e sugestões é português.
