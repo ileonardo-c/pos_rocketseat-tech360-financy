@@ -39,6 +39,31 @@ export class TransactionRepository {
     });
   }
 
+  groupSummaryByTypeForUser(
+    userId: string,
+    filters: {
+      from?: Date;
+      to?: Date;
+    },
+  ) {
+    return this.prisma.transaction.groupBy({
+      by: ["type"] as const,
+      where: {
+        userId,
+        date: {
+          ...(filters.from ? { gte: filters.from } : {}),
+          ...(filters.to ? { lte: filters.to } : {}),
+        },
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: {
+        _all: true,
+      },
+    });
+  }
+
   create(
     userId: string,
     data: {

@@ -17,6 +17,25 @@ type TransactionInput = {
 
 type TransactionUpdateInput = Partial<TransactionInput>;
 
+type TransactionSummaryInput = {
+  from?: string | null;
+  to?: string | null;
+};
+
+type TransactionTypeSummary = {
+  type: TransactionType;
+  total: number;
+  count: number;
+};
+
+type TransactionSummary = {
+  incomeTotal: number;
+  expenseTotal: number;
+  balance: number;
+  totalCount: number;
+  byType: TransactionTypeSummary[];
+};
+
 export class TransactionService {
   constructor(private readonly repository: TransactionRepository) {}
 
@@ -73,6 +92,41 @@ export class TransactionService {
 
     await this.repository.deleteById(id);
     return true;
+  }
+
+  async summaryByUser(ctx: GraphQLContext, input?: TransactionSummaryInput): Promise<TransactionSummary> {
+    if (!ctx.userId) {
+      throw new AppError("Nao autenticado", 401);
+    }
+
+    const filters = this.normalizeSummaryInput(input);
+    const grouped = await this.repository.groupSummaryByTypeForUser(ctx.userId, filters);
+    const incomeGroup = grouped.find((item) => item.type === "INCOME");
+    const expenseGroup = grouped.find((item) => item.type === "EXPENSE");
+
+    const incomeTotal = incomeGroup?._sum.amount ?? 0;
+    const expenseTotal = expenseGroup?._sum.amount ?? 0;
+    const incomeCount = incomeGroup?._count._all ?? 0;
+    const expenseCount = expenseGroup?._count._all ?? 0;
+
+    return {
+      incomeTotal,
+      expenseTotal,
+      balance: incomeTotal - expenseTotal,
+      totalCount: incomeCount + expenseCount,
+      byType: [
+        {
+          type: "INCOME",
+          total: incomeTotal,
+          count: incomeCount,
+        },
+        {
+          type: "EXPENSE",
+          total: expenseTotal,
+          count: expenseCount,
+        },
+      ],
+    };
   }
 
   private normalizeCreateInput(userId: string, input: TransactionInput) {
@@ -223,6 +277,38 @@ export class TransactionService {
     const parsed = new Date(parsedDate);
     if (Number.isNaN(parsed.getTime())) {
       throw new AppError("Data invalida", 400);
+    }
+
+    return parsed;
+  }
+
+  private normalizeSummaryInput(input?: TransactionSummaryInput) {
+    const from = this.parseOptionalDate(input?.from, "start");
+    const to = this.parseOptionalDate(input?.to, "end");
+
+    if (from && to && from.getTime() > to.getTime()) {
+      throw new AppError("Periodo invalido: data inicial maior que data final", 400);
+    }
+
+    return {
+      from,
+      to,
+    };
+  }
+
+  private parseOptionalDate(value: string | null | undefined, boundary: "start" | "end") {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalized = value.trim();
+    const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(normalized);
+    const parsedValue =
+      boundary === "end" && isDateOnly ? `${normalized}T23:59:59.999Z` : normalized;
+
+    const parsed = new Date(parsedValue);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new AppError("Data invalida no filtro", 400);
     }
 
     return parsed;

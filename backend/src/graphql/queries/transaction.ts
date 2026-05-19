@@ -9,4 +9,16 @@ export const transactionQueries = {
   transactions: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
     return service(ctx).listByUser(ctx);
   },
+  transactionSummary: async (
+    _: unknown,
+    args: {
+      filter?: {
+        from?: string | null;
+        to?: string | null;
+      };
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).summaryByUser(ctx, args.filter);
+  },
 };
