@@ -50,7 +50,7 @@ main.dashboard {
 
 .dashboard-cards {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 20px;
 }
@@ -72,6 +72,55 @@ main.dashboard {
   margin: 0;
   font-size: 20px;
   font-weight: 700;
+}
+
+.dashboard-summary-filters {
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 16px;
+}
+
+.dashboard-summary-filters h2 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.dashboard-summary-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-summary-filter-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard-type-breakdown {
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.dashboard-type-breakdown h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.dashboard-type-breakdown ul {
+  margin: 0;
+}
+
+.dashboard-type-breakdown li {
+  justify-content: space-between;
+  border-bottom: 1px solid #eaeef2;
+  padding: 8px 0;
+}
+
+.dashboard-type-breakdown li:last-child {
+  border-bottom: 0;
 }
 
 .dashboard-recent {
@@ -171,7 +220,7 @@ li {
 
 @media (max-width: 900px) {
   .dashboard-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .transactions-filter-grid {
@@ -199,6 +248,14 @@ li {
 
   .dashboard-cards {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-summary-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-summary-filter-actions {
+    flex-direction: column;
   }
 
   .dashboard-recent ul li {
