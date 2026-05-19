@@ -49,12 +49,20 @@ type TransactionSummaryNode = {
   };
 };
 
-const today = new Date();
-const toDateInput = (date: Date) => date.toISOString().slice(0, 10);
-const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-const defaultFilter: SummaryFilter = {
-  from: toDateInput(firstDayOfMonth),
-  to: toDateInput(today),
+const toDateInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getCurrentMonthFilter = (): SummaryFilter => {
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  return {
+    from: toDateInput(firstDayOfMonth),
+    to: toDateInput(today),
+  };
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -64,7 +72,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
-  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(defaultFilter);
+  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() => getCurrentMonthFilter());
 
   const { data: categoriesData, loading: categoriesLoading, error: categoriesError } =
     useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
@@ -172,7 +180,7 @@ export const ProtectedPage = () => {
           </label>
         </div>
         <div className="dashboard-summary-filter-actions">
-          <button type="button" onClick={() => setSummaryFilter(defaultFilter)}>
+          <button type="button" onClick={() => setSummaryFilter(getCurrentMonthFilter())}>
             Mês atual
           </button>
           <button type="button" onClick={() => setSummaryFilter({ from: "", to: "" })}>
