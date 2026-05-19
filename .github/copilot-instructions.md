@@ -30,7 +30,7 @@ Adicione as seguintes informações gerais sobre o codebase para reduzir a quant
 - Verifique se cada PR respeita seu escopo. Não aceite mistura de backend/frontend quando o passo não exige isso.
 - Se o schema GraphQL mudou, confirme que o consumidor correspondente foi atualizado no mesmo PR ou que existe justificativa clara.
 - Para mutações, valide autenticação, autorização, ownership por `userId`, validação de entrada e tratamento de erro.
-- Para frontend, valide loading/error states, cache/refetch após mutations, header `Authorization: Bearer` e limpeza de sessão no logout.
+- Para frontend, valide loading/error states, cache/refetch após mutations, header `Authorization: Bearer <token>` e limpeza de sessão no logout.
 - Para Docker/env, valide que `.env.example` documenta as chaves necessárias sem valores reais.
 
 ## Princípios de Julgamento Próprio
