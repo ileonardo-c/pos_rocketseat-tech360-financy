@@ -39,6 +39,28 @@ export class TransactionRepository {
     });
   }
 
+  findAllByUserForSummary(
+    userId: string,
+    filters: {
+      from?: Date;
+      to?: Date;
+    },
+  ): Promise<Array<{ amount: number; type: TransactionType }>> {
+    return this.prisma.transaction.findMany({
+      where: {
+        userId,
+        date: {
+          ...(filters.from ? { gte: filters.from } : {}),
+          ...(filters.to ? { lte: filters.to } : {}),
+        },
+      },
+      select: {
+        amount: true,
+        type: true,
+      },
+    });
+  }
+
   create(
     userId: string,
     data: {

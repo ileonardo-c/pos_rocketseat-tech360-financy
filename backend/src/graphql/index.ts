@@ -41,6 +41,20 @@ export const typeDefs = `
     updatedAt: String!
   }
 
+  type TransactionTypeSummary {
+    type: String!
+    total: Float!
+    count: Int!
+  }
+
+  type TransactionSummary {
+    incomeTotal: Float!
+    expenseTotal: Float!
+    balance: Float!
+    totalCount: Int!
+    byType: [TransactionTypeSummary!]!
+  }
+
   input RegisterInput {
     name: String!
     email: String!
@@ -87,6 +101,11 @@ export const typeDefs = `
     contentType: String!
   }
 
+  input TransactionSummaryFilterInput {
+    from: String
+    to: String
+  }
+
   type UploadPayload {
     url: String!
     key: String!
@@ -98,6 +117,7 @@ export const typeDefs = `
     me: User
     categories: [Category!]!
     transactions: [Transaction!]!
+    transactionSummary(filter: TransactionSummaryFilterInput): TransactionSummary!
   }
 
   type Mutation {
