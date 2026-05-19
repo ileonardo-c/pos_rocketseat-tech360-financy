@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
 import type { GraphQLContext } from "../../context";
@@ -12,13 +13,25 @@ export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
 
   async register(name: string, email: string, password: string) {
-    const existingUser = await this.repository.findByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await this.repository.findByEmail(normalizedEmail);
     if (existingUser) {
       throw new AppError("Email ja cadastrado", 409);
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await this.repository.createUser(name, email, hashed);
+    let user;
+    try {
+      user = await this.repository.createUser(name, normalizedEmail, hashed);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new AppError("Email ja cadastrado", 409);
+      }
+      throw error;
+    }
     const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
     const token = jwt.sign({ sub: user.id }, getRequiredEnv("JWT_SECRET"), {
       ...signOptions,
@@ -28,7 +41,8 @@ export class AuthService {
   }
 
   async login(email: string, password: string) {
-    const user = await this.repository.findByEmail(email);
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
       throw new AppError("Credenciais invalidas", 401);
     }

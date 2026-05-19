@@ -28,7 +28,11 @@ app.get("/health", async () => ({ status: "ok" }));
 
 app.setErrorHandler((error, request, reply) => {
   app.log.error(error);
-  const statusCode = error instanceof AppError ? error.statusCode : 500;
+  const fallbackStatusCode =
+    typeof (error as { statusCode?: unknown }).statusCode === "number"
+      ? (error as { statusCode: number }).statusCode
+      : 500;
+  const statusCode = error instanceof AppError ? error.statusCode : fallbackStatusCode;
   const message = error instanceof AppError ? error.message : "Erro interno";
   return reply.status(statusCode).send({ message });
 });
