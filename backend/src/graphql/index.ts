@@ -32,6 +32,8 @@ export const typeDefs = `
     amount: Float!
     type: String!
     date: String!
+    receiptKey: String
+    receiptUrl: String
     userId: ID!
     categoryId: ID!
     category: Category
@@ -65,6 +67,8 @@ export const typeDefs = `
     type: String!
     date: String!
     categoryId: String!
+    receiptKey: String
+    receiptUrl: String
   }
 
   input UpdateTransactionInput {
@@ -74,6 +78,8 @@ export const typeDefs = `
     type: String
     date: String
     categoryId: String
+    receiptKey: String
+    receiptUrl: String
   }
 
   input UploadInput {

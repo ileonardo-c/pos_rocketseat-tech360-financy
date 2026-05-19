@@ -16,6 +16,8 @@ export const transactionMutations = {
         type: "INCOME" | "EXPENSE";
         date: string;
         categoryId: string;
+        receiptKey?: string | null;
+        receiptUrl?: string | null;
       };
     },
     ctx: GraphQLContext,
@@ -27,6 +29,8 @@ export const transactionMutations = {
       type: args.input.type,
       date: args.input.date,
       categoryId: args.input.categoryId,
+      receiptKey: args.input.receiptKey,
+      receiptUrl: args.input.receiptUrl,
     });
   },
 
@@ -41,6 +45,8 @@ export const transactionMutations = {
         type?: "INCOME" | "EXPENSE";
         date?: string;
         categoryId?: string;
+        receiptKey?: string | null;
+        receiptUrl?: string | null;
       };
     },
     ctx: GraphQLContext,
