@@ -1,50 +1,94 @@
 # AGENTS.md
 
 ## Objective
-This repository is a staged monorepo for the Financy challenge. Deliverables are separated in sequential PRs, one domain per PR, to reduce review scope.
 
-## Priorities for Copilot / Reviews
-- Prefer minimal, scoped changes in each PR.
-- Keep backend and frontend changes in separate PRs unless the step explicitly depends on both.
-- Use clear GraphQL interfaces and keep user data isolated by user.
+Staged monorepo with deliverables separated into sequential PRs — one domain per PR — to keep review scope minimal and focused.
 
-## Local execution baseline
-- Backend package: `backend`
-- Frontend package: `frontend`
-- Root includes `docker-compose.yml` with Postgres and MinIO services.
+---
 
-## Validation expectations per PR
-- Monorepo PR: workspace and infra bootstrap only.
-- Backend PR: backend starts (`/health`, `/graphql`) and `.env.example` present.
-- Auth/category/transaction/frontend PRs: functional isolation by user and CRUD behavior.
+## Review Priorities
 
-## PR Comment Standard (gh)
-- When using `gh pr comment` or review replies, publish Markdown-renderable text only.
-- Validate preview text before submit:
-  - no literal `\n`
-  - no corrupted UTF-8 characters
-  - no local absolute paths, tokens, or secrets
-- For re-review triggers, append mentions when applicable: `@copilot` and `@codex review`.
-- Before publishing PR body:
-  - the header line must resolve to exactly one of: `Closes #<número>` or `Refs #<número deste PR>`
-  - never leave both placeholders unfilled — pick one and remove the other
-  - use `gh pr create --body-file` with UTF-8 text; never interpolate body via shell substitution
-- For Codex connector stability:
-  - after opening PR, wait a short sync interval before first `@codex review`
-  - if error mentions missing `refs/pull/<n>/head`, validate with `git ls-remote origin refs/pull/<n>/*` and retry `@codex review` after a new comment or push
+- Prefer minimal, scoped changes per PR.
+- Keep backend and frontend changes in separate PRs unless a step explicitly requires both.
+- Prefix every finding with its severity label. Only raise findings at P0, P1, or P2.
+- If no relevant issue is found, reply only: `Nenhum problema relevante encontrado.`
+- Do not explain agent general behavior, add next-steps sections, or close with open-ended questions.
 
-## Language and response style
-- The default language for responses, review comments, suggestions, and summaries must be Brazilian Portuguese (`pt-BR`).
-- Respond in a direct, objective, and complete way.
-- Focus only on the question, task, or issue identified.
-- Do not include follow-up suggestions, extra offers, or conversation-extending phrases such as "If you want..." or "I can also help with...".
-- Avoid filler, repetition, and generic explanations.
-- End the response immediately after the essential content.
+### Severity Levels
 
-## Review guidelines
-- In Pull Request reviews, comment only on relevant issues.
-- Prioritize P0 and P1 risks: bugs, regressions, security failures, API contract breaks, data issues, critical performance problems, or business-rule inconsistencies.
-- If there is no relevant issue, reply only: "Nenhum problema relevante encontrado."
-- Do not explain Codex general behavior.
-- Do not add a next-steps section, invitation for a new task, or a closing question.
-- Write all review comments in Brazilian Portuguese (`pt-BR`).
+| Level | Meaning | Examples |
+|-------|---------|---------|
+| `P0` | Blocks delivery — must be fixed before merge | data loss, broken auth, crash on startup, exposed secrets |
+| `P1` | Breaks functionality or security — fix in this PR | wrong business logic, API contract break, regression, missing auth guard |
+| `P2` | Important improvement — fix or document before closing the domain | missing index on queried column, unhandled edge case, misleading error message |
+
+> Do not raise style preferences, minor naming choices, or speculative future concerns as findings.
+
+---
+
+## Language and Response Style
+
+- All responses, review comments, suggestions, and summaries must be written in Brazilian Portuguese (`pt-BR`).
+- Always use correct pt-BR diacritics. Never drop accents.
+  - ✅ `Correção`, `Validação`, `Configuração`, `Autenticação`, `Solução`
+  - ❌ `Correcao`, `Validacao`, `Configuracao`, `Autenticacao`, `Solucao`
+- Be direct, objective, and complete. Address only what was asked or identified.
+- No filler, no repetition, no generic explanations.
+- No follow-up offers or conversation-extending phrases (`"If you want..."`, `"I can also..."`).
+- End immediately after the essential content.
+
+---
+
+## PR Comment Format
+
+### Main PR comment (new thread)
+
+Use exactly these four sections:
+
+```
+## Contexto
+<reference to the PR, issue, or review thread being addressed>
+
+## Causa
+<root cause in 1–2 lines>
+
+## Correção
+<what changed and why>
+
+## Validação
+<evidence: tests passing, threads resolved, branch updated, next step if any>
+```
+
+### Reply in an existing review thread
+
+Use short prose — no headers:
+
+```
+Concordo com o risco. Correção aplicada: <summary>. <evidence if relevant>.
+```
+
+---
+
+## `gh` CLI Standards
+
+- Publish Markdown-renderable text only via `gh pr comment` or review replies.
+- Before submitting any comment or PR body, validate:
+  - No literal `\n` sequences.
+  - No corrupted or missing UTF-8 characters — all pt-BR accents must be present.
+  - No local absolute paths, tokens, or secrets.
+- Use `gh pr create --body-file` with a UTF-8 (no BOM) file. Never interpolate the body via shell substitution.
+- The PR body header must resolve to exactly one of:
+  - `Closes #<n>` — if this PR closes the referenced issue.
+  - `Refs #<n>` — if it references without closing.
+  - Never leave both placeholders; pick one and remove the other.
+
+---
+
+## Automated Review Triggers
+
+- **Triggering:** Mention `@copilot` and `@codex review` in a comment to request a new automated pass.
+- **Initial Sync:** Allow standard synchronization time after PR creation before requesting the first review.
+- **Error Handling (`missing refs/pull/<n>/head`):**
+  1. Validate the remote reference: `git ls-remote origin refs/pull/<n>/*`
+  2. Update the PR state via a new push or comment.
+  3. Re-trigger the review.
