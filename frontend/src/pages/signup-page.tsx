@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth/auth-provider";
 
@@ -24,7 +24,12 @@ export const SignupPage = () => {
       >
         <label>
           Nome
-          <input required type="text" value={name} onChange={(event) => setName(event.target.value)} />
+          <input
+            required
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
         </label>
         <label>
           Email
@@ -51,7 +56,7 @@ export const SignupPage = () => {
         </button>
       </form>
       <p>
-        Ja possui conta? <Link to="/">Entrar</Link>
+        Já possui conta? <Link to="/">Entrar</Link>
       </p>
     </main>
   );

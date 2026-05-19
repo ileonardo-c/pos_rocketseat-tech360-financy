@@ -1,4 +1,6 @@
-> **Closes #** <!-- Número da issue relacionada. Ex: Closes #42 -->
+> <!-- Escolha UMA linha abaixo e apague a outra: -->
+> **Closes #**<!-- número da issue dedicada. Ex: Closes #42 -->
+> **Refs #**<!-- número deste PR, se não houver issue. Ex: Refs #42 -->
 
 ## 📝 Descrição
 <!-- 

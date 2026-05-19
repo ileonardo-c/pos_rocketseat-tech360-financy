@@ -14,8 +14,12 @@ export const ProtectedPage = () => {
       <p>Bem-vindo, {user.name}</p>
       <nav>
         <Link to="/categories">Categorias</Link>
+        {" | "}
+        <Link to="/transactions">Transações</Link>
       </nav>
-      <button onClick={signout}>Sair</button>
+      <button onClick={signout} type="button">
+        Sair
+      </button>
     </main>
   );
 };

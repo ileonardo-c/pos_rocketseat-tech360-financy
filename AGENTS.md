@@ -20,12 +20,18 @@ This repository is a staged monorepo for the Financy challenge. Deliverables are
 
 ## PR Comment Standard (gh)
 - When using `gh pr comment` or review replies, publish Markdown-renderable text only.
-- Use this comment order: `Contexto`, `Causa raiz`, `Correção aplicada`, `Validação`, `Próximo passo`.
 - Validate preview text before submit:
   - no literal `\n`
   - no corrupted UTF-8 characters
   - no local absolute paths, tokens, or secrets
 - For re-review triggers, append mentions when applicable: `@copilot` and `@codex review`.
+- Before publishing PR body:
+  - the header line must resolve to exactly one of: `Closes #<número>` or `Refs #<número deste PR>`
+  - never leave both placeholders unfilled — pick one and remove the other
+  - use `gh pr create --body-file` with UTF-8 text; never interpolate body via shell substitution
+- For Codex connector stability:
+  - after opening PR, wait a short sync interval before first `@codex review`
+  - if error mentions missing `refs/pull/<n>/head`, validate with `git ls-remote origin refs/pull/<n>/*` and retry `@codex review` after a new comment or push
 
 ## Language and response style
 - The default language for responses, review comments, suggestions, and summaries must be Brazilian Portuguese (`pt-BR`).
