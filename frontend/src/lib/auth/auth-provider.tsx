@@ -97,8 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signout = useCallback(() => {
     localStorage.removeItem("financy.token");
     setUser(null);
-    client.resetStore();
-    navigate("/signup");
+    void client.clearStore();
+    navigate("/");
   }, [client, navigate]);
 
   useEffect(() => {
