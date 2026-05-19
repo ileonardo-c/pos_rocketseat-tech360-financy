@@ -36,6 +36,16 @@ type TransactionSummary = {
   byType: TransactionTypeSummary[];
 };
 
+type TransactionCategorySummary = {
+  categoryId: string;
+  categoryName: string;
+  total: number;
+  count: number;
+  incomeTotal: number;
+  expenseTotal: number;
+  balance: number;
+};
+
 export class TransactionService {
   constructor(private readonly repository: TransactionRepository) {}
 
@@ -127,6 +137,70 @@ export class TransactionService {
         },
       ],
     };
+  }
+
+  async summaryByCategory(
+    ctx: GraphQLContext,
+    input?: TransactionSummaryInput,
+    limitInput?: number | null,
+  ): Promise<TransactionCategorySummary[]> {
+    if (!ctx.userId) {
+      throw new AppError("Nao autenticado", 401);
+    }
+
+    const filters = this.normalizeSummaryInput(input);
+    const limit = this.normalizeSummaryLimit(limitInput);
+    const grouped = await this.repository.groupSummaryByCategoryForUser(ctx.userId, filters);
+
+    const categoryTotals = new Map<
+      string,
+      {
+        categoryId: string;
+        incomeTotal: number;
+        expenseTotal: number;
+        count: number;
+      }
+    >();
+
+    for (const item of grouped) {
+      const current = categoryTotals.get(item.categoryId) ?? {
+        categoryId: item.categoryId,
+        incomeTotal: 0,
+        expenseTotal: 0,
+        count: 0,
+      };
+
+      const amount = item._sum.amount ?? 0;
+      if (item.type === "INCOME") {
+        current.incomeTotal += amount;
+      } else {
+        current.expenseTotal += amount;
+      }
+
+      current.count += item._count._all;
+      categoryTotals.set(item.categoryId, current);
+    }
+
+    const categoryIds = Array.from(categoryTotals.keys());
+    const categories = await this.repository.findCategoriesByIdsForUser(ctx.userId, categoryIds);
+    const categoriesById = new Map(categories.map((category) => [category.id, category.name]));
+
+    return Array.from(categoryTotals.values())
+      .map((item) => {
+        const categoryName = categoriesById.get(item.categoryId) ?? "Categoria removida";
+        const total = item.incomeTotal + item.expenseTotal;
+        return {
+          categoryId: item.categoryId,
+          categoryName,
+          total,
+          count: item.count,
+          incomeTotal: item.incomeTotal,
+          expenseTotal: item.expenseTotal,
+          balance: item.incomeTotal - item.expenseTotal,
+        };
+      })
+      .sort((a, b) => b.total - a.total)
+      .slice(0, limit);
   }
 
   private normalizeCreateInput(userId: string, input: TransactionInput) {
@@ -294,6 +368,18 @@ export class TransactionService {
       from,
       to,
     };
+  }
+
+  private normalizeSummaryLimit(limitInput?: number | null) {
+    if (limitInput === undefined || limitInput === null) {
+      return 5;
+    }
+
+    if (!Number.isInteger(limitInput) || limitInput < 1 || limitInput > 50) {
+      throw new AppError("Limite invalido: use um inteiro entre 1 e 50", 400);
+    }
+
+    return limitInput;
   }
 
   private parseOptionalDate(value: string | null | undefined, boundary: "start" | "end") {

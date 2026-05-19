@@ -21,4 +21,17 @@ export const transactionQueries = {
   ) => {
     return service(ctx).summaryByUser(ctx, args.filter);
   },
+  transactionCategorySummary: async (
+    _: unknown,
+    args: {
+      filter?: {
+        from?: string | null;
+        to?: string | null;
+      };
+      limit?: number | null;
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).summaryByCategory(ctx, args.filter, args.limit);
+  },
 };
