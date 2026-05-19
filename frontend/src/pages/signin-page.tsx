@@ -46,7 +46,7 @@ export const SigninPage = () => {
         </button>
       </form>
       <p>
-        Nao tem conta? <Link to="/signup">Cadastrar</Link>
+        Não tem conta? <Link to="/signup">Cadastrar</Link>
       </p>
     </main>
   );

@@ -15,9 +15,11 @@ export const ProtectedPage = () => {
       <nav>
         <Link to="/categories">Categorias</Link>
         {" | "}
-        <Link to="/transactions">Transacoes</Link>
+        <Link to="/transactions">Transações</Link>
       </nav>
-      <button onClick={signout}>Sair</button>
+      <button onClick={signout} type="button">
+        Sair
+      </button>
     </main>
   );
 };
