@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { GraphQLContext } from "../../context";
-import { AuthRepository } from "./auth-repository";
+import type { SignOptions } from "jsonwebtoken";
+import type { GraphQLContext } from "../../context";
+import type { AuthRepository } from "./auth-repository";
 
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
@@ -12,8 +13,9 @@ export class AuthService {
   async register(name: string, email: string, password: string) {
     const hashed = await bcrypt.hash(password, 10);
     const user = await this.repository.createUser(name, email, hashed);
+    const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+      ...signOptions,
     });
 
     return { token, user: { id: user.id, name: user.name, email: user.email } };
@@ -30,8 +32,9 @@ export class AuthService {
       throw new Error("Credenciais inválidas");
     }
 
+    const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
+      ...signOptions,
     });
 
     return { token, user: { id: user.id, name: user.name, email: user.email } };

@@ -1,10 +1,11 @@
-import { authMutations } from "@/graphql/mutations/auth";
-import { authQueries } from "@/graphql/queries/auth";
-import { categoryMutations } from "@/graphql/mutations/category";
-import { categoryQueries } from "@/graphql/queries/category";
-import { storageMutations } from "@/graphql/mutations/storage";
-import { transactionMutations } from "@/graphql/mutations/transaction";
-import { transactionQueries } from "@/graphql/queries/transaction";
+import type { Transaction } from "@prisma/client";
+import { authMutations } from "./mutations/auth";
+import { categoryMutations } from "./mutations/category";
+import { storageMutations } from "./mutations/storage";
+import { transactionMutations } from "./mutations/transaction";
+import { authQueries } from "./queries/auth";
+import { categoryQueries } from "./queries/category";
+import { transactionQueries } from "./queries/transaction";
 
 export const typeDefs = `
   type User {
@@ -119,8 +120,8 @@ export const resolvers = {
     ...storageMutations,
   },
   Transaction: {
-    date: ({ date }) => date.toISOString(),
-    createdAt: ({ createdAt }) => createdAt.toISOString(),
-    updatedAt: ({ updatedAt }) => updatedAt.toISOString(),
+    date: ({ date }: Transaction) => date.toISOString(),
+    createdAt: ({ createdAt }: Transaction) => createdAt.toISOString(),
+    updatedAt: ({ updatedAt }: Transaction) => updatedAt.toISOString(),
   },
 };
