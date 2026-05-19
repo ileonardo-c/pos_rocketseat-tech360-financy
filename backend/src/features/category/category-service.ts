@@ -1,4 +1,5 @@
 import type { GraphQLContext } from "../../context";
+import { AppError } from "../../lib/errors";
 import { CategoryRepository } from "./category-repository";
 
 export class CategoryService {
@@ -6,7 +7,7 @@ export class CategoryService {
 
   async listByUser(ctx: GraphQLContext) {
     if (!ctx.userId) {
-      throw new Error("Nao autenticado");
+      throw new AppError("Nao autenticado", 401);
     }
 
     return this.repository.findAllByUser(ctx.userId);
@@ -14,12 +15,12 @@ export class CategoryService {
 
   async create(ctx: GraphQLContext, name: string) {
     if (!ctx.userId) {
-      throw new Error("Nao autenticado");
+      throw new AppError("Nao autenticado", 401);
     }
 
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new Error("Nome da categoria eh obrigatorio");
+      throw new AppError("Nome da categoria eh obrigatorio", 400);
     }
 
     return this.repository.create(ctx.userId, normalizedName);
@@ -27,12 +28,12 @@ export class CategoryService {
 
   async update(ctx: GraphQLContext, id: string, name?: string) {
     if (!ctx.userId) {
-      throw new Error("Nao autenticado");
+      throw new AppError("Nao autenticado", 401);
     }
 
     const category = await this.repository.findByIdAndUser(id, ctx.userId);
     if (!category) {
-      throw new Error("Categoria nao encontrada");
+      throw new AppError("Categoria nao encontrada", 404);
     }
 
     if (name === undefined) {
@@ -41,7 +42,7 @@ export class CategoryService {
 
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new Error("Nome da categoria eh obrigatorio");
+      throw new AppError("Nome da categoria eh obrigatorio", 400);
     }
 
     return this.repository.update(id, normalizedName);
@@ -49,7 +50,7 @@ export class CategoryService {
 
   async delete(ctx: GraphQLContext, id: string) {
     if (!ctx.userId) {
-      throw new Error("Nao autenticado");
+      throw new AppError("Nao autenticado", 401);
     }
 
     const category = await this.repository.findByIdAndUser(id, ctx.userId);

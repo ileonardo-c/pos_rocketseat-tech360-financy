@@ -2,6 +2,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 
 import type { GraphQLContext } from "../../context";
 import { StorageService } from "../../features/storage/storage-service";
+import { AppError } from "../../lib/errors";
 
 const createS3Client = () => {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
@@ -30,7 +31,7 @@ export const storageMutations = {
     ctx: GraphQLContext,
   ) => {
     if (!ctx.userId) {
-      throw new Error("Nao autenticado");
+      throw new AppError("Nao autenticado", 401);
     }
 
     const s3Client = createS3Client();
