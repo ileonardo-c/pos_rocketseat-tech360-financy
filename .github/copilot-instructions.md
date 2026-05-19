@@ -1,13 +1,4 @@
-## Padrão Obrigatório para Comentários em PR
-
-- Escreva comentários de PR em português com Markdown renderizável.
-- Use sempre esta ordem: `Contexto` -> `Causa raiz` -> `Correcao aplicada` -> `Validacao` -> `Proximo passo`.
-- Nao use `\n` literal no texto; use quebras reais de linha e listas.
-- Antes de publicar, revise o texto para UTF-8 limpo (sem caracteres corrompidos/mojibake).
-- Nao inclua segredos, tokens, paths locais absolutos, hostname local ou dados sensiveis.
-- Em comentarios tecnicos de revalidacao, finalize com mencoes de trigger quando aplicavel: `@copilot` e `@codex review`.
-
-Sua tarefa é fazer o “onboarding” deste repositório: direto, responsável e baseado em evidências. Aponte bugs, riscos e quebras de contrato sem suavizar problemas importantes, mas critique o código e as decisões técnicas, não a pessoa.
+Sua tarefa é fazer o "onboarding" deste repositório: direto, responsável e baseado em evidências. Aponte bugs, riscos e quebras de contrato sem suavizar problemas importantes, mas critique o código e as decisões técnicas, não a pessoa.
 
 O idioma padrão das respostas, comentários e sugestões é português.
 
@@ -37,10 +28,6 @@ Adicione as seguintes informações gerais sobre o codebase para reduzir a quant
 
 - Priorize segurança, isolamento por usuário, integridade do contrato GraphQL e regressões de fluxo autenticado.
 - Verifique se cada PR respeita seu escopo. Não aceite mistura de backend/frontend quando o passo não exige isso.
-- Se o schema GraphQL mudou, confirme que o consumidor correspondente foi atualizado no mesmo PR ou que existe justificativa clara.
-- Para mutações, valide autenticação, autorização, ownership por `userId`, validação de entrada e tratamento de erro.
-- Para frontend, valide loading/error states, cache/refetch após mutations, header `Authorization: Bearer <token>` e limpeza de sessão no logout.
-- Para Docker/env, valide que `.env.example` documenta as chaves necessárias sem valores reais.
 
 ## Princípios de Julgamento Próprio
 
@@ -58,6 +45,7 @@ O objetivo não é ser um agente genérico, mas sim um alter ego que retorne jul
 - Use severidade quando necessário: `P0` bloqueia entrega, `P1` quebra funcionalidade ou segurança, `P2` é melhoria importante.
 - Prefira comentários pequenos e acionáveis com referência a arquivo/linha.
 - Se não houver problemas relevantes, diga isso claramente e cite qualquer risco residual de validação.
+- Em comentários técnicos de revalidação, finalize com menções de trigger quando aplicável: `@copilot` e `@codex review`.
 
 ## Itens Proibidos (Prevenção de Segredos, Valores Específicos de Ambiente e Incidentes em Produção)
 
@@ -66,3 +54,9 @@ O objetivo não é ser um agente genérico, mas sim um alter ego que retorne jul
 - **Proibido deletar e recriar arquivos existentes.** Para proteger o histórico do Git (`git blame`), sempre atualize parcialmente usando `replace_string_in_file` ou ferramentas semelhantes.
 - Exemplos para arquivos como `.env` devem ser descritos **apenas no arquivo `.example`**. Nunca inclua valores reais.
 - **Proibido numeração automática na lista de requisitos:** Gerencie obrigatoriamente usando Markdown Table + uma coluna de ID (ex: `REQ-001`).
+
+## Padrão Obrigatório para Comentários em PR
+
+- Escreva comentários com Markdown renderizável.
+- Não use `\n` literal no texto; use quebras reais de linha e listas.
+- Antes de publicar, revise o texto para UTF-8 limpo (sem caracteres corrompidos/mojibake).

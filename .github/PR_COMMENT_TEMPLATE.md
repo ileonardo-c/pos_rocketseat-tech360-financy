@@ -4,17 +4,17 @@
 ## Causa raiz
 - 
 
-## Correcao aplicada
+## Correção aplicada
 - Commit: `<hash>`
 - 
 
-## Validacao
+## Validação
 - Check afetado: `<check-name>`
 - Resultado: `<pass|pending|fail>`
-- Evidencia:
+- Evidência:
   - 
 
-## Proximo passo
+## Próximo passo
 - 
 
 @copilot

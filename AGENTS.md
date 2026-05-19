@@ -20,7 +20,7 @@ This repository is a staged monorepo for the Financy challenge. Deliverables are
 
 ## PR Comment Standard (gh)
 - When using `gh pr comment` or review replies, publish Markdown-renderable text only.
-- Use this comment order: `Contexto`, `Causa raiz`, `Correcao aplicada`, `Validacao`, `Proximo passo`.
+- Use this comment order: `Contexto`, `Causa raiz`, `Correção aplicada`, `Validação`, `Próximo passo`.
 - Validate preview text before submit:
   - no literal `\n`
   - no corrupted UTF-8 characters
