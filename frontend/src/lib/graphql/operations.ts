@@ -71,3 +71,64 @@ export const DELETE_CATEGORY_MUTATION = gql`
     deleteCategory(id: $id)
   }
 `;
+
+export const TRANSACTIONS_QUERY = gql`
+  query Transactions {
+    transactions {
+      id
+      title
+      description
+      amount
+      type
+      date
+      categoryId
+      category {
+        id
+        name
+      }
+    }
+  }
+`;
+
+export const CREATE_TRANSACTION_MUTATION = gql`
+  mutation CreateTransaction($input: CreateTransactionInput!) {
+    createTransaction(input: $input) {
+      id
+      title
+      description
+      amount
+      type
+      date
+      categoryId
+    }
+  }
+`;
+
+export const UPDATE_TRANSACTION_MUTATION = gql`
+  mutation UpdateTransaction($id: ID!, $input: UpdateTransactionInput!) {
+    updateTransaction(id: $id, input: $input) {
+      id
+      title
+      description
+      amount
+      type
+      date
+      categoryId
+    }
+  }
+`;
+
+export const DELETE_TRANSACTION_MUTATION = gql`
+  mutation DeleteTransaction($id: ID!) {
+    deleteTransaction(id: $id)
+  }
+`;
+
+export const CATEGORIES_FOR_SELECTOR_QUERY = gql`
+  query CategoriesForSelector {
+    categories {
+      id
+      name
+    }
+  }
+`;
