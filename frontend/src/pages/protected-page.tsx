@@ -51,6 +51,9 @@ export const ProtectedPage = () => {
 
   const categories = categoriesData?.categories ?? [];
   const transactions = transactionsData?.transactions ?? [];
+  const isInitialLoading =
+    (categoriesLoading && categoriesData === undefined) ||
+    (transactionsLoading && transactionsData === undefined);
 
   const { incomeTotal, expenseTotal, balance } = useMemo(() => {
     const totals = transactions.reduce(
@@ -74,7 +77,7 @@ export const ProtectedPage = () => {
 
   const latestTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
-  if ((categoriesLoading || transactionsLoading) && categories.length === 0 && transactions.length === 0) {
+  if (isInitialLoading) {
     return (
       <main className="dashboard">
         <header className="dashboard-header">
