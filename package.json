@@ -5,7 +5,9 @@
   "scripts": {
     "biome": "biome check .",
     "format": "biome format .",
-    "check": "biome check ."
+    "check": "biome check .",
+    "dev:backend": "pnpm --filter backend dev",
+    "build:backend": "pnpm --filter backend build"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3"
