@@ -1,0 +1,24 @@
+body {
+  margin: 0;
+  font-family: Inter, Arial, sans-serif;
+}
+
+main {
+  padding: 24px;
+  max-width: 420px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+  gap: 4px;
+}
+
+input {
+  padding: 8px;
+}
+
+button {
+  padding: 8px 16px;
+}
