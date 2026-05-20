@@ -49,7 +49,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "Backend nao respondeu /health/ready em 120s"
+          echo "Backend did not respond at /health/ready after 120s"
           exit 1
 
       - name: Wait for frontend
@@ -61,7 +61,7 @@ jobs:
             fi
             sleep 2
           done
-          echo "Frontend nao respondeu em 120s"
+          echo "Frontend did not respond after 120s"
           exit 1
 
       - name: Run GraphQL smoke flow
