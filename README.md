@@ -52,6 +52,13 @@ Desafio fullstack de organização financeira com:
 - `pnpm compose:logs` acompanha logs da stack.
 - `pnpm compose:down` encerra os containers.
 
+### Pipelines de CI
+
+- `ci`: instala dependências, roda `pnpm check`, gera Prisma Client e valida build de backend/frontend.
+- `docker-smoke`: sobe a stack completa com `docker compose` e valida disponibilidade de:
+  - `http://localhost:4000/health`
+  - `http://localhost:5173`
+
 ## Governança
 
 - Licença: MIT

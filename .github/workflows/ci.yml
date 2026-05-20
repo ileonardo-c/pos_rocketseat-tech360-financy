@@ -34,8 +34,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Biome check
+        run: pnpm check
+
       - name: Generate Prisma client
-        run: pnpm --filter backend prisma:generate
+        run: pnpm --filter @financy/backend prisma:generate
 
       - name: Build backend
         run: pnpm build:backend
