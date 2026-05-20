@@ -1,13 +1,16 @@
-import { Navigate, Route, Routes } from "react-router-dom";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { CategoriesPage } from "@/pages/categories-page";
+import { ProtectedPage } from "@/pages/protected-page";
 import { SigninPage } from "@/pages/signin-page";
 import { SignupPage } from "@/pages/signup-page";
-import { ProtectedPage } from "@/pages/protected-page";
 import { TransactionsPage } from "@/pages/transactions-page";
 
-const RequireAuth = ({ isAuthenticated, children }: { isAuthenticated: boolean; children: JSX.Element }) => {
+const RequireAuth = ({
+  isAuthenticated,
+  children,
+}: { isAuthenticated: boolean; children: JSX.Element }) => {
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }

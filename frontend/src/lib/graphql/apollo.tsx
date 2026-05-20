@@ -1,4 +1,9 @@
-import { ApolloClient, ApolloProvider as ApolloProviderBase, InMemoryCache, createHttpLink } from "@apollo/client";
+import {
+  ApolloClient,
+  ApolloProvider as ApolloProviderBase,
+  InMemoryCache,
+  createHttpLink,
+} from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { onError } from "@apollo/client/link/error";
 import { useMemo } from "react";
@@ -43,7 +48,9 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
   }
 
   const statusCode =
-    "statusCode" in (networkError ?? {}) ? Number((networkError as { statusCode?: number }).statusCode) : undefined;
+    "statusCode" in (networkError ?? {})
+      ? Number((networkError as { statusCode?: number }).statusCode)
+      : undefined;
   if (statusCode === 401) {
     emitSessionExpired();
   }

@@ -41,7 +41,11 @@ const resolveAuthErrorMessage = (error: unknown) => {
     if (message.includes("invalid") || message.includes("credenciais")) {
       return "E-mail ou senha inválidos.";
     }
-    if (message.includes("already exists") || message.includes("já existe") || message.includes("duplicate")) {
+    if (
+      message.includes("already exists") ||
+      message.includes("já existe") ||
+      message.includes("duplicate")
+    ) {
       return "Este e-mail já está em uso.";
     }
   }
