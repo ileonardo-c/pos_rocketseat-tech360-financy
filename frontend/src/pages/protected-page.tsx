@@ -4,6 +4,7 @@ import {
   DASHBOARD_TRANSACTIONS_QUERY,
   DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY,
   DASHBOARD_TRANSACTION_SUMMARY_QUERY,
+  DASHBOARD_TRANSACTION_TIMELINE_QUERY,
 } from "@/lib/graphql/operations";
 import { useQuery } from "@apollo/client";
 import { useMemo, useState } from "react";
@@ -62,6 +63,19 @@ type TransactionCategorySummaryNode = {
   }>;
 };
 
+type TimelineInterval = "DAY" | "MONTH";
+
+type TransactionTimelineNode = {
+  transactionTimeline: Array<{
+    period: string;
+    incomeTotal: number;
+    expenseTotal: number;
+    balance: number;
+    cumulativeBalance: number;
+    count: number;
+  }>;
+};
+
 const buildTransactionsPath = (params: {
   query?: string;
   type?: "ALL" | "INCOME" | "EXPENSE";
@@ -115,6 +129,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
   const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() => getCurrentMonthFilter());
+  const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>("DAY");
 
   const {
     data: categoriesData,
@@ -157,6 +172,20 @@ export const ProtectedPage = () => {
       limit: 5,
     },
   });
+  const {
+    data: timelineData,
+    loading: timelineLoading,
+    error: timelineError,
+  } = useQuery<TransactionTimelineNode>(DASHBOARD_TRANSACTION_TIMELINE_QUERY, {
+    fetchPolicy: "cache-and-network",
+    variables: {
+      filter: {
+        from: summaryFilter.from || null,
+        to: summaryFilter.to || null,
+      },
+      interval: timelineInterval,
+    },
+  });
 
   if (!user) {
     return <div>Fazendo autenticação...</div>;
@@ -168,7 +197,8 @@ export const ProtectedPage = () => {
     (categoriesLoading && categoriesData === undefined) ||
     (transactionsLoading && transactionsData === undefined) ||
     (summaryLoading && summaryData === undefined) ||
-    (categorySummaryLoading && categorySummaryData === undefined);
+    (categorySummaryLoading && categorySummaryData === undefined) ||
+    (timelineLoading && timelineData === undefined);
 
   const summary = summaryData?.transactionSummary ?? {
     incomeTotal: 0,
@@ -178,6 +208,7 @@ export const ProtectedPage = () => {
     byType: [],
   };
   const categorySummary = categorySummaryData?.transactionCategorySummary ?? [];
+  const timelinePoints = timelineData?.transactionTimeline ?? [];
   const totalCategoryVolume = useMemo(
     () => categorySummary.reduce((accumulator, category) => accumulator + category.total, 0),
     [categorySummary],
@@ -216,7 +247,7 @@ export const ProtectedPage = () => {
         <Link to="/transactions">Gerenciar transações</Link>
       </nav>
 
-      {categoriesError || transactionsError || summaryError || categorySummaryError ? (
+      {categoriesError || transactionsError || summaryError || categorySummaryError || timelineError ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
 
@@ -335,6 +366,58 @@ export const ProtectedPage = () => {
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="dashboard-timeline">
+        <header className="dashboard-timeline-header">
+          <h2>Evolução financeira</h2>
+          <div className="dashboard-timeline-interval">
+            <button
+              className={timelineInterval === "DAY" ? "is-active" : ""}
+              type="button"
+              onClick={() => setTimelineInterval("DAY")}
+            >
+              Diário
+            </button>
+            <button
+              className={timelineInterval === "MONTH" ? "is-active" : ""}
+              type="button"
+              onClick={() => setTimelineInterval("MONTH")}
+            >
+              Mensal
+            </button>
+          </div>
+        </header>
+        {timelinePoints.length === 0 ? (
+          <p>Sem dados para o período selecionado.</p>
+        ) : (
+          <div className="dashboard-timeline-table-wrap">
+            <table className="dashboard-timeline-table">
+              <thead>
+                <tr>
+                  <th>Período</th>
+                  <th>Receitas</th>
+                  <th>Despesas</th>
+                  <th>Saldo</th>
+                  <th>Saldo acumulado</th>
+                  <th>Lançamentos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {timelinePoints.map((point) => (
+                  <tr key={point.period}>
+                    <td>{point.period}</td>
+                    <td>{currencyFormatter.format(point.incomeTotal)}</td>
+                    <td>{currencyFormatter.format(point.expenseTotal)}</td>
+                    <td>{currencyFormatter.format(point.balance)}</td>
+                    <td>{currencyFormatter.format(point.cumulativeBalance)}</td>
+                    <td>{point.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <section className="dashboard-category-ranking">
