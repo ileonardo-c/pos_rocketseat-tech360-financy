@@ -49,7 +49,11 @@ jobs:
             const mergedHeads = [
               ...new Set(
                 closedPulls
-                  .filter((pull) => pull.merged_at)
+                  .filter(
+                    (pull) =>
+                      pull.merged_at &&
+                      pull.head?.repo?.full_name?.toLowerCase() === `${owner}/${repo}`.toLowerCase(),
+                  )
                   .map((pull) => pull.head.ref)
                   .filter((head) => Boolean(head) && head !== defaultBranch),
               ),
