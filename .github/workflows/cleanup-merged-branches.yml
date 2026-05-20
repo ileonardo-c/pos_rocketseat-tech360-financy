@@ -1,0 +1,130 @@
+name: cleanup-merged-branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Executa sem deletar branches"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+  schedule:
+    - cron: "0 5 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged branches without open PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const defaultBranch = context.payload.repository?.default_branch ?? "main";
+            const dryRun = (context.payload.inputs?.dry_run ?? "false") === "true";
+
+            const openPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const openHeads = new Set(openPulls.map((pull) => pull.head.ref));
+
+            const closedPulls = await github.paginate(github.rest.pulls.list, {
+              owner,
+              repo,
+              state: "closed",
+              base: defaultBranch,
+              per_page: 100,
+            });
+            const mergedHeads = [
+              ...new Set(
+                closedPulls
+                  .filter(
+                    (pull) =>
+                      pull.merged_at &&
+                      pull.head?.repo?.full_name?.toLowerCase() === `${owner}/${repo}`.toLowerCase(),
+                  )
+                  .map((pull) => pull.head.ref)
+                  .filter((head) => Boolean(head) && head !== defaultBranch),
+              ),
+            ];
+
+            const deleted = [];
+            const skipped = [];
+
+            for (const head of mergedHeads) {
+              if (openHeads.has(head)) {
+                skipped.push({ head, reason: "branch com PR aberto" });
+                continue;
+              }
+
+              try {
+                await github.rest.git.getRef({
+                  owner,
+                  repo,
+                  ref: `heads/${head}`,
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  skipped.push({ head, reason: "branch já removida" });
+                  continue;
+                }
+                throw error;
+              }
+
+              const branchInfo = await github.rest.repos.getBranch({
+                owner,
+                repo,
+                branch: head,
+              });
+
+              if (branchInfo.data.protected) {
+                skipped.push({ head, reason: "branch protegida" });
+                continue;
+              }
+
+              if (dryRun) {
+                deleted.push({ head, mode: "dry-run" });
+                continue;
+              }
+
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `heads/${head}`,
+              });
+              deleted.push({ head, mode: "deleted" });
+            }
+
+            core.info(`dry_run=${dryRun}`);
+            core.info(`branches removidas/simuladas: ${deleted.length}`);
+            core.info(`branches ignoradas: ${skipped.length}`);
+
+            await core.summary
+              .addHeading("Cleanup de branches mergeadas")
+              .addRaw(`dry_run: ${dryRun}\n\n`)
+              .addHeading("Removidas (ou simuladas)", 3)
+              .addCodeBlock(
+                deleted.length
+                  ? deleted.map((item) => `${item.head} (${item.mode})`).join("\n")
+                  : "nenhuma",
+                "text",
+              )
+              .addHeading("Ignoradas", 3)
+              .addCodeBlock(
+                skipped.length
+                  ? skipped.map((item) => `${item.head} (${item.reason})`).join("\n")
+                  : "nenhuma",
+                "text",
+              )
+              .write();
