@@ -53,9 +53,15 @@ jobs:
             exit 0
           fi
 
+          BIOME_FILES=$(echo "$CHANGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json|pnpm-workspace\.yaml)' || true)
+          if [ -z "$BIOME_FILES" ]; then
+            echo "Nenhum arquivo alterado está no escopo de validação do Biome."
+            exit 0
+          fi
+
           echo "Arquivos validados pelo Biome:"
-          echo "$CHANGED_FILES"
-          pnpm exec biome check $CHANGED_FILES
+          echo "$BIOME_FILES"
+          pnpm exec biome check $BIOME_FILES
 
       - name: Generate Prisma client
         run: pnpm --filter @financy/backend prisma:generate
