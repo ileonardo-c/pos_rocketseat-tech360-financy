@@ -386,17 +386,25 @@ export const ProtectedPage = () => {
             disabled={isRefreshing}
             type="button"
             onClick={async () => {
-              try {
-                setRefreshError(null);
-                await Promise.all([
-                  refetchCategories(),
-                  refetchTransactions(),
-                  refetchSummary(),
-                  refetchCategorySummary(),
-                  refetchTimeline(),
-                ]);
-              } catch {
+              setRefreshError(null);
+              const results = await Promise.allSettled([
+                refetchCategories(),
+                refetchTransactions(),
+                refetchSummary(),
+                refetchCategorySummary(),
+                refetchTimeline(),
+              ]);
+              const failedCount = results.filter((result) => result.status === "rejected").length;
+
+              if (failedCount === results.length) {
                 setRefreshError("Não foi possível atualizar os dados do dashboard.");
+                return;
+              }
+
+              if (failedCount > 0) {
+                setRefreshError(
+                  "Alguns dados do dashboard não foram atualizados. Tente novamente em instantes.",
+                );
               }
             }}
           >
