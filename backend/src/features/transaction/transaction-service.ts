@@ -46,6 +46,17 @@ type TransactionCategorySummary = {
   balance: number;
 };
 
+type TimelineInterval = "DAY" | "MONTH";
+
+type TransactionTimelinePoint = {
+  period: string;
+  incomeTotal: number;
+  expenseTotal: number;
+  balance: number;
+  cumulativeBalance: number;
+  count: number;
+};
+
 export class TransactionService {
   constructor(private readonly repository: TransactionRepository) {}
 
@@ -201,6 +212,64 @@ export class TransactionService {
       })
       .sort((a, b) => b.total - a.total)
       .slice(0, limit);
+  }
+
+  async timelineByUser(
+    ctx: GraphQLContext,
+    input?: TransactionSummaryInput,
+    intervalInput?: TimelineInterval | null,
+  ): Promise<TransactionTimelinePoint[]> {
+    if (!ctx.userId) {
+      throw new AppError("Nao autenticado", 401);
+    }
+
+    const filters = this.normalizeSummaryInput(input);
+    const interval = this.normalizeTimelineInterval(intervalInput);
+    const transactions = await this.repository.findAllForTimelineByUser(ctx.userId, filters);
+
+    const grouped = new Map<
+      string,
+      {
+        period: string;
+        incomeTotal: number;
+        expenseTotal: number;
+        count: number;
+      }
+    >();
+
+    for (const transaction of transactions) {
+      const period = this.formatTimelinePeriod(transaction.date, interval);
+      const current = grouped.get(period) ?? {
+        period,
+        incomeTotal: 0,
+        expenseTotal: 0,
+        count: 0,
+      };
+
+      if (transaction.type === "INCOME") {
+        current.incomeTotal += transaction.amount;
+      } else {
+        current.expenseTotal += transaction.amount;
+      }
+      current.count += 1;
+      grouped.set(period, current);
+    }
+
+    let cumulativeBalance = 0;
+    return Array.from(grouped.values())
+      .sort((a, b) => a.period.localeCompare(b.period))
+      .map((item) => {
+        const balance = item.incomeTotal - item.expenseTotal;
+        cumulativeBalance += balance;
+        return {
+          period: item.period,
+          incomeTotal: item.incomeTotal,
+          expenseTotal: item.expenseTotal,
+          balance,
+          cumulativeBalance,
+          count: item.count,
+        };
+      });
   }
 
   private normalizeCreateInput(userId: string, input: TransactionInput) {
@@ -380,6 +449,29 @@ export class TransactionService {
     }
 
     return limitInput;
+  }
+
+  private normalizeTimelineInterval(intervalInput?: TimelineInterval | null): TimelineInterval {
+    if (intervalInput === undefined || intervalInput === null) {
+      return "DAY";
+    }
+
+    if (intervalInput !== "DAY" && intervalInput !== "MONTH") {
+      throw new AppError("Intervalo invalido: use DAY ou MONTH", 400);
+    }
+
+    return intervalInput;
+  }
+
+  private formatTimelinePeriod(date: Date, interval: TimelineInterval) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    if (interval === "MONTH") {
+      return `${year}-${month}`;
+    }
+
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   }
 
   private parseOptionalDate(value: string | null | undefined, boundary: "start" | "end") {

@@ -106,6 +106,32 @@ export class TransactionRepository {
     });
   }
 
+  findAllForTimelineByUser(
+    userId: string,
+    filters: {
+      from?: Date;
+      to?: Date;
+    },
+  ) {
+    return this.prisma.transaction.findMany({
+      where: {
+        userId,
+        date: {
+          ...(filters.from ? { gte: filters.from } : {}),
+          ...(filters.to ? { lte: filters.to } : {}),
+        },
+      },
+      select: {
+        date: true,
+        amount: true,
+        type: true,
+      },
+      orderBy: {
+        date: "asc",
+      },
+    });
+  }
+
   create(
     userId: string,
     data: {
