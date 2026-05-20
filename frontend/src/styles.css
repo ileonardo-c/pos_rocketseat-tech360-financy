@@ -291,6 +291,24 @@ main.dashboard {
   margin-bottom: 12px;
 }
 
+.transactions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.transactions-sort-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.transactions-sort-controls label {
+  margin-bottom: 0;
+}
+
 .transactions-presets {
   display: flex;
   flex-wrap: wrap;
@@ -391,6 +409,14 @@ main.dashboard {
   gap: 4px;
 }
 
+.transactions-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+
 label {
   display: flex;
   flex-direction: column;
@@ -488,6 +514,11 @@ li {
   }
 
   .transactions-group-totals {
+    align-items: flex-start;
+  }
+
+  .transactions-pagination {
+    flex-direction: column;
     align-items: flex-start;
   }
 }
