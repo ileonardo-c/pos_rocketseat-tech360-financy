@@ -7,8 +7,8 @@ import {
   DASHBOARD_TRANSACTION_TIMELINE_QUERY,
 } from "@/lib/graphql/operations";
 import { useQuery } from "@apollo/client";
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 type Category = {
   id: string;
@@ -144,10 +144,90 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
+const isValidDateInput = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+
+const parseDashboardStateFromSearchParams = (searchParams: URLSearchParams) => {
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+  const interval = searchParams.get("interval");
+
+  return {
+    summaryFilter: {
+      from: isValidDateInput(from) ? from : "",
+      to: isValidDateInput(to) ? to : "",
+    },
+    timelineInterval: interval === "MONTH" ? "MONTH" : "DAY",
+  } as const;
+};
+
+const buildSearchParamsFromDashboardState = (params: {
+  summaryFilter: SummaryFilter;
+  timelineInterval: TimelineInterval;
+}) => {
+  const searchParams = new URLSearchParams();
+
+  if (params.summaryFilter.from) {
+    searchParams.set("from", params.summaryFilter.from);
+  }
+  if (params.summaryFilter.to) {
+    searchParams.set("to", params.summaryFilter.to);
+  }
+  if (params.timelineInterval !== "DAY") {
+    searchParams.set("interval", params.timelineInterval);
+  }
+
+  return searchParams;
+};
+
+const isSameSummaryFilter = (left: SummaryFilter, right: SummaryFilter) =>
+  left.from === right.from && left.to === right.to;
+
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
-  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() => getCurrentMonthFilter());
-  const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>("DAY");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const parsedState = parseDashboardStateFromSearchParams(searchParams);
+
+  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>(() =>
+    parsedState.summaryFilter.from || parsedState.summaryFilter.to
+      ? parsedState.summaryFilter
+      : getCurrentMonthFilter(),
+  );
+  const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>(
+    parsedState.timelineInterval,
+  );
+
+  useEffect(() => {
+    const nextParsedState = parseDashboardStateFromSearchParams(searchParams);
+
+    setSummaryFilter((current) => {
+      if (isSameSummaryFilter(current, nextParsedState.summaryFilter)) {
+        return current;
+      }
+
+      if (!nextParsedState.summaryFilter.from && !nextParsedState.summaryFilter.to) {
+        return getCurrentMonthFilter();
+      }
+
+      return nextParsedState.summaryFilter;
+    });
+
+    setTimelineInterval((current) =>
+      current === nextParsedState.timelineInterval ? current : nextParsedState.timelineInterval,
+    );
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextSearchParams = buildSearchParamsFromDashboardState({
+      summaryFilter,
+      timelineInterval,
+    });
+
+    const next = nextSearchParams.toString();
+    if (next !== searchParamsString) {
+      setSearchParams(nextSearchParams, { replace: true });
+    }
+  }, [searchParamsString, setSearchParams, summaryFilter, timelineInterval]);
 
   const {
     data: categoriesData,
@@ -308,6 +388,15 @@ export const ProtectedPage = () => {
             onClick={() => setSummaryFilter(getAllPeriodFilterFromTransactions(transactions))}
           >
             Todo período
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSummaryFilter(getCurrentMonthFilter());
+              setTimelineInterval("DAY");
+            }}
+          >
+            Restaurar padrão
           </button>
         </div>
       </section>
