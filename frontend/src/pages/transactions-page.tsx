@@ -226,6 +226,7 @@ export const TransactionsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [page, setPage] = useState(1);
   const editingIdRef = useRef<string | null>(null);
+  const createDialogCycleRef = useRef(0);
   const itemsPerPage = 10;
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
@@ -609,6 +610,7 @@ export const TransactionsPage = () => {
               onClick={() => {
                 setActionError(null);
                 setForm(emptyForm);
+                createDialogCycleRef.current += 1;
                 setIsCreateDialogOpen(true);
               }}
             >
@@ -900,6 +902,7 @@ export const TransactionsPage = () => {
                 if (isCreateDisabled) {
                   return;
                 }
+                const currentCreateCycle = createDialogCycleRef.current;
 
                 try {
                   setActionError(null);
@@ -907,7 +910,9 @@ export const TransactionsPage = () => {
                     variables: { input: buildTransactionPayload(form) },
                   });
                   setForm(emptyForm);
-                  setIsCreateDialogOpen(false);
+                  if (createDialogCycleRef.current === currentCreateCycle) {
+                    setIsCreateDialogOpen(false);
+                  }
                 } catch {
                   setActionError("Não foi possível criar a transação.");
                 }
