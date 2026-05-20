@@ -121,6 +121,24 @@ const getCurrentMonthFilter = (): SummaryFilter => {
   };
 };
 
+const getAllPeriodFilterFromTransactions = (transactions: Transaction[]): SummaryFilter => {
+  const today = toDateInput(new Date());
+  if (transactions.length === 0) {
+    return { from: "", to: "" };
+  }
+
+  const oldest = transactions.reduce((currentOldest, transaction) => {
+    return new Date(transaction.date).getTime() < new Date(currentOldest.date).getTime()
+      ? transaction
+      : currentOldest;
+  }, transactions[0]);
+
+  return {
+    from: toDateInput(new Date(oldest.date)),
+    to: today,
+  };
+};
+
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -285,7 +303,10 @@ export const ProtectedPage = () => {
           <button type="button" onClick={() => setSummaryFilter(getCurrentMonthFilter())}>
             Mês atual
           </button>
-          <button type="button" onClick={() => setSummaryFilter({ from: "", to: "" })}>
+          <button
+            type="button"
+            onClick={() => setSummaryFilter(getAllPeriodFilterFromTransactions(transactions))}
+          >
             Todo período
           </button>
         </div>
