@@ -289,11 +289,3 @@ export const CategoriesPage = () => {
     </main>
   );
 };
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </main>
-  );
-};
