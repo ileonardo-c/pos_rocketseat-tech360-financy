@@ -267,6 +267,7 @@ export const TransactionsPage = () => {
     setPage(1);
   }, [filter, sortDirection, sortField]);
 
+
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
     () => transactionsData?.transactions ?? [],
@@ -330,6 +331,9 @@ export const TransactionsPage = () => {
   }, [filteredTransactions, sortDirection, sortField]);
 
   const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / itemsPerPage));
+  useEffect(() => {
+    setPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
   const currentPage = Math.min(page, totalPages);
   const pagedTransactions = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
