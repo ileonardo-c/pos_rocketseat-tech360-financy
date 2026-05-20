@@ -65,6 +65,20 @@ export const typeDefs = `
     balance: Float!
   }
 
+  type TransactionTimelinePoint {
+    period: String!
+    incomeTotal: Float!
+    expenseTotal: Float!
+    balance: Float!
+    cumulativeBalance: Float!
+    count: Int!
+  }
+
+  enum TransactionTimelineInterval {
+    DAY
+    MONTH
+  }
+
   input RegisterInput {
     name: String!
     email: String!
@@ -132,6 +146,10 @@ export const typeDefs = `
       filter: TransactionSummaryFilterInput
       limit: Int
     ): [TransactionCategorySummary!]!
+    transactionTimeline(
+      filter: TransactionSummaryFilterInput
+      interval: TransactionTimelineInterval
+    ): [TransactionTimelinePoint!]!
   }
 
   type Mutation {

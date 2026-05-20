@@ -34,4 +34,17 @@ export const transactionQueries = {
   ) => {
     return service(ctx).summaryByCategory(ctx, args.filter, args.limit);
   },
+  transactionTimeline: async (
+    _: unknown,
+    args: {
+      filter?: {
+        from?: string | null;
+        to?: string | null;
+      };
+      interval?: "DAY" | "MONTH" | null;
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).timelineByUser(ctx, args.filter, args.interval);
+  },
 };
