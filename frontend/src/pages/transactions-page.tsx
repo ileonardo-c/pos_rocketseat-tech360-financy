@@ -421,7 +421,14 @@ export const TransactionsPage = () => {
     }
 
     return Array.from(groups.entries())
-      .sort((left, right) => right[0].localeCompare(left[0]))
+      .sort((left, right) => {
+        if (sortField !== "date") {
+          return 0;
+        }
+
+        const compare = left[0].localeCompare(right[0]);
+        return sortDirection === "asc" ? compare : -compare;
+      })
       .map(([dateKey, value]) => ({
         dateKey,
         dateLabel: value.dateLabel,
@@ -430,7 +437,7 @@ export const TransactionsPage = () => {
         expense: value.expense,
         balance: value.income - value.expense,
       }));
-  }, [pagedTransactions]);
+  }, [pagedTransactions, sortDirection, sortField]);
 
   const handleExportCsv = () => {
     if (sortedTransactions.length === 0) {
