@@ -225,7 +225,8 @@ export class TransactionService {
 
     const filters = this.normalizeSummaryInput(input);
     const interval = this.normalizeTimelineInterval(intervalInput);
-    const transactions = await this.repository.findAllForTimelineByUser(ctx.userId, filters);
+    const boundedFilters = this.normalizeTimelineFilters(filters, interval);
+    const transactions = await this.repository.findAllForTimelineByUser(ctx.userId, boundedFilters);
 
     const grouped = new Map<
       string,
@@ -461,6 +462,45 @@ export class TransactionService {
     }
 
     return intervalInput;
+  }
+
+  private normalizeTimelineFilters(
+    filters: { from?: Date; to?: Date },
+    interval: TimelineInterval,
+  ) {
+    const now = new Date();
+    const to = filters.to ?? now;
+    const defaultFrom =
+      interval === "DAY" ? this.addDays(to, -89) : new Date(Date.UTC(to.getUTCFullYear() - 1, to.getUTCMonth(), 1));
+    const from = filters.from ?? defaultFrom;
+
+    if (from.getTime() > to.getTime()) {
+      throw new AppError("Periodo invalido: data inicial maior que data final", 400);
+    }
+
+    if (interval === "DAY") {
+      const maxDays = 366;
+      const diffDays = Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
+      if (diffDays > maxDays) {
+        throw new AppError("Periodo muito grande para DAY: use no maximo 366 dias", 400);
+      }
+    } else {
+      const fromMonths = from.getUTCFullYear() * 12 + from.getUTCMonth();
+      const toMonths = to.getUTCFullYear() * 12 + to.getUTCMonth();
+      const diffMonths = toMonths - fromMonths + 1;
+      const maxMonths = 120;
+      if (diffMonths > maxMonths) {
+        throw new AppError("Periodo muito grande para MONTH: use no maximo 120 meses", 400);
+      }
+    }
+
+    return { from, to };
+  }
+
+  private addDays(date: Date, days: number) {
+    const copy = new Date(date);
+    copy.setUTCDate(copy.getUTCDate() + days);
+    return copy;
   }
 
   private formatTimelinePeriod(date: Date, interval: TimelineInterval) {
