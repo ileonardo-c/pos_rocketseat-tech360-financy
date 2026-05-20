@@ -135,6 +135,66 @@ main.dashboard {
   border-bottom: 0;
 }
 
+.dashboard-timeline {
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.dashboard-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.dashboard-timeline-header h2 {
+  margin: 0;
+}
+
+.dashboard-timeline-interval {
+  display: flex;
+  gap: 8px;
+}
+
+.dashboard-timeline-interval button {
+  border: 1px solid #d0d7de;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 6px 12px;
+}
+
+.dashboard-timeline-interval button.is-active {
+  background: #0969da;
+  color: #ffffff;
+  border-color: #0969da;
+}
+
+.dashboard-timeline-table-wrap {
+  overflow-x: auto;
+}
+
+.dashboard-timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.dashboard-timeline-table th,
+.dashboard-timeline-table td {
+  border-bottom: 1px solid #eaeef2;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dashboard-timeline-table th {
+  font-size: 13px;
+  color: #57606a;
+}
+
 .dashboard-category-ranking {
   border: 1px solid #d0d7de;
   border-radius: 10px;
@@ -400,6 +460,11 @@ li {
   }
 
   .dashboard-recent ul li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .dashboard-timeline-header {
     flex-direction: column;
     align-items: flex-start;
   }

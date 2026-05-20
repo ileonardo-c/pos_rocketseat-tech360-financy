@@ -152,6 +152,22 @@ export const DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY = gql`
   }
 `;
 
+export const DASHBOARD_TRANSACTION_TIMELINE_QUERY = gql`
+  query DashboardTransactionTimeline(
+    $filter: TransactionSummaryFilterInput
+    $interval: TransactionTimelineInterval
+  ) {
+    transactionTimeline(filter: $filter, interval: $interval) {
+      period
+      incomeTotal
+      expenseTotal
+      balance
+      cumulativeBalance
+      count
+    }
+  }
+`;
+
 export const CREATE_TRANSACTION_MUTATION = gql`
   mutation CreateTransaction($input: CreateTransactionInput!) {
     createTransaction(input: $input) {
