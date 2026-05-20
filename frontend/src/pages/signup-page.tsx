@@ -10,6 +10,18 @@ export const SignupPage = () => {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ name: false, email: false, password: false });
 
+  const getNameError = (value: string) =>
+    value.trim().length >= 2 ? "" : "Informe seu nome com pelo menos 2 caracteres.";
+  const getEmailError = (value: string) => {
+    if (!value.trim()) {
+      return "Informe seu e-mail.";
+    }
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    return isEmailValid ? "" : "Informe um e-mail válido.";
+  };
+  const getPasswordError = (value: string) =>
+    value.length >= 6 ? "" : "A senha deve ter pelo menos 6 caracteres.";
+
   useEffect(() => {
     clearAuthError();
   }, [clearAuthError]);
@@ -18,25 +30,21 @@ export const SignupPage = () => {
     if (!touched.name) {
       return "";
     }
-    return name.trim().length >= 2 ? "" : "Informe seu nome com pelo menos 2 caracteres.";
+    return getNameError(name);
   }, [name, touched.name]);
 
   const emailError = useMemo(() => {
     if (!touched.email) {
       return "";
     }
-    if (!email.trim()) {
-      return "Informe seu e-mail.";
-    }
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    return isEmailValid ? "" : "Informe um e-mail válido.";
+    return getEmailError(email);
   }, [email, touched.email]);
 
   const passwordError = useMemo(() => {
     if (!touched.password) {
       return "";
     }
-    return password.length >= 6 ? "" : "A senha deve ter pelo menos 6 caracteres.";
+    return getPasswordError(password);
   }, [password, touched.password]);
 
   if (user) {
@@ -52,7 +60,10 @@ export const SignupPage = () => {
           event.preventDefault();
           setTouched({ name: true, email: true, password: true });
 
-          if (nameError || emailError || passwordError) {
+          const submitNameError = getNameError(name);
+          const submitEmailError = getEmailError(email);
+          const submitPasswordError = getPasswordError(password);
+          if (submitNameError || submitEmailError || submitPasswordError) {
             return;
           }
 
