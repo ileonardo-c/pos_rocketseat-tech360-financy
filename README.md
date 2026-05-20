@@ -56,8 +56,14 @@ Desafio fullstack de organização financeira com:
 
 - `ci`: instala dependências, roda `pnpm check`, gera Prisma Client e valida build de backend/frontend.
 - `docker-smoke`: sobe a stack completa com `docker compose` e valida disponibilidade de:
-  - `http://localhost:4000/health`
+  - `http://localhost:4000/health/ready`
   - `http://localhost:5173`
+
+### Endpoints de saúde do backend
+
+- `GET /health`: compatibilidade simples (`status: ok`)
+- `GET /health/live`: liveness do processo
+- `GET /health/ready`: readiness com verificação de banco (retorna `503` se indisponível)
 
 ## Governança
 

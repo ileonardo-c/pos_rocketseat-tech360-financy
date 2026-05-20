@@ -25,16 +25,16 @@ jobs:
       - name: Build and start compose stack
         run: docker compose up -d --build
 
-      - name: Wait for backend health
+      - name: Wait for backend readiness
         run: |
           set -euo pipefail
           for _ in {1..60}; do
-            if curl --fail --silent --show-error http://127.0.0.1:4000/health >/dev/null; then
+            if curl --fail --silent --show-error http://127.0.0.1:4000/health/ready >/dev/null; then
               exit 0
             fi
             sleep 2
           done
-          echo "Backend nao respondeu /health em 120s"
+          echo "Backend nao respondeu /health/ready em 120s"
           exit 1
 
       - name: Wait for frontend

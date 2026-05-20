@@ -18,7 +18,8 @@
   - `pnpm compose:up`
   - Frontend em `http://localhost:5173`
   - Backend GraphQL em `http://localhost:4000/graphql`
-  - Health backend em `http://localhost:4000/health`
+  - Liveness backend em `http://localhost:4000/health/live`
+  - Readiness backend em `http://localhost:4000/health/ready`
 
 ## Revisão
 
