@@ -386,58 +386,52 @@ export const TransactionsPage = () => {
   }, [categories, filter]);
 
   const groupedTransactions = useMemo(() => {
-    const groups = new Map<
-      string,
-      {
-        dateLabel: string;
-        transactions: Transaction[];
-        income: number;
-        expense: number;
-      }
-    >();
+    const groups: Array<{
+      dateKey: string;
+      dateLabel: string;
+      transactions: Transaction[];
+      income: number;
+      expense: number;
+    }> = [];
 
     for (const transaction of pagedTransactions) {
       const dateKey = toLocalDateInput(transaction.date);
-      const existing = groups.get(dateKey) ?? {
-        dateLabel: new Date(transaction.date).toLocaleDateString("pt-BR", {
-          weekday: "short",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }),
-        transactions: [],
-        income: 0,
-        expense: 0,
-      };
+      const lastGroup = groups[groups.length - 1];
+      const shouldCreateGroup = !lastGroup || lastGroup.dateKey !== dateKey;
 
-      existing.transactions.push(transaction);
-      if (transaction.type === "INCOME") {
-        existing.income += transaction.amount;
-      } else {
-        existing.expense += transaction.amount;
+      if (shouldCreateGroup) {
+        groups.push({
+          dateKey,
+          dateLabel: new Date(transaction.date).toLocaleDateString("pt-BR", {
+            weekday: "short",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          }),
+          transactions: [transaction],
+          income: transaction.type === "INCOME" ? transaction.amount : 0,
+          expense: transaction.type === "EXPENSE" ? transaction.amount : 0,
+        });
+        continue;
       }
 
-      groups.set(dateKey, existing);
+      lastGroup.transactions.push(transaction);
+      if (transaction.type === "INCOME") {
+        lastGroup.income += transaction.amount;
+      } else {
+        lastGroup.expense += transaction.amount;
+      }
     }
 
-    return Array.from(groups.entries())
-      .sort((left, right) => {
-        if (sortField !== "date") {
-          return 0;
-        }
-
-        const compare = left[0].localeCompare(right[0]);
-        return sortDirection === "asc" ? compare : -compare;
-      })
-      .map(([dateKey, value]) => ({
-        dateKey,
-        dateLabel: value.dateLabel,
-        transactions: value.transactions,
-        income: value.income,
-        expense: value.expense,
-        balance: value.income - value.expense,
-      }));
-  }, [pagedTransactions, sortDirection, sortField]);
+    return groups.map((group) => ({
+      dateKey: group.dateKey,
+      dateLabel: group.dateLabel,
+      transactions: group.transactions,
+      income: group.income,
+      expense: group.expense,
+      balance: group.income - group.expense,
+    }));
+  }, [pagedTransactions]);
 
   const handleExportCsv = () => {
     if (sortedTransactions.length === 0) {
