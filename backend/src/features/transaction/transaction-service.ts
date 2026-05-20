@@ -471,7 +471,9 @@ export class TransactionService {
     const now = new Date();
     const to = filters.to ?? now;
     const defaultFrom =
-      interval === "DAY" ? this.addDays(to, -89) : new Date(Date.UTC(to.getUTCFullYear() - 1, to.getUTCMonth(), 1));
+      interval === "DAY"
+        ? this.addDays(to, -89)
+        : new Date(Date.UTC(to.getUTCFullYear(), to.getUTCMonth() - 11, 1));
     const from = filters.from ?? defaultFrom;
 
     if (from.getTime() > to.getTime()) {
