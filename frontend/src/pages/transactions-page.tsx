@@ -934,8 +934,8 @@ export const TransactionsPage = () => {
         ) : (
           <>
             <div className="transactions-group-list">
-            {groupedTransactions.map((group) => (
-              <section key={group.dateKey} className="transactions-group">
+            {groupedTransactions.map((group, groupIndex) => (
+              <section key={`${group.dateKey}-${groupIndex}`} className="transactions-group">
                 <header className="transactions-group-header">
                   <div>
                     <h3>{group.dateLabel}</h3>
