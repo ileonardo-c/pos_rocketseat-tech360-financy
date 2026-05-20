@@ -147,6 +147,34 @@ const toLocalDateInput = (value: string | Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const getCurrentMonthRange = () => {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), today.getMonth(), 1);
+  return {
+    from: toLocalDateInput(from),
+    to: toLocalDateInput(today),
+  };
+};
+
+const getCurrentYearRange = () => {
+  const today = new Date();
+  const from = new Date(today.getFullYear(), 0, 1);
+  return {
+    from: toLocalDateInput(from),
+    to: toLocalDateInput(today),
+  };
+};
+
+const getLastDaysRange = (days: number) => {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(today.getDate() - (days - 1));
+  return {
+    from: toLocalDateInput(from),
+    to: toLocalDateInput(today),
+  };
+};
+
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
@@ -292,6 +320,82 @@ export const TransactionsPage = () => {
       expenseTotal: totals.expense,
       balance: totals.income - totals.expense,
     };
+  }, [filteredTransactions]);
+
+  const activeFilterChips = useMemo(() => {
+    const chips: Array<{ key: keyof TransactionFilter; label: string }> = [];
+
+    if (filter.query) {
+      chips.push({ key: "query", label: `Busca: ${filter.query}` });
+    }
+    if (filter.type !== "ALL") {
+      chips.push({
+        key: "type",
+        label: filter.type === "INCOME" ? "Tipo: Receita" : "Tipo: Despesa",
+      });
+    }
+    if (filter.categoryId) {
+      const categoryName = categories.find((category) => category.id === filter.categoryId)?.name;
+      chips.push({
+        key: "categoryId",
+        label: `Categoria: ${categoryName ?? "Selecionada"}`,
+      });
+    }
+    if (filter.from) {
+      chips.push({ key: "from", label: `De: ${filter.from}` });
+    }
+    if (filter.to) {
+      chips.push({ key: "to", label: `Até: ${filter.to}` });
+    }
+
+    return chips;
+  }, [categories, filter]);
+
+  const groupedTransactions = useMemo(() => {
+    const groups = new Map<
+      string,
+      {
+        dateLabel: string;
+        transactions: Transaction[];
+        income: number;
+        expense: number;
+      }
+    >();
+
+    for (const transaction of filteredTransactions) {
+      const dateKey = toLocalDateInput(transaction.date);
+      const existing = groups.get(dateKey) ?? {
+        dateLabel: new Date(transaction.date).toLocaleDateString("pt-BR", {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        }),
+        transactions: [],
+        income: 0,
+        expense: 0,
+      };
+
+      existing.transactions.push(transaction);
+      if (transaction.type === "INCOME") {
+        existing.income += transaction.amount;
+      } else {
+        existing.expense += transaction.amount;
+      }
+
+      groups.set(dateKey, existing);
+    }
+
+    return Array.from(groups.entries())
+      .sort((left, right) => right[0].localeCompare(left[0]))
+      .map(([dateKey, value]) => ({
+        dateKey,
+        dateLabel: value.dateLabel,
+        transactions: value.transactions,
+        income: value.income,
+        expense: value.expense,
+        balance: value.income - value.expense,
+      }));
   }, [filteredTransactions]);
 
   const uploadReceipt = async (file: File) => {
@@ -546,6 +650,44 @@ export const TransactionsPage = () => {
 
       <section className="transactions-filters">
         <h2>Filtros</h2>
+        <div className="transactions-presets">
+          <button
+            type="button"
+            onClick={() => {
+              const range = getLastDaysRange(7);
+              setFilter((prev) => ({ ...prev, ...range }));
+            }}
+          >
+            Últimos 7 dias
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const range = getLastDaysRange(30);
+              setFilter((prev) => ({ ...prev, ...range }));
+            }}
+          >
+            Últimos 30 dias
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const range = getCurrentMonthRange();
+              setFilter((prev) => ({ ...prev, ...range }));
+            }}
+          >
+            Mês atual
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const range = getCurrentYearRange();
+              setFilter((prev) => ({ ...prev, ...range }));
+            }}
+          >
+            Ano atual
+          </button>
+        </div>
         <div className="transactions-filter-grid">
           <label>
             Busca
@@ -628,9 +770,29 @@ export const TransactionsPage = () => {
           </label>
         </div>
 
-        <button type="button" onClick={() => setFilter(emptyFilter)}>
-          Limpar filtros
-        </button>
+        <div className="transactions-filter-actions">
+          <button type="button" onClick={() => setFilter(emptyFilter)}>
+            Limpar filtros
+          </button>
+        </div>
+        {activeFilterChips.length > 0 ? (
+          <div className="transactions-active-filters">
+            {activeFilterChips.map((chip) => (
+              <button
+                key={chip.label}
+                type="button"
+                onClick={() =>
+                  setFilter((prev) => ({
+                    ...prev,
+                    [chip.key]: chip.key === "type" ? "ALL" : "",
+                  }))
+                }
+              >
+                {chip.label} ×
+              </button>
+            ))}
+          </div>
+        ) : null}
       </section>
 
       <section className="transactions-summary-grid">
@@ -653,234 +815,251 @@ export const TransactionsPage = () => {
       </section>
 
       <section>
-        {filteredTransactions.length === 0 ? (
+        {groupedTransactions.length === 0 ? (
           <p>Nenhuma transação encontrada para os filtros aplicados.</p>
         ) : (
-          <ul>
-            {filteredTransactions.map((transaction) => {
-              const isEditing = editingId === transaction.id;
-              const isUpdateDisabled =
-                updating ||
-                uploadingEditReceipt ||
-                !editingForm.title.trim() ||
-                !editingForm.amount ||
-                !editingForm.date ||
-                !editingForm.categoryId;
+          <div className="transactions-group-list">
+            {groupedTransactions.map((group) => (
+              <section key={group.dateKey} className="transactions-group">
+                <header className="transactions-group-header">
+                  <div>
+                    <h3>{group.dateLabel}</h3>
+                    <p>{group.transactions.length} transação(ões)</p>
+                  </div>
+                  <div className="transactions-group-totals">
+                    <span>Receitas: {currencyFormatter.format(group.income)}</span>
+                    <span>Despesas: {currencyFormatter.format(group.expense)}</span>
+                    <strong>Saldo: {currencyFormatter.format(group.balance)}</strong>
+                  </div>
+                </header>
+                <ul>
+                  {group.transactions.map((transaction) => {
+                    const isEditing = editingId === transaction.id;
+                    const isUpdateDisabled =
+                      updating ||
+                      uploadingEditReceipt ||
+                      !editingForm.title.trim() ||
+                      !editingForm.amount ||
+                      !editingForm.date ||
+                      !editingForm.categoryId;
 
-              return (
-                <li key={transaction.id}>
-                  {isEditing ? (
-                    <form
-                      onSubmit={async (event) => {
-                        event.preventDefault();
-                        if (isUpdateDisabled) {
-                          return;
-                        }
+                    return (
+                      <li key={transaction.id}>
+                        {isEditing ? (
+                          <form
+                            onSubmit={async (event) => {
+                              event.preventDefault();
+                              if (isUpdateDisabled) {
+                                return;
+                              }
 
-                        try {
-                          setActionError(null);
-                          await updateTransaction({
-                            variables: {
-                              id: transaction.id,
-                              input: buildTransactionPayload(editingForm),
-                            },
-                          });
+                              try {
+                                setActionError(null);
+                                await updateTransaction({
+                                  variables: {
+                                    id: transaction.id,
+                                    input: buildTransactionPayload(editingForm),
+                                  },
+                                });
 
-                          setEditingId(null);
-                          setEditingForm(emptyForm);
-                        } catch {
-                          setActionError("Não foi possível atualizar a transação.");
-                        }
-                      }}
-                    >
-                      <input
-                        autoComplete="off"
-                        required
-                        type="text"
-                        value={editingForm.title}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            title: event.target.value,
-                          }))
-                        }
-                      />
-                      <input
-                        autoComplete="off"
-                        type="text"
-                        value={editingForm.description}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            description: event.target.value,
-                          }))
-                        }
-                      />
-                      <input
-                        min="0"
-                        required
-                        step="0.01"
-                        type="number"
-                        value={editingForm.amount}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            amount: event.target.value,
-                          }))
-                        }
-                      />
-                      <select
-                        value={editingForm.type}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            type: event.target.value as TransactionForm["type"],
-                          }))
-                        }
-                      >
-                        <option value="EXPENSE">Despesa</option>
-                        <option value="INCOME">Receita</option>
-                      </select>
-                      <input
-                        required
-                        type="date"
-                        value={editingForm.date}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            date: event.target.value,
-                          }))
-                        }
-                      />
-                      <select
-                        required
-                        value={editingForm.categoryId}
-                        onChange={(event) =>
-                          setEditingForm((prev) => ({
-                            ...prev,
-                            categoryId: event.target.value,
-                          }))
-                        }
-                      >
-                        <option value="">Selecione</option>
-                        {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                      </select>
-
-                      <input
-                        accept=".pdf,image/*"
-                        type="file"
-                        onChange={async (event) => {
-                          const file = event.target.files?.[0];
-                          if (!file) {
-                            return;
-                          }
-
-                          await handleEditReceiptUpload(transaction.id, file);
-                          event.target.value = "";
-                        }}
-                      />
-
-                      {editingForm.receiptUrl ? (
-                        <p>
-                          <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
-                            Abrir comprovante
-                          </a>{" "}
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEditingForm((prev) => ({
-                                ...prev,
-                                receiptKey: "",
-                                receiptUrl: "",
-                              }))
-                            }
+                                setEditingId(null);
+                                setEditingForm(emptyForm);
+                              } catch {
+                                setActionError("Não foi possível atualizar a transação.");
+                              }
+                            }}
                           >
-                            Remover comprovante
-                          </button>
-                        </p>
-                      ) : null}
+                            <input
+                              autoComplete="off"
+                              required
+                              type="text"
+                              value={editingForm.title}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  title: event.target.value,
+                                }))
+                              }
+                            />
+                            <input
+                              autoComplete="off"
+                              type="text"
+                              value={editingForm.description}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  description: event.target.value,
+                                }))
+                              }
+                            />
+                            <input
+                              min="0"
+                              required
+                              step="0.01"
+                              type="number"
+                              value={editingForm.amount}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  amount: event.target.value,
+                                }))
+                              }
+                            />
+                            <select
+                              value={editingForm.type}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  type: event.target.value as TransactionForm["type"],
+                                }))
+                              }
+                            >
+                              <option value="EXPENSE">Despesa</option>
+                              <option value="INCOME">Receita</option>
+                            </select>
+                            <input
+                              required
+                              type="date"
+                              value={editingForm.date}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  date: event.target.value,
+                                }))
+                              }
+                            />
+                            <select
+                              required
+                              value={editingForm.categoryId}
+                              onChange={(event) =>
+                                setEditingForm((prev) => ({
+                                  ...prev,
+                                  categoryId: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Selecione</option>
+                              {categories.map((category) => (
+                                <option key={category.id} value={category.id}>
+                                  {category.name}
+                                </option>
+                              ))}
+                            </select>
 
-                      <button disabled={isUpdateDisabled} type="submit">
-                        {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingId(null);
-                          setEditingForm(emptyForm);
-                        }}
-                      >
-                        Cancelar
-                      </button>
-                    </form>
-                  ) : (
-                    <>
-                      <strong>{transaction.title}</strong> -{" "}
-                      {transaction.type === "INCOME" ? "Receita" : "Despesa"} -{" "}
-                      {currencyFormatter.format(transaction.amount)} -{" "}
-                      {transaction.category?.name ?? "Sem categoria"} -{" "}
-                      {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                      {transaction.description ? ` - ${transaction.description}` : ""}
-                      {transaction.receiptUrl ? (
-                        <>
-                          {" "}
-                          -{" "}
-                          <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                            Comprovante
-                          </a>
-                        </>
-                      ) : null}
-                      <div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingId(transaction.id);
-                            setEditingForm({
-                              title: transaction.title,
-                              description: transaction.description ?? "",
-                              amount: String(transaction.amount),
-                              type: transaction.type,
-                              date: toLocalDateInput(transaction.date),
-                              categoryId: transaction.categoryId,
-                              receiptKey: transaction.receiptKey ?? "",
-                              receiptUrl: transaction.receiptUrl ?? "",
-                            });
-                          }}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          disabled={deleting}
-                          type="button"
-                          onClick={async () => {
-                            const confirmed = window.confirm(
-                              "Deseja realmente excluir esta transação?",
-                            );
-                            if (!confirmed) {
-                              return;
-                            }
+                            <input
+                              accept=".pdf,image/*"
+                              type="file"
+                              onChange={async (event) => {
+                                const file = event.target.files?.[0];
+                                if (!file) {
+                                  return;
+                                }
 
-                            try {
-                              setActionError(null);
-                              await deleteTransaction({ variables: { id: transaction.id } });
-                            } catch {
-                              setActionError("Não foi possível excluir a transação.");
-                            }
-                          }}
-                        >
-                          Excluir
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                                await handleEditReceiptUpload(transaction.id, file);
+                                event.target.value = "";
+                              }}
+                            />
+
+                            {editingForm.receiptUrl ? (
+                              <p>
+                                <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
+                                  Abrir comprovante
+                                </a>{" "}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditingForm((prev) => ({
+                                      ...prev,
+                                      receiptKey: "",
+                                      receiptUrl: "",
+                                    }))
+                                  }
+                                >
+                                  Remover comprovante
+                                </button>
+                              </p>
+                            ) : null}
+
+                            <button disabled={isUpdateDisabled} type="submit">
+                              {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingForm(emptyForm);
+                              }}
+                            >
+                              Cancelar
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <strong>{transaction.title}</strong> -{" "}
+                            {transaction.type === "INCOME" ? "Receita" : "Despesa"} -{" "}
+                            {currencyFormatter.format(transaction.amount)} -{" "}
+                            {transaction.category?.name ?? "Sem categoria"} -{" "}
+                            {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                            {transaction.description ? ` - ${transaction.description}` : ""}
+                            {transaction.receiptUrl ? (
+                              <>
+                                {" "}
+                                -{" "}
+                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                                  Comprovante
+                                </a>
+                              </>
+                            ) : null}
+                            <div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingId(transaction.id);
+                                  setEditingForm({
+                                    title: transaction.title,
+                                    description: transaction.description ?? "",
+                                    amount: String(transaction.amount),
+                                    type: transaction.type,
+                                    date: toLocalDateInput(transaction.date),
+                                    categoryId: transaction.categoryId,
+                                    receiptKey: transaction.receiptKey ?? "",
+                                    receiptUrl: transaction.receiptUrl ?? "",
+                                  });
+                                }}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                disabled={deleting}
+                                type="button"
+                                onClick={async () => {
+                                  const confirmed = window.confirm(
+                                    "Deseja realmente excluir esta transação?",
+                                  );
+                                  if (!confirmed) {
+                                    return;
+                                  }
+
+                                  try {
+                                    setActionError(null);
+                                    await deleteTransaction({ variables: { id: transaction.id } });
+                                  } catch {
+                                    setActionError("Não foi possível excluir a transação.");
+                                  }
+                                }}
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
         )}
       </section>
     </main>
