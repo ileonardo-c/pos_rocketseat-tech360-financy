@@ -8,6 +8,6 @@ COPY package.json pnpm-workspace.yaml .npmrc* ./
 COPY backend ./backend
 
 RUN pnpm install
-RUN pnpm --filter backend prisma:generate
+RUN pnpm --filter @financy/backend prisma:generate
 
-CMD ["pnpm", "--filter", "backend", "dev"]
+CMD ["pnpm", "--filter", "@financy/backend", "dev"]
