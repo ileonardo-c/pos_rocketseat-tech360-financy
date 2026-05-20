@@ -10,10 +10,14 @@
 
 - Verificar checklist do desafio na descrição do PR
 - Executar:
-  - `npm` ou `pnpm` `lint`
-  - `npm` ou `pnpm` `typecheck`
-  - `npm` ou `pnpm` `build`
+  - `pnpm check`
+  - `pnpm build:backend`
+  - `pnpm build:frontend`
 - Atualizar `.env.example` quando variáveis mudarem
+- Validar fluxo local com stack:
+  - `pnpm compose:up`
+  - Frontend em `http://localhost:5173`
+  - Backend GraphQL em `http://localhost:4000/graphql`
 
 ## Revisão
 
