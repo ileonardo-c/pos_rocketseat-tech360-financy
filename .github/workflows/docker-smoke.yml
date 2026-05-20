@@ -1,0 +1,62 @@
+name: docker-smoke
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: docker-smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docker-smoke:
+    name: docker-smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Build and start compose stack
+        run: docker compose up -d --build
+
+      - name: Wait for backend health
+        run: |
+          set -euo pipefail
+          for _ in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:4000/health >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend nao respondeu /health em 120s"
+          exit 1
+
+      - name: Wait for frontend
+        run: |
+          set -euo pipefail
+          for _ in {1..60}; do
+            if curl --fail --silent --show-error http://127.0.0.1:5173 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Frontend nao respondeu em 120s"
+          exit 1
+
+      - name: Show compose status
+        if: always()
+        run: docker compose ps
+
+      - name: Show compose logs
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Tear down compose stack
+        if: always()
+        run: docker compose down -v
