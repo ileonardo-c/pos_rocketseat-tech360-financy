@@ -38,7 +38,12 @@ const emitSessionExpired = () => {
 
 const hasUnauthenticatedGraphQLError = (message: string) => {
   const normalized = message.toLowerCase();
-  return normalized.includes("unauthenticated") || normalized.includes("not authenticated");
+  return (
+    normalized.includes("unauthenticated") ||
+    normalized.includes("not authenticated") ||
+    normalized.includes("não autenticado") ||
+    normalized.includes("nao autenticado")
+  );
 };
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
