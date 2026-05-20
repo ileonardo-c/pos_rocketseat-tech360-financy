@@ -2,16 +2,14 @@
 
 ## Objetivo
 
-Monorepo estruturado em etapas com entregas separadas em PRs sequenciais — um domínio por PR — para manter o escopo de revisão mínimo e focado.
+Monorepo estruturado em etapas com entregas separadas em PRs sequenciais — um domínio por PR — para manter o escopo de revisão mínimo e focado. A IA atua como um engenheiro autônomo, responsável por entregar código maduro, revisado e livre de falhas básicas de tipagem ou formatação.
 
 Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
-
----
 
 ## Diretrizes Gerais do Repositório e GitHub
 
 - **Referências de Arquivos:** Em respostas no chat, as referências a arquivos devem ser estritamente relativas à raiz do repositório (exemplo: `frontend/src/components/Button.tsx:80`); nunca use caminhos absolutos ou `~/...`.
-- **Links Automáticos:** Não envolva referências de Issues/PRs em crases quando desejar o auto-link do GitHub. Use apenas `#123` em vez de `#123`.
+- **Links Automáticos:** Não envolva referências de Issues/PRs em crases quando desejar o auto-link do GitHub. Use apenas `#123` em vez de `` `#123` ``.
 - **Resolução de Threads:** Se um bot ou agente deixar comentários de revisão no seu PR, aplique as correções e resolva as conversas você mesmo. Não deixe a limpeza de conversas de bots para os mantenedores.
 - **Commits em PRs:** Ao postar comentários de conclusão de PR, sempre torne os SHAs dos commits clicáveis com links completos.
 
@@ -22,7 +20,102 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 - **Estilo TypeScript:** Prefira tipagem estrita. Evite o uso de `any`. Nunca adicione `@ts-nocheck` e não desabilite `no-explicit-any`; corrija a causa raiz e mantenha a tipagem segura.
 - **Boas Práticas de Classes:** Nunca compartilhe comportamento de classe via mutação de protótipo (`Object.defineProperty` em `.prototype`). Use herança ou composição explícitas para que o TypeScript possa validar os tipos.
 
+## Padrões de Idioma e Qualidade de Entrega
+
+A separação de idiomas não é preferência estilística — é prevenção de bug. Português sem diacríticos em código (`nao`, `excecao`, `autenticacao`) é simultaneamente português incorreto e inglês inválido, e deve ser tratado como **P1**.
+
+### Regra central: onde cada idioma se aplica
+
+| Contexto | Idioma obrigatório |
+|---|---|
+| Respostas no chat, comentários de PR, documentação `.md` | Português do Brasil (UTF-8 completo) |
+| `name:` de steps em GitHub Actions / `echo` / mensagens de `run` | Inglês |
+| `throw new Error / AppError / HttpException` | Inglês |
+| `console.error / warn / log` e qualquer `logger.*` | Inglês |
+| Comentários técnicos em `.ts`, `.py`, `.sh` | Inglês |
+| Comentários em `.yml` de CI/CD | Inglês |
+
 ---
+
+### 1. Comunicação e Documentação — Português do Brasil
+
+Todas as respostas no chat, comentários de PR, sugestões e arquivos Markdown voltados a documentação devem ser escritos em `pt-BR`, com qualidade ortográfica absoluta.
+
+A IA nunca omite diacríticos sob pretexto de facilitar encoding ou compatibilidade.
+
+**Obrigatório:**
+
+```
+Correção   Validação   Configuração   Autenticação   Exceção   Solução
+```
+
+**Proibido:**
+
+```
+Correcao   Validacao   Configuracao   Autenticacao   Excecao   Solucao
+```
+
+Seja direto e completo. Aborde apenas o que foi perguntado ou identificado. Sem enrolação, sem repetições, sem ofertas de acompanhamento. Encerre imediatamente após o conteúdo essencial.
+
+---
+
+### 2. Código de Aplicação — Inglês
+
+Toda string literal que possa aparecer em logs, respostas de API, stack traces ou saídas de monitoramento deve ser escrita em inglês.
+
+**Proibido:**
+
+```typescript
+throw new AppError("Nao autenticado", 401);     // português truncado
+throw new AppError("Não autenticado", 401);     // português correto, mas fora do padrão
+console.error("Falha na conexão com o banco");
+```
+
+**Obrigatório:**
+
+```typescript
+throw new AppError("Unauthenticated", 401);
+console.error("Database connection failed");
+```
+
+**Motivação:** mensagens de erro circulam por terminais, ferramentas de APM, alertas e buscas em log. Inglês garante rastreabilidade universal e elimina a classe inteira de erros de encoding.
+
+---
+
+### 3. CI/CD e Shell — Inglês
+
+Nomes de steps (`name:`), mensagens de `echo`, saídas de `exit` e comentários em YAML de Actions ou scripts shell devem ser escritos exclusivamente em inglês.
+
+**Proibido:**
+
+```yaml
+- name: Aguardar backend
+  run: echo "Backend nao respondeu /health em 120s"
+```
+
+**Obrigatório:**
+
+```yaml
+- name: Wait for backend readiness
+  run: echo "Backend did not respond at /health after 120s"
+```
+
+**Motivação:** runners de CI não garantem locale UTF-8. A IA frequentemente produz português sem diacríticos ao gerar strings nesses contextos — o que torna o problema estrutural, não pontual. A única solução confiável é fixar inglês como idioma exclusivo.
+
+---
+
+### 4. Verificação antes do commit
+
+Antes de qualquer commit ou abertura de PR, a IA deve executar a busca abaixo e corrigir toda ocorrência encontrada:
+
+```bash
+# Palavras em português sem diacrítico em strings de código
+grep -rn --include="*.ts" --include="*.py" --include="*.yml" --include="*.sh" \
+  -E '"[^"]*\b(nao|excecao|autenticacao|configuracao|validacao|solucao|conexao)[^"]*"' \
+  .
+```
+
+Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
 
 ## Prioridades de Revisão
 
@@ -34,48 +127,31 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 
 ### Níveis de Severidade
 
-| Nível | Significado                                                  | Exemplos                                                     |
-| ----- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| `P0`  | Bloqueia a entrega — deve ser corrigido antes do merge       | perda de dados, falha na autenticação, crash na inicialização, credenciais expostas |
-| `P1`  | Quebra funcionalidade ou segurança — corrija neste PR        | regra de negócio incorreta, quebra de contrato de API, regressão, falta de *guard* de autenticação |
-| `P2`  | Melhoria importante — corrija ou documente antes de fechar o domínio | falta de índice em coluna consultada, caso extremo (edge case) não tratado, mensagem de erro enganosa |
-| `P3`  | Sugestões de estilo/legibilidade                             | TypeScript: modo estrito, sem `any`, preferência por `unknown` para dados externos; React: componentes do servidor por padrão, `'use client'` apenas para interatividade; CSS: classes utilitárias do Tailwind; sem estilos inline, exceto para valores dinâmicos; Imports: caminhos absolutos via alias `@/`, não relativos para importações entre módulos. |
+| **Nível** | **Significado** | **Exemplos** |
+|---|---|---|
+| `P0` | Bloqueia a entrega — deve ser corrigido antes do merge | perda de dados, falha na autenticação, crash na inicialização, credenciais expostas |
+| `P1` | Quebra funcionalidade ou segurança — corrija neste PR | texto sem diacrítico no código (ex: `nao`), regra de negócio incorreta, regressão, falta de *guard* |
+| `P2` | Melhoria importante — corrija ou documente | falta de índice no banco, edge case não tratado, mensagem de erro ambígua |
+| `P3` | Sugestões de estilo/legibilidade | TS em modo estrito, preferência por `unknown` em vez de `any`, `'use client'` apenas onde necessário, imports via alias `@/` |
 
 > Não aponte preferências de estilo, escolhas menores de nomenclatura ou preocupações futuras especulativas como problemas de revisão.
-
----
-
-## Idioma e Estilo de Resposta
-
-- Todas as respostas, comentários de revisão, sugestões e resumos devem ser escritos em Português do Brasil (`pt-BR`).
-- Sempre use a acentuação correta do pt-BR. Nunca omita os acentos.
-  - ✅ `Correção`, `Validação`, `Configuração`, `Autenticação`, `Solução`
-  - ❌ `Correcao`, `Validacao`, `Configuracao`, `Autenticacao`, `Solucao`
-- Seja direto, objetivo e completo. Aborde apenas o que foi perguntado ou identificado.
-- Sem enrolação, sem repetições, sem explicações genéricas.
-- Sem ofertas de acompanhamento ou frases que prolonguem a conversa (`"Se você quiser..."`, `"Eu também posso..."`).
-- Encerre imediatamente após o conteúdo essencial.
-
----
 
 ## Formato de Comentário no PR
 
 ### Quando usar cada formato
 
-| Situação                                         | Formato                    |
-| ------------------------------------------------ | -------------------------- |
+| **Situação** | **Formato** |
+|---|---|
 | Abrindo ou atualizando um PR (novo tópico geral) | Comentário Principal do PR |
-| Respondendo a um comentário de revisão existente | Resposta na Thread         |
+| Respondendo a um comentário de revisão existente | Resposta na Thread |
 
 > **Regra principal:** se existe uma thread de revisão aberta (Codex, Copilot ou humano), a resposta deve ser feita *dentro* dessa thread via `gh api` — nunca como um novo `gh pr comment` separado.
-
----
 
 ### Comentário Principal do PR (novo tópico geral)
 
 Use exatamente estas quatro seções — somente quando não houver thread de revisão prévia sobre o assunto:
 
-```md
+```markdown
 ## Contexto
 <referência ao PR, issue ou thread sendo abordada>
 
@@ -121,9 +197,9 @@ gh api graphql -f query='
 
 Após processar cada apontamento (finding) de revisão (Codex ou Copilot):
 
-| **Resultado**                                       | **Ação**                        |
-| --------------------------------------------------- | ------------------------------- |
-| Correção aplicada / apontamento procedente          | Reagir 👍 no comentário original |
+| **Resultado** | **Ação** |
+|---|---|
+| Correção aplicada / apontamento procedente | Reagir 👍 no comentário original |
 | Apontamento rejeitado com justificativa documentada | Reagir 👎 no comentário original |
 
 Comandos de referência:

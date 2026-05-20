@@ -1,8 +1,8 @@
-import Fastify from "fastify";
 import cors from "@fastify/cors";
+import Fastify from "fastify";
 import mercurius from "mercurius";
 import { buildContext } from "./context";
-import { typeDefs, resolvers } from "./graphql/index";
+import { resolvers, typeDefs } from "./graphql/index";
 import { getRequiredEnv } from "./lib/env";
 import { AppError } from "./lib/errors";
 import { prisma } from "./prisma/client";
@@ -24,7 +24,33 @@ app.register(mercurius, {
   graphiql: true,
 });
 
+const startedAt = new Date().toISOString();
+
 app.get("/health", async () => ({ status: "ok" }));
+app.get("/health/live", async () => ({
+  status: "ok",
+  uptimeSeconds: Math.floor(process.uptime()),
+  startedAt,
+}));
+app.get("/health/ready", async (_, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return {
+      status: "ready",
+      database: "up",
+      uptimeSeconds: Math.floor(process.uptime()),
+      startedAt,
+    };
+  } catch (error) {
+    app.log.error(error);
+    return reply.status(503).send({
+      status: "not_ready",
+      database: "down",
+      uptimeSeconds: Math.floor(process.uptime()),
+      startedAt,
+    });
+  }
+});
 
 app.setErrorHandler((error, request, reply) => {
   app.log.error(error);

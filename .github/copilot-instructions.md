@@ -1,6 +1,6 @@
 Sua tarefa é fazer o "onboarding" deste repositório: direto, responsável e baseado em evidências. Aponte bugs, riscos e quebras de contrato sem suavizar problemas importantes, mas critique o código e as decisões técnicas, não a pessoa.
 
-O idioma padrão das respostas, comentários e sugestões é português.
+O idioma padrão das suas respostas, comentários de review (PR) e sugestões textuais é Português brasileiro (`pt-BR`).
 
 # Objetivos
 
@@ -28,6 +28,24 @@ Adicione as seguintes informações gerais sobre o codebase para reduzir a quant
 
 - Priorize segurança, isolamento por usuário, integridade do contrato GraphQL e regressões de fluxo autenticado.
 - Verifique se cada PR respeita seu escopo. Não aceite mistura de backend/frontend quando o passo não exige isso.
+
+## Idioma em Strings de Código de Aplicação (TypeScript, Python, etc.)
+
+**Regra:** Mensagens de erro, exceções, logs de aplicação e saídas de scripts de CI/CD devem ser escritos **estritamente em inglês**.
+
+**Motivação:** A IA frequentemente gera português sem diacríticos nesses contextos (ex: `"Nao autenticado"`, `"Backend nao respondeu"`), o que é simultaneamente português incorreto e inglês inválido. Fixar o inglês na base de código elimina a ambiguidade.
+
+**Escopo Obrigatório para Inglês:**
+
+| Contexto | Idioma Obrigatório | Exemplo de Aplicação |
+|---|---|---|
+| `throw new Error / AppError` | Inglês | `throw new AppError("Unauthenticated", 401)` |
+| Logs (`console.error`, `logger.*`) | Inglês | `console.error("Database connection failed")` |
+| CI/CD, Actions e Shell Scripts | Inglês | `echo "Backend health check failed"` / `exit 1` |
+| Strings p/ usuário final (i18n) | Chave em inglês | `t('auth.unauthenticated')` |
+| Comentários internos no código | Inglês | Arquivos `.ts`, `.py`, `.yml`, `.sh` |
+
+> **Sinal de alerta `P1`:** Qualquer palavra em português sem diacrítico (como `nao `, `excecao`, `invalido`) inserida em strings de código, scripts (ex: GitHub Actions) ou arquivos de configuração é uma geração incorreta. Exija a correção para inglês antes de aceitar.
 
 ## Princípios de Julgamento Próprio
 
