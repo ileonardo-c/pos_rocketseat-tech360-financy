@@ -49,6 +49,7 @@ Desafio fullstack de organização financeira com:
 - `pnpm check` valida regras do Biome.
 - `pnpm build:backend` gera build do backend.
 - `pnpm build:frontend` gera build do frontend.
+- `pnpm smoke:graphql` executa smoke do contrato GraphQL (auth + CRUD básico).
 - `pnpm compose:logs` acompanha logs da stack.
 - `pnpm compose:down` encerra os containers.
 
@@ -58,6 +59,7 @@ Desafio fullstack de organização financeira com:
 - `docker-smoke`: sobe a stack completa com `docker compose` e valida disponibilidade de:
   - `http://localhost:4000/health/ready`
   - `http://localhost:5173`
+  - fluxo GraphQL smoke (`register`, `login`, `me`, `categories`, `transactions`)
 
 ### Endpoints de saúde do backend
 

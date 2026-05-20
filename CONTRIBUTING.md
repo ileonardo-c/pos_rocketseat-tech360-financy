@@ -13,6 +13,7 @@
   - `pnpm check`
   - `pnpm build:backend`
   - `pnpm build:frontend`
+  - `pnpm smoke:graphql` (com stack local ativa)
 - Atualizar `.env.example` quando variáveis mudarem
 - Validar fluxo local com stack:
   - `pnpm compose:up`

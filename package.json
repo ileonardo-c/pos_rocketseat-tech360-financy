@@ -15,7 +15,8 @@
     "compose:up": "docker compose up -d --build",
     "compose:down": "docker compose down",
     "compose:logs": "docker compose logs -f",
-    "prisma:generate": "pnpm --filter @financy/backend prisma:generate"
+    "prisma:generate": "pnpm --filter @financy/backend prisma:generate",
+    "smoke:graphql": "node scripts/graphql-smoke.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3"

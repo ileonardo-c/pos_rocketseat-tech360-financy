@@ -49,6 +49,9 @@ jobs:
           echo "Frontend nao respondeu em 120s"
           exit 1
 
+      - name: Run GraphQL smoke flow
+        run: pnpm smoke:graphql
+
       - name: Show compose status
         if: always()
         run: docker compose ps
