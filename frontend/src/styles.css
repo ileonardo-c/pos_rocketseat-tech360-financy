@@ -74,6 +74,18 @@ main.dashboard {
   font-weight: 700;
 }
 
+.dashboard-card-link {
+  display: inline-flex;
+  margin-top: 10px;
+  font-size: 13px;
+  text-decoration: none;
+  color: #0969da;
+}
+
+.dashboard-card-link:hover {
+  text-decoration: underline;
+}
+
 .dashboard-summary-filters {
   border: 1px solid #d0d7de;
   border-radius: 10px;
@@ -195,6 +207,16 @@ main.dashboard {
 
 .dashboard-recent ul li p {
   margin: 0;
+}
+
+.dashboard-recent-link {
+  font-size: 13px;
+  text-decoration: none;
+  color: #0969da;
+}
+
+.dashboard-recent-link:hover {
+  text-decoration: underline;
 }
 
 .transactions-filters {

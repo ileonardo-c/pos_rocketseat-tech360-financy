@@ -62,6 +62,35 @@ type TransactionCategorySummaryNode = {
   }>;
 };
 
+const buildTransactionsPath = (params: {
+  query?: string;
+  type?: "ALL" | "INCOME" | "EXPENSE";
+  categoryId?: string;
+  from?: string;
+  to?: string;
+}) => {
+  const searchParams = new URLSearchParams();
+
+  if (params.query) {
+    searchParams.set("query", params.query);
+  }
+  if (params.type && params.type !== "ALL") {
+    searchParams.set("type", params.type);
+  }
+  if (params.categoryId) {
+    searchParams.set("categoryId", params.categoryId);
+  }
+  if (params.from) {
+    searchParams.set("from", params.from);
+  }
+  if (params.to) {
+    searchParams.set("to", params.to);
+  }
+
+  const queryString = searchParams.toString();
+  return queryString ? `/transactions?${queryString}` : "/transactions";
+};
+
 const toDateInput = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -235,22 +264,63 @@ export const ProtectedPage = () => {
         <article className="dashboard-card">
           <h2>Saldo atual</h2>
           <p>{currencyFormatter.format(summary.balance)}</p>
+          <Link
+            className="dashboard-card-link"
+            to={buildTransactionsPath({
+              from: summaryFilter.from,
+              to: summaryFilter.to,
+            })}
+          >
+            Ver no extrato
+          </Link>
         </article>
         <article className="dashboard-card">
           <h2>Receitas</h2>
           <p>{currencyFormatter.format(summary.incomeTotal)}</p>
+          <Link
+            className="dashboard-card-link"
+            to={buildTransactionsPath({
+              type: "INCOME",
+              from: summaryFilter.from,
+              to: summaryFilter.to,
+            })}
+          >
+            Ver receitas
+          </Link>
         </article>
         <article className="dashboard-card">
           <h2>Despesas</h2>
           <p>{currencyFormatter.format(summary.expenseTotal)}</p>
+          <Link
+            className="dashboard-card-link"
+            to={buildTransactionsPath({
+              type: "EXPENSE",
+              from: summaryFilter.from,
+              to: summaryFilter.to,
+            })}
+          >
+            Ver despesas
+          </Link>
         </article>
         <article className="dashboard-card">
           <h2>Transações</h2>
           <p>{summary.totalCount}</p>
+          <Link
+            className="dashboard-card-link"
+            to={buildTransactionsPath({
+              from: summaryFilter.from,
+              to: summaryFilter.to,
+            })}
+          >
+            Ver todas
+          </Link>
         </article>
         <article className="dashboard-card">
           <h2>Categorias</h2>
           <p>{categories.length}</p>
+          <Link className="dashboard-card-link" to="/categories">
+            Abrir categorias
+          </Link>
         </article>
       </section>
 
@@ -287,6 +357,16 @@ export const ProtectedPage = () => {
                     <span>{category.count} lançamento(s)</span>
                     <span>Saldo: {currencyFormatter.format(category.balance)}</span>
                   </div>
+                  <Link
+                    className="dashboard-recent-link"
+                    to={buildTransactionsPath({
+                      categoryId: category.categoryId,
+                      from: summaryFilter.from,
+                      to: summaryFilter.to,
+                    })}
+                  >
+                    Ver transações da categoria
+                  </Link>
                   <div
                     aria-hidden="true"
                     className="dashboard-category-ranking-bar"
@@ -316,6 +396,16 @@ export const ProtectedPage = () => {
                   <p>{new Date(transaction.date).toLocaleDateString("pt-BR")}</p>
                 </div>
                 <strong>{currencyFormatter.format(transaction.amount)}</strong>
+                <Link
+                  className="dashboard-recent-link"
+                  to={buildTransactionsPath({
+                    categoryId: transaction.category?.id,
+                    from: toDateInput(new Date(transaction.date)),
+                    to: toDateInput(new Date(transaction.date)),
+                  })}
+                >
+                  Ver no extrato
+                </Link>
               </li>
             ))}
           </ul>
