@@ -7,7 +7,7 @@ import {
   DASHBOARD_TRANSACTION_TIMELINE_QUERY,
 } from "@/lib/graphql/operations";
 import { useQuery } from "@apollo/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 type Category = {
@@ -209,14 +209,17 @@ export const ProtectedPage = () => {
   const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>(
     parsedState.timelineInterval,
   );
+  const isSyncingFromUrlRef = useRef(false);
 
   useEffect(() => {
     const nextParsedState = parseDashboardStateFromSearchParams(searchParams);
+    let hasStateChangeFromUrl = false;
 
     setSummaryFilter((current) => {
       if (isSameSummaryFilter(current, nextParsedState.summaryFilter)) {
         return current;
       }
+      hasStateChangeFromUrl = true;
 
       if (!nextParsedState.summaryFilter.from && !nextParsedState.summaryFilter.to) {
         return getCurrentMonthFilter();
@@ -225,12 +228,25 @@ export const ProtectedPage = () => {
       return nextParsedState.summaryFilter;
     });
 
-    setTimelineInterval((current) =>
-      current === nextParsedState.timelineInterval ? current : nextParsedState.timelineInterval,
-    );
+    setTimelineInterval((current) => {
+      if (current === nextParsedState.timelineInterval) {
+        return current;
+      }
+      hasStateChangeFromUrl = true;
+      return nextParsedState.timelineInterval;
+    });
+
+    if (hasStateChangeFromUrl) {
+      isSyncingFromUrlRef.current = true;
+    }
   }, [searchParams]);
 
   useEffect(() => {
+    if (isSyncingFromUrlRef.current) {
+      isSyncingFromUrlRef.current = false;
+      return;
+    }
+
     const nextSearchParams = buildSearchParamsFromDashboardState({
       summaryFilter,
       timelineInterval,
