@@ -22,6 +22,8 @@ type AuthContextData = {
 };
 
 const AuthContext = createContext<AuthContextData | null>(null);
+const sessionExpiredEventName = "financy:session-expired";
+const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
 
 const resolveAuthErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -50,10 +52,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchPolicy: "network-only",
     onCompleted: (result) => {
       setUser(result.me);
+      setAuthError(null);
       setLoading(false);
     },
     onError: () => {
+      localStorage.removeItem("financy.token");
       setUser(null);
+      setAuthError(sessionExpiredMessage);
       setLoading(false);
     },
   });
@@ -129,9 +134,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/signup");
   }, [client, navigate]);
 
+  const handleSessionExpired = useCallback(() => {
+    localStorage.removeItem("financy.token");
+    setUser(null);
+    setAuthError(sessionExpiredMessage);
+    client.resetStore();
+    navigate("/", { replace: true });
+  }, [client, navigate]);
+
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    const listener = () => {
+      handleSessionExpired();
+    };
+    window.addEventListener(sessionExpiredEventName, listener);
+    return () => {
+      window.removeEventListener(sessionExpiredEventName, listener);
+    };
+  }, [handleSessionExpired]);
 
   const value = useMemo<AuthContextData>(
     () => ({ user, loading, authError, clearAuthError, signin, signup, signout }),
