@@ -612,11 +612,19 @@ export const TransactionsPage = () => {
               disabled={isRefreshing}
               type="button"
               onClick={async () => {
-                try {
-                  setActionError(null);
-                  await Promise.all([refetchCategories(), refetchTransactions()]);
-                } catch {
+                setActionError(null);
+                const results = await Promise.allSettled([refetchCategories(), refetchTransactions()]);
+                const failedCount = results.filter((result) => result.status === "rejected").length;
+
+                if (failedCount === results.length) {
                   setActionError("Não foi possível atualizar as transações.");
+                  return;
+                }
+
+                if (failedCount > 0) {
+                  setActionError(
+                    "Alguns dados da tela de transações não foram atualizados. Tente novamente em instantes.",
+                  );
                 }
               }}
             >
