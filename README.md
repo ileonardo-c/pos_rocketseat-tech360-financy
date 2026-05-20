@@ -11,6 +11,7 @@ Desafio fullstack de organização financeira com:
 - `frontend/` resolução completa da SPA
 - `docker-compose.yml` para ambiente local com PostgreSQL + MinIO (S3-compatible)
 - `biome.json` e scripts de qualidade no root
+- `frontend/Dockerfile` e `backend/Dockerfile` para execução FullStack via Docker
 
 ## Objetivos obrigatórios
 
@@ -24,8 +25,32 @@ Desafio fullstack de organização financeira com:
 ### Início rápido
 
 1. Copie `.env.example` para `.env`.
-2. Suba serviços de infraestrutura:
-   - `docker compose up -d`.
+2. Instale dependências:
+   - `pnpm install`
+3. Gere o client do Prisma:
+   - `pnpm prisma:generate`
+4. Suba a stack completa (PostgreSQL + MinIO + backend + frontend):
+   - `pnpm compose:up`
+5. Acesse:
+   - Frontend: `http://localhost:5173`
+   - Backend GraphQL: `http://localhost:4000/graphql`
+   - MinIO Console: `http://localhost:9001`
+
+### Desenvolvimento local sem Docker para apps
+
+- Infra com Docker:
+  - `pnpm compose:up`
+- Apps localmente:
+  - Backend: `pnpm dev:backend`
+  - Frontend: `pnpm dev:frontend`
+
+### Scripts úteis
+
+- `pnpm check` valida regras do Biome.
+- `pnpm build:backend` gera build do backend.
+- `pnpm build:frontend` gera build do frontend.
+- `pnpm compose:logs` acompanha logs da stack.
+- `pnpm compose:down` encerra os containers.
 
 ## Governança
 

@@ -3,13 +3,19 @@
   "private": true,
   "packageManager": "pnpm@10.5.0",
   "scripts": {
+    "install:all": "pnpm install",
     "biome": "biome check .",
     "format": "biome format .",
     "check": "biome check .",
-    "dev:backend": "pnpm --filter backend dev",
-    "build:backend": "pnpm --filter backend build",
-    "dev:frontend": "pnpm --filter frontend dev",
-    "build:frontend": "pnpm --filter frontend build"
+    "dev:backend": "pnpm --filter @financy/backend dev",
+    "build:backend": "pnpm --filter @financy/backend build",
+    "dev:frontend": "pnpm --filter @financy/frontend dev",
+    "build:frontend": "pnpm --filter @financy/frontend build",
+    "dev": "pnpm -r --parallel --filter @financy/backend --filter @financy/frontend dev",
+    "compose:up": "docker compose up -d --build",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f",
+    "prisma:generate": "pnpm --filter @financy/backend prisma:generate"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3"
