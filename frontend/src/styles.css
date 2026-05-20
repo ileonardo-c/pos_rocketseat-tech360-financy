@@ -18,6 +18,109 @@ main.dashboard {
   margin: 0 auto;
 }
 
+main.categories-layout {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.categories-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.categories-toolbar label {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.categories-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.categories-summary-card {
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f6f8fa;
+}
+
+.categories-summary-card h2 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.categories-summary-card p {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.categories-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #d0d7de;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 0;
+}
+
+.categories-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.categories-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.modal-card h2 {
+  margin-top: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -462,6 +565,37 @@ li {
 @media (max-width: 560px) {
   main.dashboard {
     padding: 16px;
+  }
+
+  main.categories-layout {
+    padding: 16px;
+  }
+
+  .categories-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .categories-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .categories-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .categories-item-actions {
+    width: 100%;
+  }
+
+  .categories-item-actions button {
+    flex: 1;
+  }
+
+  .categories-pagination {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .dashboard-header {
