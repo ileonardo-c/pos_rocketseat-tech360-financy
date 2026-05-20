@@ -55,6 +55,8 @@ type TransactionFilter = {
   from: string;
   to: string;
 };
+type SortField = "date" | "amount" | "title";
+type SortDirection = "asc" | "desc";
 
 type UploadMutationResult = {
   requestUploadUrl: {
@@ -219,7 +221,11 @@ export const TransactionsPage = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
   const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
+  const [sortField, setSortField] = useState<SortField>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [page, setPage] = useState(1);
   const editingIdRef = useRef<string | null>(null);
+  const itemsPerPage = 10;
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
@@ -256,6 +262,10 @@ export const TransactionsPage = () => {
       setSearchParams(nextSearchParams, { replace: true });
     }
   }, [filter, searchParamsString, setSearchParams]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, sortDirection, sortField]);
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
@@ -301,6 +311,30 @@ export const TransactionsPage = () => {
       return haystack.includes(normalizedQuery);
     });
   }, [transactions, filter]);
+
+  const sortedTransactions = useMemo(() => {
+    const copy = [...filteredTransactions];
+    copy.sort((left, right) => {
+      let compare = 0;
+      if (sortField === "date") {
+        compare = new Date(left.date).getTime() - new Date(right.date).getTime();
+      } else if (sortField === "amount") {
+        compare = left.amount - right.amount;
+      } else {
+        compare = left.title.localeCompare(right.title, "pt-BR");
+      }
+
+      return sortDirection === "asc" ? compare : -compare;
+    });
+    return copy;
+  }, [filteredTransactions, sortDirection, sortField]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / itemsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const pagedTransactions = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return sortedTransactions.slice(start, start + itemsPerPage);
+  }, [currentPage, sortedTransactions]);
 
   const { incomeTotal, expenseTotal, balance } = useMemo(() => {
     const totals = filteredTransactions.reduce(
@@ -362,7 +396,7 @@ export const TransactionsPage = () => {
       }
     >();
 
-    for (const transaction of filteredTransactions) {
+    for (const transaction of pagedTransactions) {
       const dateKey = toLocalDateInput(transaction.date);
       const existing = groups.get(dateKey) ?? {
         dateLabel: new Date(transaction.date).toLocaleDateString("pt-BR", {
@@ -396,7 +430,54 @@ export const TransactionsPage = () => {
         expense: value.expense,
         balance: value.income - value.expense,
       }));
-  }, [filteredTransactions]);
+  }, [pagedTransactions]);
+
+  const handleExportCsv = () => {
+    if (sortedTransactions.length === 0) {
+      setActionError("Não há transações para exportar com os filtros atuais.");
+      return;
+    }
+
+    const header = [
+      "data",
+      "titulo",
+      "descricao",
+      "tipo",
+      "categoria",
+      "valor",
+      "comprovante_url",
+    ];
+
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const rows = sortedTransactions.map((transaction) =>
+      [
+        toLocalDateInput(transaction.date),
+        transaction.title,
+        transaction.description ?? "",
+        transaction.type === "INCOME" ? "RECEITA" : "DESPESA",
+        transaction.category?.name ?? "",
+        transaction.amount.toFixed(2).replace(".", ","),
+        transaction.receiptUrl ?? "",
+      ]
+        .map((value) => escapeCsv(value))
+        .join(";"),
+    );
+
+    const csvContent = [header.join(";"), ...rows].join("\n");
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const dateSuffix = toLocalDateInput(new Date());
+    const fileName = `financy-transacoes-${dateSuffix}.csv`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.style.display = "none";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   const uploadReceipt = async (file: File) => {
     const uploadResponse = await requestUploadUrl({
@@ -650,6 +731,34 @@ export const TransactionsPage = () => {
 
       <section className="transactions-filters">
         <h2>Filtros</h2>
+        <div className="transactions-toolbar">
+          <div className="transactions-sort-controls">
+            <label>
+              Ordenar por
+              <select
+                value={sortField}
+                onChange={(event) => setSortField(event.target.value as SortField)}
+              >
+                <option value="date">Data</option>
+                <option value="amount">Valor</option>
+                <option value="title">Título</option>
+              </select>
+            </label>
+            <label>
+              Direção
+              <select
+                value={sortDirection}
+                onChange={(event) => setSortDirection(event.target.value as SortDirection)}
+              >
+                <option value="desc">Decrescente</option>
+                <option value="asc">Crescente</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" onClick={handleExportCsv}>
+            Exportar CSV filtrado
+          </button>
+        </div>
         <div className="transactions-presets">
           <button
             type="button"
@@ -798,7 +907,7 @@ export const TransactionsPage = () => {
       <section className="transactions-summary-grid">
         <article className="transactions-summary-card">
           <h3>Total filtrado</h3>
-          <p>{filteredTransactions.length}</p>
+          <p>{sortedTransactions.length}</p>
         </article>
         <article className="transactions-summary-card">
           <h3>Receitas filtradas</h3>
@@ -815,10 +924,11 @@ export const TransactionsPage = () => {
       </section>
 
       <section>
-        {groupedTransactions.length === 0 ? (
+        {sortedTransactions.length === 0 ? (
           <p>Nenhuma transação encontrada para os filtros aplicados.</p>
         ) : (
-          <div className="transactions-group-list">
+          <>
+            <div className="transactions-group-list">
             {groupedTransactions.map((group) => (
               <section key={group.dateKey} className="transactions-group">
                 <header className="transactions-group-header">
@@ -1059,7 +1169,27 @@ export const TransactionsPage = () => {
                 </ul>
               </section>
             ))}
-          </div>
+            </div>
+            <div className="transactions-pagination">
+              <button
+                disabled={currentPage <= 1}
+                type="button"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Anterior
+              </button>
+              <span>
+                Página {currentPage} de {totalPages}
+              </span>
+              <button
+                disabled={currentPage >= totalPages}
+                type="button"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Próxima
+              </button>
+            </div>
+          </>
         )}
       </section>
     </main>
