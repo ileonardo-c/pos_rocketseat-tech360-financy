@@ -38,12 +38,13 @@ const resolveHydrationErrorMessage = (error: unknown) => {
 const resolveAuthErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = String(error.message).toLowerCase();
-    if (message.includes("invalid") || message.includes("credenciais")) {
+    if (message.includes("invalid")) {
       return "E-mail ou senha inválidos.";
     }
     if (
       message.includes("already exists") ||
-      message.includes("já existe") ||
+      message.includes("already registered") ||
+      message.includes("conflict") ||
       message.includes("duplicate")
     ) {
       return "Este e-mail já está em uso.";
