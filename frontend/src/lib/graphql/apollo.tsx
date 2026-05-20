@@ -31,26 +31,20 @@ const emitSessionExpired = () => {
   window.dispatchEvent(new CustomEvent(sessionExpiredEventName));
 };
 
-const hasUnauthorizedGraphQLError = (message: string) => {
+const hasUnauthenticatedGraphQLError = (message: string) => {
   const normalized = message.toLowerCase();
-  return (
-    normalized.includes("unauthenticated") ||
-    normalized.includes("not authenticated") ||
-    normalized.includes("forbidden") ||
-    normalized.includes("não autenticado") ||
-    normalized.includes("nao autenticado")
-  );
+  return normalized.includes("unauthenticated") || normalized.includes("not authenticated");
 };
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors?.some((error) => hasUnauthorizedGraphQLError(error.message))) {
+  if (graphQLErrors?.some((error) => hasUnauthenticatedGraphQLError(error.message))) {
     emitSessionExpired();
     return;
   }
 
   const statusCode =
     "statusCode" in (networkError ?? {}) ? Number((networkError as { statusCode?: number }).statusCode) : undefined;
-  if (statusCode === 401 || statusCode === 403) {
+  if (statusCode === 401) {
     emitSessionExpired();
   }
 });

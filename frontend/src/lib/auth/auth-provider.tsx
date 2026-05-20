@@ -24,6 +24,16 @@ type AuthContextData = {
 const AuthContext = createContext<AuthContextData | null>(null);
 const sessionExpiredEventName = "financy:session-expired";
 const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
+const resolveHydrationErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = String(error.message).toLowerCase();
+    if (message.includes("unauthenticated") || message.includes("not authenticated")) {
+      return sessionExpiredMessage;
+    }
+  }
+
+  return "Não foi possível validar sua sessão agora. Tente novamente em instantes.";
+};
 
 const resolveAuthErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "message" in error) {
@@ -55,10 +65,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthError(null);
       setLoading(false);
     },
-    onError: () => {
-      localStorage.removeItem("financy.token");
+    onError: (error) => {
       setUser(null);
-      setAuthError(sessionExpiredMessage);
+      setAuthError(resolveHydrationErrorMessage(error));
       setLoading(false);
     },
   });
