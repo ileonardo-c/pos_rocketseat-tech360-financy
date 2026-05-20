@@ -213,26 +213,25 @@ export const ProtectedPage = () => {
 
   useEffect(() => {
     const nextParsedState = parseDashboardStateFromSearchParams(searchParams);
-    let hasStateChangeFromUrl = false;
+    const nextSummaryFilter =
+      !nextParsedState.summaryFilter.from && !nextParsedState.summaryFilter.to
+        ? getCurrentMonthFilter()
+        : nextParsedState.summaryFilter;
+    const hasStateChangeFromUrl =
+      !isSameSummaryFilter(summaryFilter, nextSummaryFilter) ||
+      timelineInterval !== nextParsedState.timelineInterval;
 
     setSummaryFilter((current) => {
-      if (isSameSummaryFilter(current, nextParsedState.summaryFilter)) {
+      if (isSameSummaryFilter(current, nextSummaryFilter)) {
         return current;
       }
-      hasStateChangeFromUrl = true;
-
-      if (!nextParsedState.summaryFilter.from && !nextParsedState.summaryFilter.to) {
-        return getCurrentMonthFilter();
-      }
-
-      return nextParsedState.summaryFilter;
+      return nextSummaryFilter;
     });
 
     setTimelineInterval((current) => {
       if (current === nextParsedState.timelineInterval) {
         return current;
       }
-      hasStateChangeFromUrl = true;
       return nextParsedState.timelineInterval;
     });
 
