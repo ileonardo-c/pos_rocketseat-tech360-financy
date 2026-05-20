@@ -261,22 +261,28 @@ export const ProtectedPage = () => {
     data: categoriesData,
     loading: categoriesLoading,
     error: categoriesError,
+    refetch: refetchCategories,
   } = useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
   const {
     data: transactionsData,
     loading: transactionsLoading,
     error: transactionsError,
+    refetch: refetchTransactions,
   } = useQuery<TransactionsNode>(DASHBOARD_TRANSACTIONS_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
   const {
     data: summaryData,
     loading: summaryLoading,
     error: summaryError,
+    refetch: refetchSummary,
   } = useQuery<TransactionSummaryNode>(DASHBOARD_TRANSACTION_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -288,8 +294,10 @@ export const ProtectedPage = () => {
     data: categorySummaryData,
     loading: categorySummaryLoading,
     error: categorySummaryError,
+    refetch: refetchCategorySummary,
   } = useQuery<TransactionCategorySummaryNode>(DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -302,8 +310,10 @@ export const ProtectedPage = () => {
     data: timelineData,
     loading: timelineLoading,
     error: timelineError,
+    refetch: refetchTimeline,
   } = useQuery<TransactionTimelineNode>(DASHBOARD_TRANSACTION_TIMELINE_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -341,6 +351,13 @@ export const ProtectedPage = () => {
   );
 
   const latestTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+  const isRefreshing =
+    !isInitialLoading &&
+    (categoriesLoading ||
+      transactionsLoading ||
+      summaryLoading ||
+      categorySummaryLoading ||
+      timelineLoading);
 
   if (isInitialLoading) {
     return (
@@ -363,9 +380,26 @@ export const ProtectedPage = () => {
           <h1>Dashboard</h1>
           <p>Bem-vindo, {user.name}</p>
         </div>
-        <button onClick={signout} type="button">
-          Sair
-        </button>
+        <div className="page-actions">
+          <button
+            disabled={isRefreshing}
+            type="button"
+            onClick={async () => {
+              await Promise.all([
+                refetchCategories(),
+                refetchTransactions(),
+                refetchSummary(),
+                refetchCategorySummary(),
+                refetchTimeline(),
+              ]);
+            }}
+          >
+            {isRefreshing ? "Atualizando..." : "Atualizar"}
+          </button>
+          <button onClick={signout} type="button">
+            Sair
+          </button>
+        </div>
       </header>
 
       <nav className="dashboard-links">

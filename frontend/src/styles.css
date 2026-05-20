@@ -150,6 +150,11 @@ main.auth-layout {
   gap: 16px;
 }
 
+.page-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .dashboard-header h1 {
   margin-bottom: 4px;
 }
@@ -656,6 +661,14 @@ li {
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions button {
+    flex: 1;
   }
 
   .dashboard-links {
