@@ -14,6 +14,8 @@ type User = {
 type AuthContextData = {
   user: User | null;
   loading: boolean;
+  authError: string | null;
+  clearAuthError: () => void;
   signup: (input: { name: string; email: string; password: string }) => Promise<void>;
   signin: (input: { email: string; password: string }) => Promise<void>;
   signout: () => void;
@@ -21,10 +23,25 @@ type AuthContextData = {
 
 const AuthContext = createContext<AuthContextData | null>(null);
 
+const resolveAuthErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = String(error.message).toLowerCase();
+    if (message.includes("invalid") || message.includes("credenciais")) {
+      return "E-mail ou senha inválidos.";
+    }
+    if (message.includes("already exists") || message.includes("já existe") || message.includes("duplicate")) {
+      return "Este e-mail já está em uso.";
+    }
+  }
+
+  return "Não foi possível concluir a autenticação. Tente novamente.";
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const client = useApolloClient();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const [signupMutation] = useMutation(REGISTER_MUTATION);
@@ -62,15 +79,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     [client, hydrate],
   );
 
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
   const signin = useCallback(
     async (input: { email: string; password: string }) => {
       setLoading(true);
+      setAuthError(null);
       try {
         const response = await signinMutation({ variables: { input } });
         const token = response.data.login.token;
         persistAuth(token);
         setUser(response.data.login.user);
         navigate("/");
+      } catch (error) {
+        setAuthError(resolveAuthErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -81,12 +105,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signup = useCallback(
     async (input: { name: string; email: string; password: string }) => {
       setLoading(true);
+      setAuthError(null);
       try {
         const response = await signupMutation({ variables: { input } });
         const token = response.data.register.token;
         persistAuth(token);
         setUser(response.data.register.user);
         navigate("/");
+      } catch (error) {
+        setAuthError(resolveAuthErrorMessage(error));
       } finally {
         setLoading(false);
       }
@@ -97,6 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signout = useCallback(() => {
     localStorage.removeItem("financy.token");
     setUser(null);
+    setAuthError(null);
     client.resetStore();
     navigate("/signup");
   }, [client, navigate]);
@@ -106,8 +134,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [hydrate]);
 
   const value = useMemo<AuthContextData>(
-    () => ({ user, loading, signin, signup, signout }),
-    [user, loading, signin, signup, signout],
+    () => ({ user, loading, authError, clearAuthError, signin, signup, signout }),
+    [user, loading, authError, clearAuthError, signin, signup, signout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
