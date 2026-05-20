@@ -209,6 +209,7 @@ export const ProtectedPage = () => {
   const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>(
     parsedState.timelineInterval,
   );
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const isSyncingFromUrlRef = useRef(false);
 
   useEffect(() => {
@@ -385,13 +386,18 @@ export const ProtectedPage = () => {
             disabled={isRefreshing}
             type="button"
             onClick={async () => {
-              await Promise.all([
-                refetchCategories(),
-                refetchTransactions(),
-                refetchSummary(),
-                refetchCategorySummary(),
-                refetchTimeline(),
-              ]);
+              try {
+                setRefreshError(null);
+                await Promise.all([
+                  refetchCategories(),
+                  refetchTransactions(),
+                  refetchSummary(),
+                  refetchCategorySummary(),
+                  refetchTimeline(),
+                ]);
+              } catch {
+                setRefreshError("Não foi possível atualizar os dados do dashboard.");
+              }
             }}
           >
             {isRefreshing ? "Atualizando..." : "Atualizar"}
@@ -410,6 +416,7 @@ export const ProtectedPage = () => {
       {categoriesError || transactionsError || summaryError || categorySummaryError || timelineError ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
+      {refreshError ? <p>{refreshError}</p> : null}
 
       <section className="dashboard-summary-filters">
         <h2>Resumo por período</h2>

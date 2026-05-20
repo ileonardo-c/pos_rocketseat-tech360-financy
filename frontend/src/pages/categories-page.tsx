@@ -103,7 +103,12 @@ export const CategoriesPage = () => {
           disabled={isRefreshing}
           type="button"
           onClick={async () => {
-            await refetch();
+            try {
+              setActionError(null);
+              await refetch();
+            } catch {
+              setActionError("Não foi possível atualizar a lista de categorias.");
+            }
           }}
         >
           {isRefreshing ? "Atualizando..." : "Atualizar"}

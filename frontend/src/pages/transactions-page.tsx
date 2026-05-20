@@ -612,7 +612,12 @@ export const TransactionsPage = () => {
               disabled={isRefreshing}
               type="button"
               onClick={async () => {
-                await Promise.all([refetchCategories(), refetchTransactions()]);
+                try {
+                  setActionError(null);
+                  await Promise.all([refetchCategories(), refetchTransactions()]);
+                } catch {
+                  setActionError("Não foi possível atualizar as transações.");
+                }
               }}
             >
               {isRefreshing ? "Atualizando..." : "Atualizar"}
