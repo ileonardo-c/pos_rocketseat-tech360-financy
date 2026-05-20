@@ -215,6 +215,7 @@ export const TransactionsPage = () => {
   const [form, setForm] = useState<TransactionForm>(emptyForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [filter, setFilter] = useState<TransactionFilter>(() =>
     parseFilterFromSearchParams(searchParams),
   );
@@ -225,6 +226,7 @@ export const TransactionsPage = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [page, setPage] = useState(1);
   const editingIdRef = useRef<string | null>(null);
+  const createDialogCycleRef = useRef(0);
   const itemsPerPage = 10;
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
@@ -548,6 +550,14 @@ export const TransactionsPage = () => {
     !form.categoryId ||
     categories.length === 0;
 
+  const isUpdateDisabled =
+    updating ||
+    uploadingEditReceipt ||
+    !editingForm.title.trim() ||
+    !editingForm.amount ||
+    !editingForm.date ||
+    !editingForm.categoryId;
+
   return (
     <main className="transactions-layout">
       <p>
@@ -559,180 +569,10 @@ export const TransactionsPage = () => {
       {transactionsError ? <p>Erro ao carregar transações.</p> : null}
       {actionError ? <p>{actionError}</p> : null}
 
-      {isInitialLoading ? (
-        <p>Carregando transações...</p>
-      ) : categories.length === 0 ? (
+      {isInitialLoading ? <p>Carregando transações...</p> : null}
+      {!isInitialLoading && categories.length === 0 ? (
         <p>Crie uma categoria antes de cadastrar transações.</p>
-      ) : (
-        <form
-          onSubmit={async (event) => {
-            event.preventDefault();
-            if (isCreateDisabled) {
-              return;
-            }
-
-            try {
-              setActionError(null);
-              await createTransaction({
-                variables: { input: buildTransactionPayload(form) },
-              });
-              setForm(emptyForm);
-            } catch {
-              setActionError("Não foi possível criar a transação.");
-            }
-          }}
-        >
-          <label>
-            Título
-            <input
-              autoComplete="off"
-              required
-              type="text"
-              value={form.title}
-              onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            />
-          </label>
-
-          <label>
-            Descrição
-            <input
-              autoComplete="off"
-              type="text"
-              value={form.description}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  description: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <label>
-            Valor
-            <input
-              min="0"
-              required
-              step="0.01"
-              type="number"
-              value={form.amount}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  amount: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <label>
-            Tipo
-            <select
-              value={form.type}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  type: event.target.value as TransactionForm["type"],
-                }))
-              }
-            >
-              <option value="EXPENSE">Despesa</option>
-              <option value="INCOME">Receita</option>
-            </select>
-          </label>
-
-          <label>
-            Data
-            <input
-              required
-              type="date"
-              value={form.date}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  date: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <label>
-            Categoria
-            <select
-              required
-              value={form.categoryId}
-              onChange={(event) =>
-                setForm((prev) => ({
-                  ...prev,
-                  categoryId: event.target.value,
-                }))
-              }
-            >
-              <option value="">Selecione</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            Comprovante
-            <input
-              accept=".pdf,image/*"
-              type="file"
-              onChange={async (event) => {
-                const file = event.target.files?.[0];
-                if (!file) {
-                  return;
-                }
-
-                try {
-                  setActionError(null);
-                  setUploadingCreateReceipt(true);
-                  const uploaded = await uploadReceipt(file);
-                  setForm((prev) => ({
-                    ...prev,
-                    receiptKey: uploaded.receiptKey,
-                    receiptUrl: uploaded.receiptUrl,
-                  }));
-                } catch {
-                  setActionError("Não foi possível enviar o comprovante.");
-                } finally {
-                  setUploadingCreateReceipt(false);
-                  event.target.value = "";
-                }
-              }}
-            />
-          </label>
-
-          {form.receiptUrl ? (
-            <p>
-              Comprovante anexado.{" "}
-              <a href={form.receiptUrl} rel="noreferrer" target="_blank">
-                Abrir
-              </a>{" "}
-              <button
-                type="button"
-                onClick={() =>
-                  setForm((prev) => ({
-                    ...prev,
-                    receiptKey: "",
-                    receiptUrl: "",
-                  }))
-                }
-              >
-                Remover
-              </button>
-            </p>
-          ) : null}
-
-          <button disabled={isCreateDisabled} type="submit">
-            {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
-          </button>
-        </form>
-      )}
+      ) : null}
 
       <section className="transactions-filters">
         <h2>Filtros</h2>
@@ -760,9 +600,23 @@ export const TransactionsPage = () => {
               </select>
             </label>
           </div>
-          <button type="button" onClick={handleExportCsv}>
-            Exportar CSV filtrado
-          </button>
+          <div className="transactions-toolbar-actions">
+            <button type="button" onClick={handleExportCsv}>
+              Exportar CSV filtrado
+            </button>
+            <button
+              disabled={categories.length === 0}
+              type="button"
+              onClick={() => {
+                setActionError(null);
+                setForm(emptyForm);
+                createDialogCycleRef.current += 1;
+                setIsCreateDialogOpen(true);
+              }}
+            >
+              Nova transação
+            </button>
+          </div>
         </div>
         <div className="transactions-presets">
           <button
@@ -949,225 +803,65 @@ export const TransactionsPage = () => {
                 </header>
                 <ul>
                   {group.transactions.map((transaction) => {
-                    const isEditing = editingId === transaction.id;
-                    const isUpdateDisabled =
-                      updating ||
-                      uploadingEditReceipt ||
-                      !editingForm.title.trim() ||
-                      !editingForm.amount ||
-                      !editingForm.date ||
-                      !editingForm.categoryId;
-
                     return (
-                      <li key={transaction.id}>
-                        {isEditing ? (
-                          <form
-                            onSubmit={async (event) => {
-                              event.preventDefault();
-                              if (isUpdateDisabled) {
+                      <li key={transaction.id} className="transactions-item">
+                        <div className="transactions-item-main">
+                          <strong>{transaction.title}</strong>
+                          <p>
+                            {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
+                            {currencyFormatter.format(transaction.amount)} ·{" "}
+                            {transaction.category?.name ?? "Sem categoria"} ·{" "}
+                            {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                          </p>
+                          {transaction.description ? <p>{transaction.description}</p> : null}
+                          {transaction.receiptUrl ? (
+                            <p>
+                              <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                                Comprovante
+                              </a>
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="transactions-item-actions">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActionError(null);
+                              setEditingId(transaction.id);
+                              setEditingForm({
+                                title: transaction.title,
+                                description: transaction.description ?? "",
+                                amount: String(transaction.amount),
+                                type: transaction.type,
+                                date: toLocalDateInput(transaction.date),
+                                categoryId: transaction.categoryId,
+                                receiptKey: transaction.receiptKey ?? "",
+                                receiptUrl: transaction.receiptUrl ?? "",
+                              });
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            disabled={deleting}
+                            type="button"
+                            onClick={async () => {
+                              const confirmed = window.confirm("Deseja realmente excluir esta transação?");
+                              if (!confirmed) {
                                 return;
                               }
 
                               try {
                                 setActionError(null);
-                                await updateTransaction({
-                                  variables: {
-                                    id: transaction.id,
-                                    input: buildTransactionPayload(editingForm),
-                                  },
-                                });
-
-                                setEditingId(null);
-                                setEditingForm(emptyForm);
+                                await deleteTransaction({ variables: { id: transaction.id } });
                               } catch {
-                                setActionError("Não foi possível atualizar a transação.");
+                                setActionError("Não foi possível excluir a transação.");
                               }
                             }}
                           >
-                            <input
-                              autoComplete="off"
-                              required
-                              type="text"
-                              value={editingForm.title}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  title: event.target.value,
-                                }))
-                              }
-                            />
-                            <input
-                              autoComplete="off"
-                              type="text"
-                              value={editingForm.description}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  description: event.target.value,
-                                }))
-                              }
-                            />
-                            <input
-                              min="0"
-                              required
-                              step="0.01"
-                              type="number"
-                              value={editingForm.amount}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  amount: event.target.value,
-                                }))
-                              }
-                            />
-                            <select
-                              value={editingForm.type}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  type: event.target.value as TransactionForm["type"],
-                                }))
-                              }
-                            >
-                              <option value="EXPENSE">Despesa</option>
-                              <option value="INCOME">Receita</option>
-                            </select>
-                            <input
-                              required
-                              type="date"
-                              value={editingForm.date}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  date: event.target.value,
-                                }))
-                              }
-                            />
-                            <select
-                              required
-                              value={editingForm.categoryId}
-                              onChange={(event) =>
-                                setEditingForm((prev) => ({
-                                  ...prev,
-                                  categoryId: event.target.value,
-                                }))
-                              }
-                            >
-                              <option value="">Selecione</option>
-                              {categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                  {category.name}
-                                </option>
-                              ))}
-                            </select>
-
-                            <input
-                              accept=".pdf,image/*"
-                              type="file"
-                              onChange={async (event) => {
-                                const file = event.target.files?.[0];
-                                if (!file) {
-                                  return;
-                                }
-
-                                await handleEditReceiptUpload(transaction.id, file);
-                                event.target.value = "";
-                              }}
-                            />
-
-                            {editingForm.receiptUrl ? (
-                              <p>
-                                <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
-                                  Abrir comprovante
-                                </a>{" "}
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setEditingForm((prev) => ({
-                                      ...prev,
-                                      receiptKey: "",
-                                      receiptUrl: "",
-                                    }))
-                                  }
-                                >
-                                  Remover comprovante
-                                </button>
-                              </p>
-                            ) : null}
-
-                            <button disabled={isUpdateDisabled} type="submit">
-                              {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditingForm(emptyForm);
-                              }}
-                            >
-                              Cancelar
-                            </button>
-                          </form>
-                        ) : (
-                          <>
-                            <strong>{transaction.title}</strong> -{" "}
-                            {transaction.type === "INCOME" ? "Receita" : "Despesa"} -{" "}
-                            {currencyFormatter.format(transaction.amount)} -{" "}
-                            {transaction.category?.name ?? "Sem categoria"} -{" "}
-                            {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                            {transaction.description ? ` - ${transaction.description}` : ""}
-                            {transaction.receiptUrl ? (
-                              <>
-                                {" "}
-                                -{" "}
-                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                                  Comprovante
-                                </a>
-                              </>
-                            ) : null}
-                            <div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingId(transaction.id);
-                                  setEditingForm({
-                                    title: transaction.title,
-                                    description: transaction.description ?? "",
-                                    amount: String(transaction.amount),
-                                    type: transaction.type,
-                                    date: toLocalDateInput(transaction.date),
-                                    categoryId: transaction.categoryId,
-                                    receiptKey: transaction.receiptKey ?? "",
-                                    receiptUrl: transaction.receiptUrl ?? "",
-                                  });
-                                }}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                disabled={deleting}
-                                type="button"
-                                onClick={async () => {
-                                  const confirmed = window.confirm(
-                                    "Deseja realmente excluir esta transação?",
-                                  );
-                                  if (!confirmed) {
-                                    return;
-                                  }
-
-                                  try {
-                                    setActionError(null);
-                                    await deleteTransaction({ variables: { id: transaction.id } });
-                                  } catch {
-                                    setActionError("Não foi possível excluir a transação.");
-                                  }
-                                }}
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </>
-                        )}
+                            Excluir
+                          </button>
+                        </div>
                       </li>
                     );
                   })}
@@ -1197,6 +891,357 @@ export const TransactionsPage = () => {
           </>
         )}
       </section>
+
+      {isCreateDialogOpen ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setIsCreateDialogOpen(false)}>
+          <div className="modal-card transactions-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h2>Nova transação</h2>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (isCreateDisabled) {
+                  return;
+                }
+                const currentCreateCycle = createDialogCycleRef.current;
+
+                try {
+                  setActionError(null);
+                  await createTransaction({
+                    variables: { input: buildTransactionPayload(form) },
+                  });
+                  setForm(emptyForm);
+                  if (createDialogCycleRef.current === currentCreateCycle) {
+                    setIsCreateDialogOpen(false);
+                  }
+                } catch {
+                  setActionError("Não foi possível criar a transação.");
+                }
+              }}
+            >
+              <label>
+                Título
+                <input
+                  autoComplete="off"
+                  required
+                  type="text"
+                  value={form.title}
+                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                />
+              </label>
+              <label>
+                Descrição
+                <input
+                  autoComplete="off"
+                  type="text"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Valor
+                <input
+                  min="0"
+                  required
+                  step="0.01"
+                  type="number"
+                  value={form.amount}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      amount: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Tipo
+                <select
+                  value={form.type}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      type: event.target.value as TransactionForm["type"],
+                    }))
+                  }
+                >
+                  <option value="EXPENSE">Despesa</option>
+                  <option value="INCOME">Receita</option>
+                </select>
+              </label>
+              <label>
+                Data
+                <input
+                  required
+                  type="date"
+                  value={form.date}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Categoria
+                <select
+                  required
+                  value={form.categoryId}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      categoryId: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Selecione</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Comprovante
+                <input
+                  accept=".pdf,image/*"
+                  type="file"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) {
+                      return;
+                    }
+
+                    try {
+                      setActionError(null);
+                      setUploadingCreateReceipt(true);
+                      const uploaded = await uploadReceipt(file);
+                      setForm((prev) => ({
+                        ...prev,
+                        receiptKey: uploaded.receiptKey,
+                        receiptUrl: uploaded.receiptUrl,
+                      }));
+                    } catch {
+                      setActionError("Não foi possível enviar o comprovante.");
+                    } finally {
+                      setUploadingCreateReceipt(false);
+                      event.target.value = "";
+                    }
+                  }}
+                />
+              </label>
+              {form.receiptUrl ? (
+                <p>
+                  Comprovante anexado.{" "}
+                  <a href={form.receiptUrl} rel="noreferrer" target="_blank">
+                    Abrir
+                  </a>{" "}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((prev) => ({
+                        ...prev,
+                        receiptKey: "",
+                        receiptUrl: "",
+                      }))
+                    }
+                  >
+                    Remover
+                  </button>
+                </p>
+              ) : null}
+              <div className="modal-actions">
+                <button disabled={isCreateDisabled} type="submit">
+                  {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
+                </button>
+                <button type="button" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
+
+      {editingId ? (
+        <div className="modal-overlay" role="presentation" onClick={() => setEditingId(null)}>
+          <div className="modal-card transactions-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <h2>Editar transação</h2>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (isUpdateDisabled) {
+                  return;
+                }
+
+                try {
+                  setActionError(null);
+                  await updateTransaction({
+                    variables: {
+                      id: editingId,
+                      input: buildTransactionPayload(editingForm),
+                    },
+                  });
+                  setEditingId(null);
+                  setEditingForm(emptyForm);
+                } catch {
+                  setActionError("Não foi possível atualizar a transação.");
+                }
+              }}
+            >
+              <label>
+                Título
+                <input
+                  autoComplete="off"
+                  required
+                  type="text"
+                  value={editingForm.title}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      title: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Descrição
+                <input
+                  autoComplete="off"
+                  type="text"
+                  value={editingForm.description}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      description: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Valor
+                <input
+                  min="0"
+                  required
+                  step="0.01"
+                  type="number"
+                  value={editingForm.amount}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      amount: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Tipo
+                <select
+                  value={editingForm.type}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      type: event.target.value as TransactionForm["type"],
+                    }))
+                  }
+                >
+                  <option value="EXPENSE">Despesa</option>
+                  <option value="INCOME">Receita</option>
+                </select>
+              </label>
+              <label>
+                Data
+                <input
+                  required
+                  type="date"
+                  value={editingForm.date}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      date: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              <label>
+                Categoria
+                <select
+                  required
+                  value={editingForm.categoryId}
+                  onChange={(event) =>
+                    setEditingForm((prev) => ({
+                      ...prev,
+                      categoryId: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Selecione</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Comprovante
+                <input
+                  accept=".pdf,image/*"
+                  type="file"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file || !editingId) {
+                      return;
+                    }
+
+                    await handleEditReceiptUpload(editingId, file);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              {editingForm.receiptUrl ? (
+                <p>
+                  <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
+                    Abrir comprovante
+                  </a>{" "}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditingForm((prev) => ({
+                        ...prev,
+                        receiptKey: "",
+                        receiptUrl: "",
+                      }))
+                    }
+                  >
+                    Remover comprovante
+                  </button>
+                </p>
+              ) : null}
+              <div className="modal-actions">
+                <button disabled={isUpdateDisabled} type="submit">
+                  {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId(null);
+                    setEditingForm(emptyForm);
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 };
