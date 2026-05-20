@@ -9,6 +9,21 @@ export const SigninPage = () => {
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ email: false, password: false });
 
+  const getEmailError = (value: string) => {
+    if (!value.trim()) {
+      return "Informe seu e-mail.";
+    }
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    return isEmailValid ? "" : "Informe um e-mail válido.";
+  };
+
+  const getPasswordError = (value: string) => {
+    if (!value) {
+      return "Informe sua senha.";
+    }
+    return "";
+  };
+
   useEffect(() => {
     clearAuthError();
   }, [clearAuthError]);
@@ -17,21 +32,14 @@ export const SigninPage = () => {
     if (!touched.email) {
       return "";
     }
-    if (!email.trim()) {
-      return "Informe seu e-mail.";
-    }
-    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-    return isEmailValid ? "" : "Informe um e-mail válido.";
+    return getEmailError(email);
   }, [email, touched.email]);
 
   const passwordError = useMemo(() => {
     if (!touched.password) {
       return "";
     }
-    if (!password) {
-      return "Informe sua senha.";
-    }
-    return "";
+    return getPasswordError(password);
   }, [password, touched.password]);
 
   if (user) {
@@ -47,7 +55,9 @@ export const SigninPage = () => {
           event.preventDefault();
           setTouched({ email: true, password: true });
 
-          if (emailError || passwordError) {
+          const submitEmailError = getEmailError(email);
+          const submitPasswordError = getPasswordError(password);
+          if (submitEmailError || submitPasswordError) {
             return;
           }
 
