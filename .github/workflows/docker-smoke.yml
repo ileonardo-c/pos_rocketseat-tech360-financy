@@ -64,8 +64,8 @@ jobs:
           echo "Frontend did not respond after 120s"
           exit 1
 
-      - name: Apply Prisma migrations
-        run: docker compose exec -T backend pnpm --filter @financy/backend prisma:deploy
+      - name: Sync Prisma schema
+        run: docker compose exec -T backend pnpm --filter @financy/backend exec prisma db push
 
       - name: Run GraphQL smoke flow
         run: pnpm smoke:graphql
