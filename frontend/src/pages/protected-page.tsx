@@ -209,6 +209,7 @@ export const ProtectedPage = () => {
   const [timelineInterval, setTimelineInterval] = useState<TimelineInterval>(
     parsedState.timelineInterval,
   );
+  const [refreshError, setRefreshError] = useState<string | null>(null);
   const isSyncingFromUrlRef = useRef(false);
 
   useEffect(() => {
@@ -261,22 +262,28 @@ export const ProtectedPage = () => {
     data: categoriesData,
     loading: categoriesLoading,
     error: categoriesError,
+    refetch: refetchCategories,
   } = useQuery<CategoriesNode>(DASHBOARD_CATEGORIES_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
   const {
     data: transactionsData,
     loading: transactionsLoading,
     error: transactionsError,
+    refetch: refetchTransactions,
   } = useQuery<TransactionsNode>(DASHBOARD_TRANSACTIONS_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
   const {
     data: summaryData,
     loading: summaryLoading,
     error: summaryError,
+    refetch: refetchSummary,
   } = useQuery<TransactionSummaryNode>(DASHBOARD_TRANSACTION_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -288,8 +295,10 @@ export const ProtectedPage = () => {
     data: categorySummaryData,
     loading: categorySummaryLoading,
     error: categorySummaryError,
+    refetch: refetchCategorySummary,
   } = useQuery<TransactionCategorySummaryNode>(DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -302,8 +311,10 @@ export const ProtectedPage = () => {
     data: timelineData,
     loading: timelineLoading,
     error: timelineError,
+    refetch: refetchTimeline,
   } = useQuery<TransactionTimelineNode>(DASHBOARD_TRANSACTION_TIMELINE_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -341,6 +352,13 @@ export const ProtectedPage = () => {
   );
 
   const latestTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+  const isRefreshing =
+    !isInitialLoading &&
+    (categoriesLoading ||
+      transactionsLoading ||
+      summaryLoading ||
+      categorySummaryLoading ||
+      timelineLoading);
 
   if (isInitialLoading) {
     return (
@@ -363,9 +381,39 @@ export const ProtectedPage = () => {
           <h1>Dashboard</h1>
           <p>Bem-vindo, {user.name}</p>
         </div>
-        <button onClick={signout} type="button">
-          Sair
-        </button>
+        <div className="page-actions">
+          <button
+            disabled={isRefreshing}
+            type="button"
+            onClick={async () => {
+              setRefreshError(null);
+              const results = await Promise.allSettled([
+                refetchCategories(),
+                refetchTransactions(),
+                refetchSummary(),
+                refetchCategorySummary(),
+                refetchTimeline(),
+              ]);
+              const failedCount = results.filter((result) => result.status === "rejected").length;
+
+              if (failedCount === results.length) {
+                setRefreshError("Não foi possível atualizar os dados do dashboard.");
+                return;
+              }
+
+              if (failedCount > 0) {
+                setRefreshError(
+                  "Alguns dados do dashboard não foram atualizados. Tente novamente em instantes.",
+                );
+              }
+            }}
+          >
+            {isRefreshing ? "Atualizando..." : "Atualizar"}
+          </button>
+          <button onClick={signout} type="button">
+            Sair
+          </button>
+        </div>
       </header>
 
       <nav className="dashboard-links">
@@ -376,6 +424,7 @@ export const ProtectedPage = () => {
       {categoriesError || transactionsError || summaryError || categorySummaryError || timelineError ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
+      {refreshError ? <p>{refreshError}</p> : null}
 
       <section className="dashboard-summary-filters">
         <h2>Resumo por período</h2>

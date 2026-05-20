@@ -22,8 +22,9 @@ type CategoryNode = {
 
 export const CategoriesPage = () => {
   const { user } = useAuth();
-  const { data, loading, error } = useQuery<CategoryNode>(CATEGORIES_QUERY, {
+  const { data, loading, error, refetch, networkStatus } = useQuery<CategoryNode>(CATEGORIES_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
 
   const [query, setQuery] = useState("");
@@ -70,6 +71,7 @@ export const CategoriesPage = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredCategories.slice(start, start + itemsPerPage);
   }, [currentPage, filteredCategories]);
+  const isRefreshing = networkStatus === 4;
 
   if (!user) {
     return <Navigate to="/" replace />;
@@ -97,6 +99,20 @@ export const CategoriesPage = () => {
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
+        <button
+          disabled={isRefreshing}
+          type="button"
+          onClick={async () => {
+            try {
+              setActionError(null);
+              await refetch();
+            } catch {
+              setActionError("Não foi possível atualizar a lista de categorias.");
+            }
+          }}
+        >
+          {isRefreshing ? "Atualizando..." : "Atualizar"}
+        </button>
         <button
           type="button"
           onClick={() => {

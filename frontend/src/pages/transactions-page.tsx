@@ -200,16 +200,22 @@ export const TransactionsPage = () => {
     data: categoriesData,
     loading: categoriesLoading,
     error: categoriesError,
+    refetch: refetchCategories,
+    networkStatus: categoriesNetworkStatus,
   } = useQuery<CategoriesNode>(CATEGORIES_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
 
   const {
     data: transactionsData,
     loading: transactionsLoading,
     error: transactionsError,
+    refetch: refetchTransactions,
+    networkStatus: transactionsNetworkStatus,
   } = useQuery<TransactionsNode>(TRANSACTIONS_QUERY, {
     fetchPolicy: "cache-and-network",
+    notifyOnNetworkStatusChange: true,
   });
 
   const [form, setForm] = useState<TransactionForm>(emptyForm);
@@ -280,6 +286,7 @@ export const TransactionsPage = () => {
     (categoriesLoading || transactionsLoading) &&
     categories.length === 0 &&
     transactions.length === 0;
+  const isRefreshing = categoriesNetworkStatus === 4 || transactionsNetworkStatus === 4;
 
   const filteredTransactions = useMemo(() => {
     const normalizedQuery = filter.query.trim().toLowerCase();
@@ -601,6 +608,28 @@ export const TransactionsPage = () => {
             </label>
           </div>
           <div className="transactions-toolbar-actions">
+            <button
+              disabled={isRefreshing}
+              type="button"
+              onClick={async () => {
+                setActionError(null);
+                const results = await Promise.allSettled([refetchCategories(), refetchTransactions()]);
+                const failedCount = results.filter((result) => result.status === "rejected").length;
+
+                if (failedCount === results.length) {
+                  setActionError("Não foi possível atualizar as transações.");
+                  return;
+                }
+
+                if (failedCount > 0) {
+                  setActionError(
+                    "Alguns dados da tela de transações não foram atualizados. Tente novamente em instantes.",
+                  );
+                }
+              }}
+            >
+              {isRefreshing ? "Atualizando..." : "Atualizar"}
+            </button>
             <button type="button" onClick={handleExportCsv}>
               Exportar CSV filtrado
             </button>
