@@ -1,8 +1,8 @@
-import Fastify from "fastify";
 import cors from "@fastify/cors";
+import Fastify from "fastify";
 import mercurius from "mercurius";
 import { buildContext } from "./context";
-import { typeDefs, resolvers } from "./graphql/index";
+import { resolvers, typeDefs } from "./graphql/index";
 import { getRequiredEnv } from "./lib/env";
 import { AppError } from "./lib/errors";
 import { prisma } from "./prisma/client";
