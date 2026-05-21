@@ -38,23 +38,15 @@ const AUTH_ERROR_RULES: AuthErrorRule[] = [
       "session expired",
       "expired token",
       "não autenticado",
-      "nao autenticado",
     ],
     toUserMessage: sessionExpiredMessage,
   },
   {
-    messages: ["invalid", "invalid credentials", "credenciais invalidas", "credenciais inválidas"],
+    messages: ["invalid", "invalid credentials", "credenciais inválidas"],
     toUserMessage: "E-mail ou senha inválidos.",
   },
   {
-    messages: [
-      "already exists",
-      "already registered",
-      "conflict",
-      "duplicate",
-      "já cadastrado",
-      "ja cadastrado",
-    ],
+    messages: ["already exists", "already registered", "conflict", "duplicate", "já cadastrado"],
     toUserMessage: "Este e-mail já está em uso.",
   },
 ];

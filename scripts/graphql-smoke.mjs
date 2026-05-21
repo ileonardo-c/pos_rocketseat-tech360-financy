@@ -1,26 +1,53 @@
 const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
+const requestDelayMs = 500;
+const maxRequestRetries = 8;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const request = async (query, variables = {}, token) => {
-  const response = await fetch(graphqlUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  let lastError;
 
-  if (!response.ok) {
-    throw new Error(`GraphQL HTTP error: ${response.status}`);
+  for (let attempt = 1; attempt <= maxRequestRetries; attempt += 1) {
+    try {
+      const response = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL HTTP error: ${response.status}`);
+      }
+
+      const payload = await response.json();
+      if (payload.errors?.length) {
+        const message = payload.errors.map((error) => error.message).join("; ");
+        throw new Error(`GraphQL execution error: ${message}`);
+      }
+
+      return payload.data;
+    } catch (error) {
+      lastError = error;
+
+      const isRetryableError = error instanceof TypeError && error.message === "fetch failed";
+      if (!isRetryableError) {
+        throw error;
+      }
+
+      if (attempt >= maxRequestRetries) {
+        throw new Error(
+          `GraphQL request failed after ${maxRequestRetries} attempts to ${graphqlUrl}: ${error.message}`,
+        );
+      }
+
+      await sleep(requestDelayMs * attempt);
+    }
   }
 
-  const payload = await response.json();
-  if (payload.errors?.length) {
-    const message = payload.errors.map((error) => error.message).join("; ");
-    throw new Error(`GraphQL execution error: ${message}`);
-  }
-
-  return payload.data;
+  throw lastError;
 };
 
 const ensure = (condition, message) => {
@@ -35,6 +62,9 @@ const userInput = {
   email: `smoke.${randomSuffix}@financy.local`,
   password: "SmokePass123!",
 };
+
+const runGraphQLProbe = () =>
+  request(`query HealthProbe { __typename }`);
 
 const registerMutation = `
   mutation Register($input: RegisterInput!) {
@@ -97,6 +127,8 @@ const deleteCategoryMutation = `
 `;
 
 const run = async () => {
+  await runGraphQLProbe();
+
   const registerData = await request(registerMutation, { input: userInput });
   ensure(registerData?.register?.token, "Missing token from register");
   ensure(registerData.register.user.email === userInput.email, "Registered user email mismatch");
