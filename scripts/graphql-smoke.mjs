@@ -231,7 +231,15 @@ const run = async () => {
     input: { email: secondUserInput.email, password: secondUserInput.password },
   });
   const secondToken = secondLoginData?.login?.token;
+  const secondUserId = secondLoginData?.login?.user?.id;
   ensure(secondToken, "Missing token from second user login");
+  ensure(secondUserId, "Missing user id from second user login");
+
+  const secondMeData = await request(meQuery, secondToken);
+  ensure(
+    secondMeData?.me?.email === secondUserInput.email,
+    "Second user me query returned unexpected user",
+  );
 
   const crossDeleteTransaction = await requestWithGraphQLErrors(
     deleteTransactionMutation,
