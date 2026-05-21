@@ -51,21 +51,48 @@ const request = async (query, token, variables = {}) => {
 };
 
 const requestWithGraphQLErrors = async (query, token, variables = {}) => {
-  const response = await fetch(graphqlUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(token ? { authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ query, variables }),
-  });
+  let lastError;
 
-  const payload = await response.json();
-  return {
-    httpStatus: response.status,
-    data: payload.data ?? null,
-    errors: payload.errors ?? [],
-  };
+  for (let attempt = 1; attempt <= maxRequestRetries; attempt += 1) {
+    try {
+      const response = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL HTTP error: ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return {
+        httpStatus: response.status,
+        data: payload.data ?? null,
+        errors: payload.errors ?? [],
+      };
+    } catch (error) {
+      lastError = error;
+
+      const isRetryableError = error instanceof TypeError && error.message === "fetch failed";
+      if (!isRetryableError) {
+        throw error;
+      }
+
+      if (attempt >= maxRequestRetries) {
+        throw new Error(
+          `GraphQL request failed after ${maxRequestRetries} attempts to ${graphqlUrl}: ${error.message}`,
+        );
+      }
+
+      await sleep(requestDelayMs * attempt);
+    }
+  }
+
+  throw lastError;
 };
 
 const ensure = (condition, message) => {
