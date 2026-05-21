@@ -63,10 +63,10 @@ export class AuthService {
     if (!normalizedEmail) {
       throw new AppError("Invalid email", 400);
     }
-    const normalizedPassword = password.trim();
-    if (!normalizedPassword) {
+    if (!password.length) {
       throw new AppError("Invalid credentials", 401);
     }
+    const normalizedPassword = password.trim();
 
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
