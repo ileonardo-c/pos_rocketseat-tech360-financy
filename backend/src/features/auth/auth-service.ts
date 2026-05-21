@@ -1,5 +1,5 @@
-import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
 import type { GraphQLContext } from "../../context";
@@ -20,14 +20,11 @@ export class AuthService {
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    let user;
+    let user: Awaited<ReturnType<AuthRepository["createUser"]>>;
     try {
       user = await this.repository.createUser(name, normalizedEmail, hashed);
     } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new AppError("Email already registered", 409);
       }
       throw error;
