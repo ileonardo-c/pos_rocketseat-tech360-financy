@@ -13,7 +13,21 @@ export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
 
   async register(name: string, email: string, password: string) {
+    const normalizedName = name.trim();
+    if (!normalizedName) {
+      throw new AppError("Invalid name", 400);
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
+    const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    if (!isValidEmail) {
+      throw new AppError("Invalid email", 400);
+    }
+
+    if (password.length < 6) {
+      throw new AppError("Invalid password", 400);
+    }
+
     const existingUser = await this.repository.findByEmail(normalizedEmail);
     if (existingUser) {
       throw new AppError("Email already registered", 409);
@@ -22,7 +36,7 @@ export class AuthService {
     const hashed = await bcrypt.hash(password, 10);
     let user: Awaited<ReturnType<AuthRepository["createUser"]>>;
     try {
-      user = await this.repository.createUser(name, normalizedEmail, hashed);
+      user = await this.repository.createUser(normalizedName, normalizedEmail, hashed);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new AppError("Email already registered", 409);
@@ -39,6 +53,10 @@ export class AuthService {
 
   async login(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new AppError("Invalid email", 400);
+    }
+
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
       throw new AppError("Invalid credentials", 401);

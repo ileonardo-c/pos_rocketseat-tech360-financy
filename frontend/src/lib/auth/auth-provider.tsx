@@ -21,49 +21,75 @@ type AuthContextData = {
   signout: () => void;
 };
 
+type AuthErrorRule = {
+  messages: string[];
+  toUserMessage: string;
+};
+
 const AuthContext = createContext<AuthContextData | null>(null);
 const sessionExpiredEventName = "financy:session-expired";
 const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
-const resolveHydrationErrorMessage = (error: unknown) => {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const message = String(error.message).toLowerCase();
-    if (
-      message.includes("unauthenticated") ||
-      message.includes("not authenticated") ||
-      message.includes("não autenticado") ||
-      message.includes("session expired") ||
-      message.includes("expired token")
-    ) {
-      return sessionExpiredMessage;
-    }
-  }
 
-  return "Não foi possível validar sua sessão agora. Tente novamente em instantes.";
+const AUTH_ERROR_RULES: AuthErrorRule[] = [
+  {
+    messages: [
+      "unauthenticated",
+      "not authenticated",
+      "session expired",
+      "expired token",
+      "não autenticado",
+    ],
+    toUserMessage: sessionExpiredMessage,
+  },
+  {
+    messages: ["invalid name"],
+    toUserMessage: "Por favor, informe um nome válido.",
+  },
+  {
+    messages: ["invalid email"],
+    toUserMessage: "Por favor, informe um e-mail válido.",
+  },
+  {
+    messages: ["invalid password"],
+    toUserMessage: "A senha deve ter pelo menos 6 caracteres.",
+  },
+  {
+    messages: ["invalid credentials"],
+    toUserMessage: "E-mail ou senha inválidos.",
+  },
+  {
+    messages: ["already exists", "already registered", "conflict", "duplicate", "já cadastrado"],
+    toUserMessage: "Este e-mail já está em uso.",
+  },
+];
+
+const AUTH_FALLBACK_MESSAGES = {
+  defaultSession: "Não foi possível validar sua sessão agora. Tente novamente em instantes.",
+  defaultAuth: "Não foi possível concluir a autenticação. Tente novamente.",
 };
 
-const resolveAuthErrorMessage = (error: unknown) => {
-  if (typeof error === "object" && error !== null && "message" in error) {
-    const message = String(error.message).toLowerCase();
-    if (message.includes("invalid")) {
-      return "E-mail ou senha inválidos.";
-    }
-    if (
-      message.includes("already exists") ||
-      message.includes("already registered") ||
-      message.includes("conflict") ||
-      message.includes("duplicate")
-    ) {
-      return "Este e-mail já está em uso.";
-    }
+const normalizeErrorMessage = (error: unknown) => {
+  if (error && typeof error === "object" && "message" in error) {
+    return String(error.message).toLowerCase();
   }
+  return "";
+};
 
-  return "Não foi possível concluir a autenticação. Tente novamente.";
+const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
+  const message = normalizeErrorMessage(error);
+  const foundRule = AUTH_ERROR_RULES.find((rule) =>
+    rule.messages.some((value) => message.includes(value)),
+  );
+  if (!foundRule) {
+    return fallback;
+  }
+  return foundRule.toUserMessage;
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const client = useApolloClient();
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -78,7 +104,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     onError: (error) => {
       setUser(null);
-      const hydrationMessage = resolveHydrationErrorMessage(error);
+      const hydrationMessage = resolveAuthErrorMessage(
+        error,
+        AUTH_FALLBACK_MESSAGES.defaultSession,
+      );
       setAuthError((current) =>
         current === sessionExpiredMessage ? sessionExpiredMessage : hydrationMessage,
       );
@@ -90,18 +119,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const token = localStorage.getItem("financy.token");
     if (!token) {
       setUser(null);
+      setAuthError(null);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    loadMe().finally(() => setLoading(false));
+    void loadMe();
   }, [loadMe]);
 
+  const clearAuthState = useCallback(
+    async (message?: string | null) => {
+      localStorage.removeItem("financy.token");
+      setUser(null);
+      setAuthError(message ?? null);
+      setLoading(false);
+      try {
+        await client.resetStore();
+      } catch (error) {
+        console.warn("Failed to reset Apollo store during auth state cleanup", error);
+      }
+    },
+    [client],
+  );
+
   const persistAuth = useCallback(
-    (token: string) => {
+    async (token: string) => {
       localStorage.setItem("financy.token", token);
-      client.resetStore();
+      try {
+        await client.resetStore();
+      } catch (error) {
+        console.warn("Failed to reset Apollo store after auth persistence", error);
+      }
       hydrate();
     },
     [client, hydrate],
@@ -117,12 +166,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthError(null);
       try {
         const response = await signinMutation({ variables: { input } });
-        const token = response.data.login.token;
-        persistAuth(token);
+        await persistAuth(response.data.login.token);
         setUser(response.data.login.user);
         navigate("/");
       } catch (error) {
-        setAuthError(resolveAuthErrorMessage(error));
+        setAuthError(resolveAuthErrorMessage(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
       } finally {
         setLoading(false);
       }
@@ -136,12 +184,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setAuthError(null);
       try {
         const response = await signupMutation({ variables: { input } });
-        const token = response.data.register.token;
-        persistAuth(token);
+        await persistAuth(response.data.register.token);
         setUser(response.data.register.user);
         navigate("/");
       } catch (error) {
-        setAuthError(resolveAuthErrorMessage(error));
+        setAuthError(resolveAuthErrorMessage(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
       } finally {
         setLoading(false);
       }
@@ -150,20 +197,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signout = useCallback(() => {
-    localStorage.removeItem("financy.token");
-    setUser(null);
-    setAuthError(null);
-    client.resetStore();
-    navigate("/signup");
-  }, [client, navigate]);
+    void clearAuthState().then(() => {
+      navigate("/signup", { replace: true });
+    });
+  }, [clearAuthState, navigate]);
 
-  const handleSessionExpired = useCallback(() => {
-    localStorage.removeItem("financy.token");
-    setUser(null);
-    setAuthError(sessionExpiredMessage);
-    client.resetStore();
+  const handleSessionExpired = useCallback(async () => {
+    await clearAuthState(sessionExpiredMessage);
     navigate("/", { replace: true });
-  }, [client, navigate]);
+  }, [clearAuthState, navigate]);
 
   useEffect(() => {
     void hydrate();
@@ -171,7 +213,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const listener = () => {
-      handleSessionExpired();
+      void handleSessionExpired();
     };
     window.addEventListener(sessionExpiredEventName, listener);
     return () => {
@@ -181,7 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = useMemo<AuthContextData>(
     () => ({ user, loading, authError, clearAuthError, signin, signup, signout }),
-    [user, loading, authError, clearAuthError, signin, signup, signout],
+    [clearAuthError, loading, signin, signup, signout, user, authError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
