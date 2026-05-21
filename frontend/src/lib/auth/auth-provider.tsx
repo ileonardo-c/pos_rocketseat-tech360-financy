@@ -30,7 +30,6 @@ const resolveHydrationErrorMessage = (error: unknown) => {
     if (
       message.includes("unauthenticated") ||
       message.includes("not authenticated") ||
-      message.includes("nao autenticado") ||
       message.includes("não autenticado") ||
       message.includes("session expired") ||
       message.includes("expired token")

@@ -41,8 +41,7 @@ const hasUnauthenticatedGraphQLError = (message: string) => {
   return (
     normalized.includes("unauthenticated") ||
     normalized.includes("not authenticated") ||
-    normalized.includes("não autenticado") ||
-    normalized.includes("nao autenticado")
+    normalized.includes("não autenticado")
   );
 };
 

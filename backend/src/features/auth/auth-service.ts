@@ -16,7 +16,7 @@ export class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await this.repository.findByEmail(normalizedEmail);
     if (existingUser) {
-      throw new AppError("Email ja cadastrado", 409);
+      throw new AppError("Email already registered", 409);
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -28,7 +28,7 @@ export class AuthService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === "P2002"
       ) {
-        throw new AppError("Email ja cadastrado", 409);
+        throw new AppError("Email already registered", 409);
       }
       throw error;
     }
@@ -44,12 +44,12 @@ export class AuthService {
     const normalizedEmail = email.trim().toLowerCase();
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
-      throw new AppError("Credenciais invalidas", 401);
+      throw new AppError("Invalid credentials", 401);
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      throw new AppError("Credenciais invalidas", 401);
+      throw new AppError("Invalid credentials", 401);
     }
 
     const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
@@ -62,12 +62,12 @@ export class AuthService {
 
   async me(ctx: GraphQLContext) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const user = await this.repository.findById(ctx.userId);
     if (!user) {
-      throw new AppError("Usuario nao encontrado", 404);
+      throw new AppError("User not found", 404);
     }
 
     return { id: user.id, name: user.name, email: user.email };
