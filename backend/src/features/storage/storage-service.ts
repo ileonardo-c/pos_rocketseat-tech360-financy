@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { AppError } from "../../lib/errors";
 
@@ -31,15 +31,15 @@ export class StorageService {
 
   async requestUploadUrl(userId: string, input: UploadInput): Promise<RequestUploadUrlResult> {
     if (!this.endpoint) {
-      throw new AppError("Configuracao S3 faltando", 500);
+      throw new AppError("Missing S3 configuration", 500);
     }
     if (!this.bucket) {
-      throw new AppError("Configuracao de bucket S3 faltando", 500);
+      throw new AppError("Missing S3 bucket configuration", 500);
     }
 
     const fileName = input.fileName.trim();
     if (!fileName) {
-      throw new AppError("Nome do arquivo invalido", 400);
+      throw new AppError("Invalid file name", 400);
     }
 
     const key = this.buildObjectKey(userId, fileName);
