@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import type { GraphQLContext } from "../../context";
 import { AppError } from "../../lib/errors";
 import type { CategoryRepository } from "./category-repository";
@@ -20,10 +21,17 @@ export class CategoryService {
 
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new AppError("Nome da categoria eh obrigatorio", 400);
+      throw new AppError("Category name is required", 400);
     }
 
-    return this.repository.create(ctx.userId, normalizedName);
+    try {
+      return await this.repository.create(ctx.userId, normalizedName);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new AppError("Category name already exists", 409);
+      }
+      throw error;
+    }
   }
 
   async update(ctx: GraphQLContext, id: string, name?: string) {
@@ -33,7 +41,7 @@ export class CategoryService {
 
     const category = await this.repository.findByIdAndUser(id, ctx.userId);
     if (!category) {
-      throw new AppError("Categoria nao encontrada", 404);
+      throw new AppError("Category not found", 404);
     }
 
     if (name === undefined) {
@@ -42,10 +50,17 @@ export class CategoryService {
 
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new AppError("Nome da categoria eh obrigatorio", 400);
+      throw new AppError("Category name is required", 400);
     }
 
-    return this.repository.update(id, normalizedName);
+    try {
+      return await this.repository.update(id, normalizedName);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new AppError("Category name already exists", 409);
+      }
+      throw error;
+    }
   }
 
   async delete(ctx: GraphQLContext, id: string) {
@@ -58,7 +73,14 @@ export class CategoryService {
       return false;
     }
 
-    await this.repository.deleteById(id);
-    return true;
+    try {
+      await this.repository.deleteById(id);
+      return true;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+        throw new AppError("Category has linked transactions", 409);
+      }
+      throw error;
+    }
   }
 }
