@@ -50,6 +50,51 @@ const request = async (query, token, variables = {}) => {
   throw lastError;
 };
 
+const requestWithGraphQLErrors = async (query, token, variables = {}) => {
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxRequestRetries; attempt += 1) {
+    try {
+      const response = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(token ? { authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ query, variables }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`GraphQL HTTP error: ${response.status}`);
+      }
+
+      const payload = await response.json();
+      return {
+        httpStatus: response.status,
+        data: payload.data ?? null,
+        errors: payload.errors ?? [],
+      };
+    } catch (error) {
+      lastError = error;
+
+      const isRetryableError = error instanceof TypeError && error.message === "fetch failed";
+      if (!isRetryableError) {
+        throw error;
+      }
+
+      if (attempt >= maxRequestRetries) {
+        throw new Error(
+          `GraphQL request failed after ${maxRequestRetries} attempts to ${graphqlUrl}: ${error.message}`,
+        );
+      }
+
+      await sleep(requestDelayMs * attempt);
+    }
+  }
+
+  throw lastError;
+};
+
 const ensure = (condition, message) => {
   if (!condition) {
     throw new Error(message);
@@ -60,6 +105,11 @@ const randomSuffix = Math.random().toString(36).slice(2, 10);
 const userInput = {
   name: `Smoke User ${randomSuffix}`,
   email: `smoke.${randomSuffix}@financy.local`,
+  password: "SmokePass123!",
+};
+const secondUserInput = {
+  name: `Smoke User Two ${randomSuffix}`,
+  email: `smoke.two.${randomSuffix}@financy.local`,
   password: "SmokePass123!",
 };
 
@@ -200,6 +250,37 @@ const run = async () => {
     uploadData.requestUploadUrl.key.startsWith(`users/${userId}/`),
     "Upload key does not match authenticated user namespace",
   );
+
+  const secondRegisterData = await request(registerMutation, undefined, { input: secondUserInput });
+  ensure(secondRegisterData?.register?.token, "Missing token from second user register");
+
+  const secondLoginData = await request(loginMutation, undefined, {
+    input: { email: secondUserInput.email, password: secondUserInput.password },
+  });
+  const secondToken = secondLoginData?.login?.token;
+  const secondUserId = secondLoginData?.login?.user?.id;
+  ensure(secondToken, "Missing token from second user login");
+  ensure(secondUserId, "Missing user id from second user login");
+
+  const secondMeData = await request(meQuery, secondToken);
+  ensure(
+    secondMeData?.me?.email === secondUserInput.email,
+    "Second user me query returned unexpected user",
+  );
+
+  const crossDeleteTransaction = await requestWithGraphQLErrors(
+    deleteTransactionMutation,
+    secondToken,
+    {
+      id: transactionId,
+    },
+  );
+  ensure(crossDeleteTransaction.errors.length > 0, "Cross-user transaction delete should fail");
+
+  const crossDeleteCategory = await requestWithGraphQLErrors(deleteCategoryMutation, secondToken, {
+    id: categoryId,
+  });
+  ensure(crossDeleteCategory.errors.length > 0, "Cross-user category delete should fail");
 
   const deleteTransactionData = await request(deleteTransactionMutation, token, {
     id: transactionId,
