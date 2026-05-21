@@ -50,6 +50,24 @@ const request = async (query, token, variables = {}) => {
   throw lastError;
 };
 
+const requestWithGraphQLErrors = async (query, token, variables = {}) => {
+  const response = await fetch(graphqlUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const payload = await response.json();
+  return {
+    httpStatus: response.status,
+    data: payload.data ?? null,
+    errors: payload.errors ?? [],
+  };
+};
+
 const ensure = (condition, message) => {
   if (!condition) {
     throw new Error(message);
@@ -60,6 +78,11 @@ const randomSuffix = Math.random().toString(36).slice(2, 10);
 const userInput = {
   name: `Smoke User ${randomSuffix}`,
   email: `smoke.${randomSuffix}@financy.local`,
+  password: "SmokePass123!",
+};
+const secondUserInput = {
+  name: `Smoke User Two ${randomSuffix}`,
+  email: `smoke.two.${randomSuffix}@financy.local`,
   password: "SmokePass123!",
 };
 
@@ -200,6 +223,29 @@ const run = async () => {
     uploadData.requestUploadUrl.key.startsWith(`users/${userId}/`),
     "Upload key does not match authenticated user namespace",
   );
+
+  const secondRegisterData = await request(registerMutation, undefined, { input: secondUserInput });
+  ensure(secondRegisterData?.register?.token, "Missing token from second user register");
+
+  const secondLoginData = await request(loginMutation, undefined, {
+    input: { email: secondUserInput.email, password: secondUserInput.password },
+  });
+  const secondToken = secondLoginData?.login?.token;
+  ensure(secondToken, "Missing token from second user login");
+
+  const crossDeleteTransaction = await requestWithGraphQLErrors(
+    deleteTransactionMutation,
+    secondToken,
+    {
+      id: transactionId,
+    },
+  );
+  ensure(crossDeleteTransaction.errors.length > 0, "Cross-user transaction delete should fail");
+
+  const crossDeleteCategory = await requestWithGraphQLErrors(deleteCategoryMutation, secondToken, {
+    id: categoryId,
+  });
+  ensure(crossDeleteCategory.errors.length > 0, "Cross-user category delete should fail");
 
   const deleteTransactionData = await request(deleteTransactionMutation, token, {
     id: transactionId,
