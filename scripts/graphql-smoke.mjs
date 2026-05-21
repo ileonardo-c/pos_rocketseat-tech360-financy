@@ -4,7 +4,7 @@ const maxRequestRetries = 8;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const request = async (query, variables = {}, token) => {
+const request = async (query, token, variables = {}) => {
   let lastError;
 
   for (let attempt = 1; attempt <= maxRequestRetries; attempt += 1) {
@@ -63,8 +63,7 @@ const userInput = {
   password: "SmokePass123!",
 };
 
-const runGraphQLProbe = () =>
-  request(`query HealthProbe { __typename }`);
+const runGraphQLProbe = () => request("query HealthProbe { __typename }");
 
 const registerMutation = `
   mutation Register($input: RegisterInput!) {
@@ -102,6 +101,17 @@ const createTransactionMutation = `
   }
 `;
 
+const requestUploadUrlMutation = `
+  mutation RequestUploadUrl($input: UploadInput!) {
+    requestUploadUrl(input: $input) {
+      url
+      key
+      publicUrl
+      expiresIn
+    }
+  }
+`;
+
 const categoriesQuery = `
   query Categories {
     categories { id name }
@@ -129,57 +139,74 @@ const deleteCategoryMutation = `
 const run = async () => {
   await runGraphQLProbe();
 
-  const registerData = await request(registerMutation, { input: userInput });
+  const registerData = await request(registerMutation, undefined, { input: userInput });
   ensure(registerData?.register?.token, "Missing token from register");
   ensure(registerData.register.user.email === userInput.email, "Registered user email mismatch");
 
-  const loginData = await request(loginMutation, {
+  const loginData = await request(loginMutation, undefined, {
     input: { email: userInput.email, password: userInput.password },
   });
   const token = loginData?.login?.token;
+  const userId = loginData?.login?.user?.id;
   ensure(token, "Missing token from login");
+  ensure(userId, "Missing user id from login");
 
-  const meData = await request(meQuery, {}, token);
+  const meData = await request(meQuery, token);
   ensure(meData?.me?.email === userInput.email, "me query returned unexpected user");
 
   const categoryName = `Smoke Category ${randomSuffix}`;
-  const categoryData = await request(createCategoryMutation, { input: { name: categoryName } }, token);
+  const categoryData = await request(createCategoryMutation, token, {
+    input: { name: categoryName },
+  });
   const categoryId = categoryData?.createCategory?.id;
   ensure(categoryId, "Category creation returned no id");
 
-  const transactionData = await request(
-    createTransactionMutation,
-    {
-      input: {
-        title: `Smoke Transaction ${randomSuffix}`,
-        description: "E2E smoke transaction",
-        amount: 123.45,
-        type: "EXPENSE",
-        date: new Date().toISOString(),
-        categoryId,
-      },
+  const transactionData = await request(createTransactionMutation, token, {
+    input: {
+      title: `Smoke Transaction ${randomSuffix}`,
+      description: "E2E smoke transaction",
+      amount: 123.45,
+      type: "EXPENSE",
+      date: new Date().toISOString(),
+      categoryId,
     },
-    token,
-  );
+  });
   const transactionId = transactionData?.createTransaction?.id;
   ensure(transactionId, "Transaction creation returned no id");
 
-  const categoriesData = await request(categoriesQuery, {}, token);
+  const categoriesData = await request(categoriesQuery, token);
   ensure(
     categoriesData.categories.some((category) => category.id === categoryId),
     "Created category not found in list",
   );
 
-  const transactionsData = await request(transactionsQuery, {}, token);
+  const transactionsData = await request(transactionsQuery, token);
   ensure(
     transactionsData.transactions.some((transaction) => transaction.id === transactionId),
     "Created transaction not found in list",
   );
 
-  const deleteTransactionData = await request(deleteTransactionMutation, { id: transactionId }, token);
+  const uploadData = await request(requestUploadUrlMutation, token, {
+    input: {
+      fileName: `smoke-receipt-${randomSuffix}.txt`,
+      contentType: "text/plain",
+    },
+  });
+  ensure(uploadData?.requestUploadUrl?.url, "Missing signed upload URL");
+  ensure(uploadData?.requestUploadUrl?.key, "Missing upload key");
+  ensure(uploadData?.requestUploadUrl?.publicUrl, "Missing upload public URL");
+  ensure(uploadData?.requestUploadUrl?.expiresIn > 0, "Invalid upload URL expiration");
+  ensure(
+    uploadData.requestUploadUrl.key.startsWith(`users/${userId}/`),
+    "Upload key does not match authenticated user namespace",
+  );
+
+  const deleteTransactionData = await request(deleteTransactionMutation, token, {
+    id: transactionId,
+  });
   ensure(deleteTransactionData.deleteTransaction === true, "Transaction deletion failed");
 
-  const deleteCategoryData = await request(deleteCategoryMutation, { id: categoryId }, token);
+  const deleteCategoryData = await request(deleteCategoryMutation, token, { id: categoryId });
   ensure(deleteCategoryData.deleteCategory === true, "Category deletion failed");
 
   console.log("GraphQL smoke flow passed");
