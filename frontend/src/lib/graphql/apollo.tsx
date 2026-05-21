@@ -1,3 +1,4 @@
+import { isAuthenticationGraphQLError } from "@/lib/auth/auth-errors";
 import {
   ApolloClient,
   ApolloProvider as ApolloProviderBase,
@@ -36,17 +37,8 @@ const emitSessionExpired = () => {
   window.dispatchEvent(new CustomEvent(sessionExpiredEventName));
 };
 
-const hasUnauthenticatedGraphQLError = (message: string) => {
-  const normalized = message.toLowerCase();
-  return (
-    normalized.includes("unauthenticated") ||
-    normalized.includes("not authenticated") ||
-    normalized.includes("não autenticado")
-  );
-};
-
 const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors?.some((error) => hasUnauthenticatedGraphQLError(error.message))) {
+  if (graphQLErrors?.some((error) => isAuthenticationGraphQLError(error.message))) {
     emitSessionExpired();
     return;
   }

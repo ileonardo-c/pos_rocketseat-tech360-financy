@@ -17,14 +17,21 @@ export class AuthService {
     if (!normalizedName) {
       throw new AppError("Invalid name", 400);
     }
+    if (normalizedName.length < 2) {
+      throw new AppError("Invalid name", 400);
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new AppError("Invalid email", 400);
+    }
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
     if (!isValidEmail) {
       throw new AppError("Invalid email", 400);
     }
 
-    if (password.length < 6) {
+    const normalizedPassword = password.trim();
+    if (normalizedPassword.length < 6) {
       throw new AppError("Invalid password", 400);
     }
 
@@ -33,7 +40,7 @@ export class AuthService {
       throw new AppError("Email already registered", 409);
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(normalizedPassword, 10);
     let user: Awaited<ReturnType<AuthRepository["createUser"]>>;
     try {
       user = await this.repository.createUser(normalizedName, normalizedEmail, hashed);
@@ -56,13 +63,22 @@ export class AuthService {
     if (!normalizedEmail) {
       throw new AppError("Invalid email", 400);
     }
+    if (!password.length) {
+      throw new AppError("Invalid credentials", 401);
+    }
+    const normalizedPassword = password.trim();
 
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
       throw new AppError("Invalid credentials", 401);
     }
 
-    const valid = await bcrypt.compare(password, user.password);
+    const validWithLegacyPassword = await bcrypt.compare(password, user.password);
+    const validWithNormalizedPassword =
+      normalizedPassword !== password
+        ? await bcrypt.compare(normalizedPassword, user.password)
+        : validWithLegacyPassword;
+    const valid = validWithLegacyPassword || validWithNormalizedPassword;
     if (!valid) {
       throw new AppError("Invalid credentials", 401);
     }
