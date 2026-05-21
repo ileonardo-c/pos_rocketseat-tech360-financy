@@ -1,4 +1,30 @@
 const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
+const textEncoder = new TextEncoder();
+
+const toBase64Url = (value) => Buffer.from(value).toString("base64url");
+
+const signHs256Token = async ({ payload, secret }) => {
+  const header = { alg: "HS256", typ: "JWT" };
+  const headerPart = toBase64Url(JSON.stringify(header));
+  const payloadPart = toBase64Url(JSON.stringify(payload));
+  const unsignedToken = `${headerPart}.${payloadPart}`;
+
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    textEncoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signatureBuffer = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    textEncoder.encode(unsignedToken),
+  );
+  const signaturePart = Buffer.from(signatureBuffer).toString("base64url");
+
+  return `${unsignedToken}.${signaturePart}`;
+};
 
 const request = async (query, token, variables = {}) => {
   const response = await fetch(graphqlUrl, {
@@ -139,23 +165,22 @@ const run = async () => {
 
   const jwtSecret = process.env.AUTH_SCRIPT_JWT_SECRET;
   if (jwtSecret) {
-    let jwt = null;
-    try {
-      const module = await import("backend/node_modules/jsonwebtoken");
-      jwt = module.default ?? module;
-    } catch (_error) {
-      console.warn(
-        "auth-regression: skipped expired-token scenario; backend node_modules/jsonwebtoken unavailable",
-      );
-    }
-
-    if (jwt) {
-      const expiredToken = jwt.sign({ sub: userId }, jwtSecret, { expiresIn: "-1s" });
-      const expiredTokenResult = await request(meQuery, expiredToken, {});
-      ensureStatus(expiredTokenResult.httpStatus, [200, 401], "Me query with expired token");
-      ensure(expiredTokenResult.errors.length > 0, "Me query with expired token must return error");
-      ensureHasErrorMessage(expiredTokenResult.errors, "expired");
-    }
+    const issuedAt = Math.floor(Date.now() / 1000) - 10;
+    const expiredAt = issuedAt - 1;
+    const expiredToken = await signHs256Token({
+      payload: { sub: userId, iat: issuedAt, exp: expiredAt },
+      secret: jwtSecret,
+    });
+    const expiredTokenResult = await request(meQuery, expiredToken, {});
+    ensureStatus(expiredTokenResult.httpStatus, [200, 401], "Me query with expired token");
+    ensure(expiredTokenResult.errors.length > 0, "Me query with expired token must return error");
+    const expiredErrors = expiredTokenResult.errors
+      .map((error) => `${error?.message ?? ""}`.toLowerCase())
+      .join(" ");
+    ensure(
+      expiredErrors.includes("expired") || expiredErrors.includes("unauthenticated"),
+      `Expected expired token to be rejected, got: ${expiredErrors}`,
+    );
   } else {
     console.warn(
       "auth-regression: AUTH_SCRIPT_JWT_SECRET not set, skipping token expired scenario",
