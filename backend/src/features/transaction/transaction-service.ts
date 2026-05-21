@@ -62,7 +62,7 @@ export class TransactionService {
 
   async listByUser(ctx: GraphQLContext) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     return this.repository.findAllByUser(ctx.userId);
@@ -70,7 +70,7 @@ export class TransactionService {
 
   async create(ctx: GraphQLContext, input: TransactionInput) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const payload = this.normalizeCreateInput(ctx.userId, input);
@@ -81,7 +81,7 @@ export class TransactionService {
 
   async update(ctx: GraphQLContext, id: string, input: TransactionUpdateInput) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const transaction = await this.repository.findByIdAndUser(id, ctx.userId);
@@ -103,7 +103,7 @@ export class TransactionService {
 
   async delete(ctx: GraphQLContext, id: string) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const transaction = await this.repository.findByIdAndUser(id, ctx.userId);
@@ -117,7 +117,7 @@ export class TransactionService {
 
   async summaryByUser(ctx: GraphQLContext, input?: TransactionSummaryInput): Promise<TransactionSummary> {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const filters = this.normalizeSummaryInput(input);
@@ -156,7 +156,7 @@ export class TransactionService {
     limitInput?: number | null,
   ): Promise<TransactionCategorySummary[]> {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const filters = this.normalizeSummaryInput(input);
@@ -220,7 +220,7 @@ export class TransactionService {
     intervalInput?: TimelineInterval | null,
   ): Promise<TransactionTimelinePoint[]> {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const filters = this.normalizeSummaryInput(input);

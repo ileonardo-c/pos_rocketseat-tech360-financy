@@ -31,7 +31,7 @@ export const storageMutations = {
     ctx: GraphQLContext,
   ) => {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const s3Client = createS3Client();

@@ -78,7 +78,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     },
     onError: (error) => {
       setUser(null);
-      setAuthError(resolveHydrationErrorMessage(error));
+      const hydrationMessage = resolveHydrationErrorMessage(error);
+      setAuthError((current) =>
+        current === sessionExpiredMessage ? sessionExpiredMessage : hydrationMessage,
+      );
       setLoading(false);
     },
   });

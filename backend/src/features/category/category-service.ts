@@ -7,7 +7,7 @@ export class CategoryService {
 
   async listByUser(ctx: GraphQLContext) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     return this.repository.findAllByUser(ctx.userId);
@@ -15,7 +15,7 @@ export class CategoryService {
 
   async create(ctx: GraphQLContext, name: string) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const normalizedName = name.trim();
@@ -28,7 +28,7 @@ export class CategoryService {
 
   async update(ctx: GraphQLContext, id: string, name?: string) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const category = await this.repository.findByIdAndUser(id, ctx.userId);
@@ -50,7 +50,7 @@ export class CategoryService {
 
   async delete(ctx: GraphQLContext, id: string) {
     if (!ctx.userId) {
-      throw new AppError("Nao autenticado", 401);
+      throw new AppError("Unauthenticated", 401);
     }
 
     const category = await this.repository.findByIdAndUser(id, ctx.userId);
