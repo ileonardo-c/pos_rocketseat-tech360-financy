@@ -146,7 +146,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const persistAuth = useCallback(
     async (token: string) => {
       localStorage.setItem("financy.token", token);
-      await client.resetStore();
+      try {
+        await client.resetStore();
+      } catch (error) {
+        console.warn("Failed to reset Apollo store after auth persistence", error);
+      }
       hydrate();
     },
     [client, hydrate],
