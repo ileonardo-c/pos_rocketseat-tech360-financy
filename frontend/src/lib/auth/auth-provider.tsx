@@ -27,7 +27,14 @@ const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
 const resolveHydrationErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = String(error.message).toLowerCase();
-    if (message.includes("unauthenticated") || message.includes("not authenticated")) {
+    if (
+      message.includes("unauthenticated") ||
+      message.includes("not authenticated") ||
+      message.includes("nao autenticado") ||
+      message.includes("não autenticado") ||
+      message.includes("session expired") ||
+      message.includes("expired token")
+    ) {
       return sessionExpiredMessage;
     }
   }
