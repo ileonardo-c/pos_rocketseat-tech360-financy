@@ -200,12 +200,18 @@ export const CategoriesPage = () => {
                         try {
                           setActionError(null);
                           setActionSuccess(null);
-                          await deleteCategory({ variables: { id: category.id } });
-                          setActionSuccess("Categoria excluída com sucesso.");
-                        } catch {
+                          const response = await deleteCategory({
+                            variables: { id: category.id },
+                          });
+                          if (response.data?.deleteCategory) {
+                            setActionSuccess("Categoria excluída com sucesso.");
+                          } else {
+                            setActionError("Categoria não encontrada para exclusão.");
+                          }
+                        } catch (mutationError) {
                           setActionError(
                             getCategoryActionErrorMessage(
-                              error,
+                              mutationError,
                               "Não foi possível excluir a categoria.",
                             ),
                           );
