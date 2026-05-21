@@ -30,6 +30,13 @@ const run = async () => {
     await page.getByText(`Bem-vindo, ${user.name}`).waitFor({ timeout: 20_000 });
 
     await page.getByRole("button", { name: "Sair" }).click();
+    await page
+      .locator("h1")
+      .filter({ hasText: /^(Login|Criar conta)$/ })
+      .first()
+      .waitFor({ timeout: 20_000 });
+
+    await page.goto(`${frontendUrl}/`, { waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 20_000 });
 
     await page.getByLabel("Email").fill(user.email);
