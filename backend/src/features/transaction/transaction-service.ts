@@ -385,6 +385,10 @@ export class TransactionService {
       throw new AppError("Invalid receipt for this user", 403);
     }
 
+    if (!this.hasStorageConfiguration()) {
+      throw new AppError("Receipt storage is not available", 400);
+    }
+
     return {
       receiptKey,
       receiptUrl: this.buildPublicReceiptUrl(receiptKey),
@@ -396,13 +400,16 @@ export class TransactionService {
   }
 
   private buildPublicReceiptUrl(receiptKey: string) {
-    const endpoint = process.env.S3_ENDPOINT?.trim();
-    const bucket = process.env.S3_BUCKET?.trim();
-    if (!endpoint || !bucket) {
-      throw new AppError("Missing S3 configuration", 500);
-    }
+    const endpoint = process.env.S3_ENDPOINT?.trim() ?? "";
+    const bucket = process.env.S3_BUCKET?.trim() ?? "";
 
     return `${endpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
+  }
+
+  private hasStorageConfiguration() {
+    const endpoint = process.env.S3_ENDPOINT?.trim();
+    const bucket = process.env.S3_BUCKET?.trim();
+    return Boolean(endpoint && bucket);
   }
 
   private parseType(type: TransactionType): TransactionType {
