@@ -1,6 +1,6 @@
+import { useMutation, useQuery } from "@apollo/client";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { useMutation, useQuery } from "@apollo/client";
 
 import { useAuth } from "@/lib/auth/auth-provider";
 import {
@@ -22,14 +22,18 @@ type CategoryNode = {
 
 export const CategoriesPage = () => {
   const { user } = useAuth();
-  const { data, loading, error, refetch, networkStatus } = useQuery<CategoryNode>(CATEGORIES_QUERY, {
-    fetchPolicy: "cache-and-network",
-    notifyOnNetworkStatusChange: true,
-  });
+  const { data, loading, error, refetch, networkStatus } = useQuery<CategoryNode>(
+    CATEGORIES_QUERY,
+    {
+      fetchPolicy: "cache-and-network",
+      notifyOnNetworkStatusChange: true,
+    },
+  );
 
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [createName, setCreateName] = useState("");
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -56,6 +60,25 @@ export const CategoriesPage = () => {
       .filter((category) => category.name.toLowerCase().includes(normalizedQuery))
       .sort((left, right) => left.name.localeCompare(right.name, "pt-BR"));
   }, [categories, query]);
+
+  const getCategoryActionErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === "object" && "message" in error) {
+      const message = String(error.message).toLowerCase();
+      if (message.includes("already exists")) {
+        return "Já existe uma categoria com este nome.";
+      }
+      if (message.includes("linked transactions")) {
+        return "Não é possível excluir categoria com transações vinculadas.";
+      }
+      if (message.includes("not found")) {
+        return "Categoria não encontrada.";
+      }
+      if (message.includes("required")) {
+        return "Nome da categoria é obrigatório.";
+      }
+    }
+    return fallback;
+  };
 
   useEffect(() => {
     setPage(1);
@@ -105,6 +128,7 @@ export const CategoriesPage = () => {
           onClick={async () => {
             try {
               setActionError(null);
+              setActionSuccess(null);
               await refetch();
             } catch {
               setActionError("Não foi possível atualizar a lista de categorias.");
@@ -117,6 +141,7 @@ export const CategoriesPage = () => {
           type="button"
           onClick={() => {
             setActionError(null);
+            setActionSuccess(null);
             setCreateName("");
             setIsCreateDialogOpen(true);
           }}
@@ -138,6 +163,7 @@ export const CategoriesPage = () => {
 
       {error ? <p>Erro ao carregar categorias.</p> : null}
       {actionError ? <p>{actionError}</p> : null}
+      {actionSuccess ? <p>{actionSuccess}</p> : null}
 
       <section>
         {filteredCategories.length === 0 ? (
@@ -153,6 +179,7 @@ export const CategoriesPage = () => {
                       type="button"
                       onClick={() => {
                         setActionError(null);
+                        setActionSuccess(null);
                         setEditingCategory(category);
                         setEditingName(category.name);
                       }}
@@ -163,16 +190,25 @@ export const CategoriesPage = () => {
                       disabled={deleting}
                       type="button"
                       onClick={async () => {
-                        const confirmed = window.confirm("Deseja realmente excluir esta categoria?");
+                        const confirmed = window.confirm(
+                          "Deseja realmente excluir esta categoria?",
+                        );
                         if (!confirmed) {
                           return;
                         }
 
                         try {
                           setActionError(null);
+                          setActionSuccess(null);
                           await deleteCategory({ variables: { id: category.id } });
+                          setActionSuccess("Categoria excluída com sucesso.");
                         } catch {
-                          setActionError("Não foi possível excluir a categoria.");
+                          setActionError(
+                            getCategoryActionErrorMessage(
+                              error,
+                              "Não foi possível excluir a categoria.",
+                            ),
+                          );
                         }
                       }}
                     >
@@ -206,8 +242,8 @@ export const CategoriesPage = () => {
       </section>
 
       {isCreateDialogOpen ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setIsCreateDialogOpen(false)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" role="presentation">
+          <dialog className="modal-card" open>
             <h2>Nova categoria</h2>
             <form
               onSubmit={async (event) => {
@@ -219,11 +255,15 @@ export const CategoriesPage = () => {
 
                 try {
                   setActionError(null);
+                  setActionSuccess(null);
                   await createCategory({ variables: { input: { name: trimmed } } });
                   setCreateName("");
                   setIsCreateDialogOpen(false);
-                } catch {
-                  setActionError("Não foi possível criar a categoria.");
+                  setActionSuccess("Categoria criada com sucesso.");
+                } catch (error) {
+                  setActionError(
+                    getCategoryActionErrorMessage(error, "Não foi possível criar a categoria."),
+                  );
                 }
               }}
             >
@@ -246,13 +286,13 @@ export const CategoriesPage = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </dialog>
         </div>
       ) : null}
 
       {editingCategory ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setEditingCategory(null)}>
-          <div className="modal-card" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" role="presentation">
+          <dialog className="modal-card" open>
             <h2>Editar categoria</h2>
             <form
               onSubmit={async (event) => {
@@ -264,13 +304,17 @@ export const CategoriesPage = () => {
 
                 try {
                   setActionError(null);
+                  setActionSuccess(null);
                   await updateCategory({
                     variables: { id: editingCategory.id, input: { name: nextName } },
                   });
                   setEditingCategory(null);
                   setEditingName("");
-                } catch {
-                  setActionError("Não foi possível atualizar a categoria.");
+                  setActionSuccess("Categoria atualizada com sucesso.");
+                } catch (error) {
+                  setActionError(
+                    getCategoryActionErrorMessage(error, "Não foi possível atualizar a categoria."),
+                  );
                 }
               }}
             >
@@ -299,7 +343,7 @@ export const CategoriesPage = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </dialog>
         </div>
       ) : null}
     </main>
