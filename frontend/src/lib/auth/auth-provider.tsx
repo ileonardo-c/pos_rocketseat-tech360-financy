@@ -22,14 +22,37 @@ type AuthContextData = {
 };
 
 const AuthContext = createContext<AuthContextData | null>(null);
+const sessionExpiredEventName = "financy:session-expired";
+const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
+const resolveHydrationErrorMessage = (error: unknown) => {
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const message = String(error.message).toLowerCase();
+    if (
+      message.includes("unauthenticated") ||
+      message.includes("not authenticated") ||
+      message.includes("não autenticado") ||
+      message.includes("session expired") ||
+      message.includes("expired token")
+    ) {
+      return sessionExpiredMessage;
+    }
+  }
+
+  return "Não foi possível validar sua sessão agora. Tente novamente em instantes.";
+};
 
 const resolveAuthErrorMessage = (error: unknown) => {
   if (typeof error === "object" && error !== null && "message" in error) {
     const message = String(error.message).toLowerCase();
-    if (message.includes("invalid") || message.includes("credenciais")) {
+    if (message.includes("invalid")) {
       return "E-mail ou senha inválidos.";
     }
-    if (message.includes("already exists") || message.includes("já existe") || message.includes("duplicate")) {
+    if (
+      message.includes("already exists") ||
+      message.includes("already registered") ||
+      message.includes("conflict") ||
+      message.includes("duplicate")
+    ) {
       return "Este e-mail já está em uso.";
     }
   }
@@ -50,10 +73,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     fetchPolicy: "network-only",
     onCompleted: (result) => {
       setUser(result.me);
+      setAuthError(null);
       setLoading(false);
     },
-    onError: () => {
+    onError: (error) => {
       setUser(null);
+      const hydrationMessage = resolveHydrationErrorMessage(error);
+      setAuthError((current) =>
+        current === sessionExpiredMessage ? sessionExpiredMessage : hydrationMessage,
+      );
       setLoading(false);
     },
   });
@@ -129,9 +157,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate("/signup");
   }, [client, navigate]);
 
+  const handleSessionExpired = useCallback(() => {
+    localStorage.removeItem("financy.token");
+    setUser(null);
+    setAuthError(sessionExpiredMessage);
+    client.resetStore();
+    navigate("/", { replace: true });
+  }, [client, navigate]);
+
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    const listener = () => {
+      handleSessionExpired();
+    };
+    window.addEventListener(sessionExpiredEventName, listener);
+    return () => {
+      window.removeEventListener(sessionExpiredEventName, listener);
+    };
+  }, [handleSessionExpired]);
 
   const value = useMemo<AuthContextData>(
     () => ({ user, loading, authError, clearAuthError, signin, signup, signout }),
