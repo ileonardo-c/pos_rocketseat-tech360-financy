@@ -42,7 +42,19 @@ const AUTH_ERROR_RULES: AuthErrorRule[] = [
     toUserMessage: sessionExpiredMessage,
   },
   {
-    messages: ["invalid", "invalid credentials", "credenciais inválidas"],
+    messages: ["invalid name"],
+    toUserMessage: "Por favor, informe um nome válido.",
+  },
+  {
+    messages: ["invalid email"],
+    toUserMessage: "Por favor, informe um e-mail válido.",
+  },
+  {
+    messages: ["invalid password"],
+    toUserMessage: "A senha deve ter pelo menos 6 caracteres.",
+  },
+  {
+    messages: ["invalid credentials"],
     toUserMessage: "E-mail ou senha inválidos.",
   },
   {
