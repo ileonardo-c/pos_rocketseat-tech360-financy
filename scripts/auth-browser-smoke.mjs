@@ -2,6 +2,8 @@ import { chromium } from "playwright";
 
 const frontendUrl = process.env.FRONTEND_URL ?? "http://127.0.0.1:5173";
 const password = "SmokePass123!";
+const hydrationWindowTimeoutMs = 4000;
+const hydrationProbeIntervalMs = 50;
 
 const buildUser = () => {
   const suffix = Math.random().toString(36).slice(2, 10);
@@ -50,6 +52,26 @@ const run = async () => {
     await page.evaluate(() => {
       localStorage.setItem("financy.token", "invalid.token");
     });
+    await page.goto(`${frontendUrl}/categories`, { waitUntil: "domcontentloaded" });
+    const hydrationProbeStart = Date.now();
+    let authScreenVisible = false;
+    while (Date.now() - hydrationProbeStart < hydrationWindowTimeoutMs) {
+      const dashboardHeadingCount = await page.getByRole("heading", { name: "Dashboard" }).count();
+      if (dashboardHeadingCount > 0) {
+        throw new Error("Protected dashboard content flashed during invalid-token hydration");
+      }
+
+      const loginHeadingCount = await page.getByRole("heading", { name: "Login" }).count();
+      const signupHeadingCount = await page.getByRole("heading", { name: "Criar conta" }).count();
+      if (loginHeadingCount > 0 || signupHeadingCount > 0) {
+        authScreenVisible = true;
+      }
+
+      await page.waitForTimeout(hydrationProbeIntervalMs);
+    }
+    if (!authScreenVisible) {
+      throw new Error("Auth screen did not stabilize after invalid-token hydration window");
+    }
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 20_000 });
 
