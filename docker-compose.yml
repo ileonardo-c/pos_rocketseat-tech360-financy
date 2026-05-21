@@ -56,7 +56,7 @@ services:
         condition: service_completed_successfully
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-financy_user}:${POSTGRES_PASSWORD:-financy_password}@postgres:5432/${POSTGRES_DB:-financy}
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: ${JWT_SECRET:-change_me}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       S3_ENDPOINT: http://minio:${MINIO_API_PORT:-9000}
