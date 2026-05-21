@@ -67,6 +67,10 @@ type UploadMutationResult = {
   };
 };
 
+type DeleteTransactionMutationResult = {
+  deleteTransaction: boolean;
+};
+
 type TransactionFilterType = TransactionFilter["type"];
 
 const emptyForm: TransactionForm = {
@@ -226,6 +230,7 @@ export const TransactionsPage = () => {
     parseFilterFromSearchParams(searchParams),
   );
   const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
   const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
   const [sortField, setSortField] = useState<SortField>("date");
@@ -243,10 +248,13 @@ export const TransactionsPage = () => {
     refetchQueries: [{ query: TRANSACTIONS_QUERY }],
     awaitRefetchQueries: true,
   });
-  const [deleteTransaction, { loading: deleting }] = useMutation(DELETE_TRANSACTION_MUTATION, {
-    refetchQueries: [{ query: TRANSACTIONS_QUERY }],
-    awaitRefetchQueries: true,
-  });
+  const [deleteTransaction, { loading: deleting }] = useMutation<DeleteTransactionMutationResult>(
+    DELETE_TRANSACTION_MUTATION,
+    {
+      refetchQueries: [{ query: TRANSACTIONS_QUERY }],
+      awaitRefetchQueries: true,
+    },
+  );
   const [requestUploadUrl] = useMutation<UploadMutationResult>(REQUEST_UPLOAD_URL_MUTATION);
 
   useEffect(() => {
@@ -274,7 +282,6 @@ export const TransactionsPage = () => {
   useEffect(() => {
     setPage(1);
   }, [filter, sortDirection, sortField]);
-
 
   const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
   const transactions = useMemo(
@@ -452,15 +459,7 @@ export const TransactionsPage = () => {
       return;
     }
 
-    const header = [
-      "data",
-      "titulo",
-      "descricao",
-      "tipo",
-      "categoria",
-      "valor",
-      "comprovante_url",
-    ];
+    const header = ["data", "titulo", "descricao", "tipo", "categoria", "valor", "comprovante_url"];
 
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const rows = sortedTransactions.map((transaction) =>
@@ -565,6 +564,33 @@ export const TransactionsPage = () => {
     !editingForm.date ||
     !editingForm.categoryId;
 
+  const getTransactionActionErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === "object" && "message" in error) {
+      const message = String(error.message).toLowerCase();
+
+      if (message.includes("category not found")) {
+        return "Categoria inválida para esta transação.";
+      }
+      if (message.includes("invalid amount")) {
+        return "Valor inválido. Informe um número válido.";
+      }
+      if (message.includes("invalid date")) {
+        return "Data inválida.";
+      }
+      if (message.includes("transaction title is required")) {
+        return "Título da transação é obrigatório.";
+      }
+      if (message.includes("transaction not found")) {
+        return "Transação não encontrada.";
+      }
+      if (message.includes("invalid receipt for this user")) {
+        return "Comprovante inválido para este usuário.";
+      }
+    }
+
+    return fallback;
+  };
+
   return (
     <main className="transactions-layout">
       <p>
@@ -575,6 +601,7 @@ export const TransactionsPage = () => {
       {categoriesError ? <p>Erro ao carregar categorias.</p> : null}
       {transactionsError ? <p>Erro ao carregar transações.</p> : null}
       {actionError ? <p>{actionError}</p> : null}
+      {actionSuccess ? <p>{actionSuccess}</p> : null}
 
       {isInitialLoading ? <p>Carregando transações...</p> : null}
       {!isInitialLoading && categories.length === 0 ? (
@@ -613,7 +640,11 @@ export const TransactionsPage = () => {
               type="button"
               onClick={async () => {
                 setActionError(null);
-                const results = await Promise.allSettled([refetchCategories(), refetchTransactions()]);
+                setActionSuccess(null);
+                const results = await Promise.allSettled([
+                  refetchCategories(),
+                  refetchTransactions(),
+                ]);
                 const failedCount = results.filter((result) => result.status === "rejected").length;
 
                 if (failedCount === results.length) {
@@ -638,6 +669,7 @@ export const TransactionsPage = () => {
               type="button"
               onClick={() => {
                 setActionError(null);
+                setActionSuccess(null);
                 setForm(emptyForm);
                 createDialogCycleRef.current += 1;
                 setIsCreateDialogOpen(true);
@@ -817,86 +849,101 @@ export const TransactionsPage = () => {
         ) : (
           <>
             <div className="transactions-group-list">
-            {groupedTransactions.map((group, groupIndex) => (
-              <section key={`${group.dateKey}-${groupIndex}`} className="transactions-group">
-                <header className="transactions-group-header">
-                  <div>
-                    <h3>{group.dateLabel}</h3>
-                    <p>{group.transactions.length} transação(ões)</p>
-                  </div>
-                  <div className="transactions-group-totals">
-                    <span>Receitas: {currencyFormatter.format(group.income)}</span>
-                    <span>Despesas: {currencyFormatter.format(group.expense)}</span>
-                    <strong>Saldo: {currencyFormatter.format(group.balance)}</strong>
-                  </div>
-                </header>
-                <ul>
-                  {group.transactions.map((transaction) => {
-                    return (
-                      <li key={transaction.id} className="transactions-item">
-                        <div className="transactions-item-main">
-                          <strong>{transaction.title}</strong>
-                          <p>
-                            {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
-                            {currencyFormatter.format(transaction.amount)} ·{" "}
-                            {transaction.category?.name ?? "Sem categoria"} ·{" "}
-                            {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                          </p>
-                          {transaction.description ? <p>{transaction.description}</p> : null}
-                          {transaction.receiptUrl ? (
+              {groupedTransactions.map((group, groupIndex) => (
+                <section key={`${group.dateKey}-${groupIndex}`} className="transactions-group">
+                  <header className="transactions-group-header">
+                    <div>
+                      <h3>{group.dateLabel}</h3>
+                      <p>{group.transactions.length} transação(ões)</p>
+                    </div>
+                    <div className="transactions-group-totals">
+                      <span>Receitas: {currencyFormatter.format(group.income)}</span>
+                      <span>Despesas: {currencyFormatter.format(group.expense)}</span>
+                      <strong>Saldo: {currencyFormatter.format(group.balance)}</strong>
+                    </div>
+                  </header>
+                  <ul>
+                    {group.transactions.map((transaction) => {
+                      return (
+                        <li key={transaction.id} className="transactions-item">
+                          <div className="transactions-item-main">
+                            <strong>{transaction.title}</strong>
                             <p>
-                              <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                                Comprovante
-                              </a>
+                              {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
+                              {currencyFormatter.format(transaction.amount)} ·{" "}
+                              {transaction.category?.name ?? "Sem categoria"} ·{" "}
+                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
                             </p>
-                          ) : null}
-                        </div>
-                        <div className="transactions-item-actions">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActionError(null);
-                              setEditingId(transaction.id);
-                              setEditingForm({
-                                title: transaction.title,
-                                description: transaction.description ?? "",
-                                amount: String(transaction.amount),
-                                type: transaction.type,
-                                date: toLocalDateInput(transaction.date),
-                                categoryId: transaction.categoryId,
-                                receiptKey: transaction.receiptKey ?? "",
-                                receiptUrl: transaction.receiptUrl ?? "",
-                              });
-                            }}
-                          >
-                            Editar
-                          </button>
-                          <button
-                            disabled={deleting}
-                            type="button"
-                            onClick={async () => {
-                              const confirmed = window.confirm("Deseja realmente excluir esta transação?");
-                              if (!confirmed) {
-                                return;
-                              }
-
-                              try {
+                            {transaction.description ? <p>{transaction.description}</p> : null}
+                            {transaction.receiptUrl ? (
+                              <p>
+                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                                  Comprovante
+                                </a>
+                              </p>
+                            ) : null}
+                          </div>
+                          <div className="transactions-item-actions">
+                            <button
+                              type="button"
+                              onClick={() => {
                                 setActionError(null);
-                                await deleteTransaction({ variables: { id: transaction.id } });
-                              } catch {
-                                setActionError("Não foi possível excluir a transação.");
-                              }
-                            }}
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ))}
+                                setEditingId(transaction.id);
+                                setEditingForm({
+                                  title: transaction.title,
+                                  description: transaction.description ?? "",
+                                  amount: String(transaction.amount),
+                                  type: transaction.type,
+                                  date: toLocalDateInput(transaction.date),
+                                  categoryId: transaction.categoryId,
+                                  receiptKey: transaction.receiptKey ?? "",
+                                  receiptUrl: transaction.receiptUrl ?? "",
+                                });
+                              }}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              disabled={deleting}
+                              type="button"
+                              onClick={async () => {
+                                const confirmed = window.confirm(
+                                  "Deseja realmente excluir esta transação?",
+                                );
+                                if (!confirmed) {
+                                  return;
+                                }
+
+                                try {
+                                  setActionError(null);
+                                  setActionSuccess(null);
+                                  const response = await deleteTransaction({
+                                    variables: { id: transaction.id },
+                                  });
+                                  if (response.data?.deleteTransaction) {
+                                    setActionSuccess("Transação excluída com sucesso.");
+                                  } else {
+                                    setActionError("Transação não encontrada para exclusão.");
+                                  }
+                                } catch (mutationError) {
+                                  setActionError(
+                                    getTransactionActionErrorMessage(
+                                      mutationError,
+                                      "Não foi possível excluir a transação.",
+                                    ),
+                                  );
+                                }
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ))}
             </div>
             <div className="transactions-pagination">
               <button
@@ -922,8 +969,8 @@ export const TransactionsPage = () => {
       </section>
 
       {isCreateDialogOpen ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setIsCreateDialogOpen(false)}>
-          <div className="modal-card transactions-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" role="presentation">
+          <dialog className="modal-card transactions-modal" open>
             <h2>Nova transação</h2>
             <form
               onSubmit={async (event) => {
@@ -935,6 +982,7 @@ export const TransactionsPage = () => {
 
                 try {
                   setActionError(null);
+                  setActionSuccess(null);
                   await createTransaction({
                     variables: { input: buildTransactionPayload(form) },
                   });
@@ -942,8 +990,14 @@ export const TransactionsPage = () => {
                   if (createDialogCycleRef.current === currentCreateCycle) {
                     setIsCreateDialogOpen(false);
                   }
-                } catch {
-                  setActionError("Não foi possível criar a transação.");
+                  setActionSuccess("Transação criada com sucesso.");
+                } catch (mutationError) {
+                  setActionError(
+                    getTransactionActionErrorMessage(
+                      mutationError,
+                      "Não foi possível criar a transação.",
+                    ),
+                  );
                 }
               }}
             >
@@ -1094,13 +1148,13 @@ export const TransactionsPage = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </dialog>
         </div>
       ) : null}
 
       {editingId ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setEditingId(null)}>
-          <div className="modal-card transactions-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <div className="modal-overlay" role="presentation">
+          <dialog className="modal-card transactions-modal" open>
             <h2>Editar transação</h2>
             <form
               onSubmit={async (event) => {
@@ -1111,6 +1165,7 @@ export const TransactionsPage = () => {
 
                 try {
                   setActionError(null);
+                  setActionSuccess(null);
                   await updateTransaction({
                     variables: {
                       id: editingId,
@@ -1119,8 +1174,14 @@ export const TransactionsPage = () => {
                   });
                   setEditingId(null);
                   setEditingForm(emptyForm);
-                } catch {
-                  setActionError("Não foi possível atualizar a transação.");
+                  setActionSuccess("Transação atualizada com sucesso.");
+                } catch (mutationError) {
+                  setActionError(
+                    getTransactionActionErrorMessage(
+                      mutationError,
+                      "Não foi possível atualizar a transação.",
+                    ),
+                  );
                 }
               }}
             >
@@ -1268,7 +1329,7 @@ export const TransactionsPage = () => {
                 </button>
               </div>
             </form>
-          </div>
+          </dialog>
         </div>
       ) : null}
     </main>

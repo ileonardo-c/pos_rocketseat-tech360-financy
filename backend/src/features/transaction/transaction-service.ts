@@ -86,7 +86,7 @@ export class TransactionService {
 
     const transaction = await this.repository.findByIdAndUser(id, ctx.userId);
     if (!transaction) {
-      throw new AppError("Transacao nao encontrada", 404);
+      throw new AppError("Transaction not found", 404);
     }
 
     const payload = this.normalizeUpdateInput(input, id, ctx.userId);
@@ -279,18 +279,18 @@ export class TransactionService {
   private normalizeCreateInput(userId: string, input: TransactionInput) {
     const title = (input.title ?? "").trim();
     if (!title) {
-      throw new AppError("Titulo da transacao eh obrigatorio", 400);
+      throw new AppError("Transaction title is required", 400);
     }
 
     if (!Number.isFinite(input.amount)) {
-      throw new AppError("Valor invalido", 400);
+      throw new AppError("Invalid amount", 400);
     }
 
     const parsedType = this.parseType(input.type);
     const date = this.parseDate(input.date);
     const categoryId = (input.categoryId ?? "").trim();
     if (!categoryId) {
-      throw new AppError("Categoria eh obrigatoria", 400);
+      throw new AppError("Category is required", 400);
     }
 
     const receipt = this.normalizeReceiptFields(userId, input.receiptKey, input.receiptUrl);
@@ -321,7 +321,7 @@ export class TransactionService {
     if (input.title !== undefined) {
       const title = input.title.trim();
       if (!title) {
-        throw new AppError("Titulo da transacao eh obrigatorio", 400);
+        throw new AppError("Transaction title is required", 400);
       }
       payload.title = title;
     }
@@ -332,7 +332,7 @@ export class TransactionService {
 
     if (input.amount !== undefined) {
       if (!Number.isFinite(input.amount)) {
-        throw new AppError("Valor invalido", 400);
+        throw new AppError("Invalid amount", 400);
       }
       payload.amount = input.amount;
     }
@@ -348,7 +348,7 @@ export class TransactionService {
     if (input.categoryId !== undefined) {
       const categoryId = input.categoryId.trim();
       if (!categoryId) {
-        throw new AppError("Categoria eh obrigatoria", 400);
+        throw new AppError("Category is required", 400);
       }
       payload.categoryId = categoryId;
     }
@@ -382,7 +382,11 @@ export class TransactionService {
     }
 
     if (!this.isReceiptKeyOwnedByUser(userId, receiptKey)) {
-      throw new AppError("Comprovante invalido para este usuario", 403);
+      throw new AppError("Invalid receipt for this user", 403);
+    }
+
+    if (!this.hasStorageConfiguration()) {
+      throw new AppError("Receipt storage is not available", 400);
     }
 
     return {
@@ -396,18 +400,21 @@ export class TransactionService {
   }
 
   private buildPublicReceiptUrl(receiptKey: string) {
-    const endpoint = process.env.S3_ENDPOINT?.trim();
-    const bucket = process.env.S3_BUCKET?.trim();
-    if (!endpoint || !bucket) {
-      throw new AppError("Configuracao S3 faltando", 500);
-    }
+    const endpoint = process.env.S3_ENDPOINT?.trim() ?? "";
+    const bucket = process.env.S3_BUCKET?.trim() ?? "";
 
     return `${endpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
   }
 
+  private hasStorageConfiguration() {
+    const endpoint = process.env.S3_ENDPOINT?.trim();
+    const bucket = process.env.S3_BUCKET?.trim();
+    return Boolean(endpoint && bucket);
+  }
+
   private parseType(type: TransactionType): TransactionType {
     if (type !== "INCOME" && type !== "EXPENSE") {
-      throw new AppError("Tipo invalido", 400);
+      throw new AppError("Invalid type", 400);
     }
     return type;
   }
@@ -416,18 +423,18 @@ export class TransactionService {
     const parsedDate = typeof date === "string" ? date.trim() : date;
     if (parsedDate instanceof Date) {
       if (Number.isNaN(parsedDate.getTime())) {
-        throw new AppError("Data invalida", 400);
+        throw new AppError("Invalid date", 400);
       }
       return parsedDate;
     }
 
     if (!parsedDate) {
-      throw new AppError("Data eh obrigatoria", 400);
+      throw new AppError("Date is required", 400);
     }
 
     const parsed = new Date(parsedDate);
     if (Number.isNaN(parsed.getTime())) {
-      throw new AppError("Data invalida", 400);
+      throw new AppError("Invalid date", 400);
     }
 
     return parsed;
@@ -438,7 +445,7 @@ export class TransactionService {
     const to = this.parseOptionalDate(input?.to, "end");
 
     if (from && to && from.getTime() > to.getTime()) {
-      throw new AppError("Periodo invalido: data inicial maior que data final", 400);
+      throw new AppError("Invalid range: start date is greater than end date", 400);
     }
 
     return {
@@ -453,7 +460,7 @@ export class TransactionService {
     }
 
     if (!Number.isInteger(limitInput) || limitInput < 1 || limitInput > 50) {
-      throw new AppError("Limite invalido: use um inteiro entre 1 e 50", 400);
+      throw new AppError("Invalid limit: use an integer between 1 and 50", 400);
     }
 
     return limitInput;
@@ -465,7 +472,7 @@ export class TransactionService {
     }
 
     if (intervalInput !== "DAY" && intervalInput !== "MONTH") {
-      throw new AppError("Intervalo invalido: use DAY ou MONTH", 400);
+      throw new AppError("Invalid interval: use DAY or MONTH", 400);
     }
 
     return intervalInput;
@@ -484,14 +491,14 @@ export class TransactionService {
     const from = filters.from ?? defaultFrom;
 
     if (from.getTime() > to.getTime()) {
-      throw new AppError("Periodo invalido: data inicial maior que data final", 400);
+      throw new AppError("Invalid range: start date is greater than end date", 400);
     }
 
     if (interval === "DAY") {
       const maxDays = 366;
       const diffDays = Math.floor((to.getTime() - from.getTime()) / 86_400_000) + 1;
       if (diffDays > maxDays) {
-        throw new AppError("Periodo muito grande para DAY: use no maximo 366 dias", 400);
+        throw new AppError("Range too large for DAY: use at most 366 days", 400);
       }
     } else {
       const fromMonths = from.getUTCFullYear() * 12 + from.getUTCMonth();
@@ -499,7 +506,7 @@ export class TransactionService {
       const diffMonths = toMonths - fromMonths + 1;
       const maxMonths = 120;
       if (diffMonths > maxMonths) {
-        throw new AppError("Periodo muito grande para MONTH: use no maximo 120 meses", 400);
+        throw new AppError("Range too large for MONTH: use at most 120 months", 400);
       }
     }
 
@@ -535,7 +542,7 @@ export class TransactionService {
 
     const parsed = new Date(parsedValue);
     if (Number.isNaN(parsed.getTime())) {
-      throw new AppError("Data invalida no filtro", 400);
+      throw new AppError("Invalid date in filters", 400);
     }
 
     return parsed;
@@ -544,7 +551,7 @@ export class TransactionService {
   private async validateCategoryOwnership(userId: string, categoryId: string) {
     const category = await this.repository.findCategoryByIdAndUser(categoryId, userId);
     if (!category) {
-      throw new AppError("Categoria nao encontrada", 404);
+      throw new AppError("Category not found", 404);
     }
   }
 }

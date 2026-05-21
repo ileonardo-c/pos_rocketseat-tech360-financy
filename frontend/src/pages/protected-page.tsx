@@ -195,6 +195,9 @@ const buildSearchParamsFromDashboardState = (params: {
 const isSameSummaryFilter = (left: SummaryFilter, right: SummaryFilter) =>
   left.from === right.from && left.to === right.to;
 
+const isInvalidSummaryRange = (filter: SummaryFilter) =>
+  Boolean(filter.from && filter.to && filter.from > filter.to);
+
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -211,6 +214,10 @@ export const ProtectedPage = () => {
   );
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const isSyncingFromUrlRef = useRef(false);
+  const hasInvalidSummaryRange = isInvalidSummaryRange(summaryFilter);
+  const summaryFilterValidationError = hasInvalidSummaryRange
+    ? "Período inválido: a data inicial deve ser menor ou igual à final."
+    : null;
 
   useEffect(() => {
     const nextParsedState = parseDashboardStateFromSearchParams(searchParams);
@@ -284,6 +291,7 @@ export const ProtectedPage = () => {
   } = useQuery<TransactionSummaryNode>(DASHBOARD_TRANSACTION_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
+    skip: hasInvalidSummaryRange,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -299,6 +307,7 @@ export const ProtectedPage = () => {
   } = useQuery<TransactionCategorySummaryNode>(DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
+    skip: hasInvalidSummaryRange,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -315,6 +324,7 @@ export const ProtectedPage = () => {
   } = useQuery<TransactionTimelineNode>(DASHBOARD_TRANSACTION_TIMELINE_QUERY, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
+    skip: hasInvalidSummaryRange,
     variables: {
       filter: {
         from: summaryFilter.from || null,
@@ -337,17 +347,17 @@ export const ProtectedPage = () => {
     (categorySummaryLoading && categorySummaryData === undefined) ||
     (timelineLoading && timelineData === undefined);
 
-  const summary = summaryData?.transactionSummary ?? {
-    incomeTotal: 0,
-    expenseTotal: 0,
-    balance: 0,
-    totalCount: 0,
-    byType: [],
-  };
-  const categorySummary = categorySummaryData?.transactionCategorySummary ?? [];
-  const timelinePoints = timelineData?.transactionTimeline ?? [];
+  const summary = summaryData?.transactionSummary;
+  const categorySummary = categorySummaryData?.transactionCategorySummary;
+  const timelinePoints = timelineData?.transactionTimeline;
+  const hasCriticalSummaryFailure =
+    !hasInvalidSummaryRange &&
+    ((summaryError && !summary) ||
+      (categorySummaryError && !categorySummary) ||
+      (timelineError && !timelinePoints));
   const totalCategoryVolume = useMemo(
-    () => categorySummary.reduce((accumulator, category) => accumulator + category.total, 0),
+    () =>
+      (categorySummary ?? []).reduce((accumulator, category) => accumulator + category.total, 0),
     [categorySummary],
   );
 
@@ -387,13 +397,16 @@ export const ProtectedPage = () => {
             type="button"
             onClick={async () => {
               setRefreshError(null);
-              const results = await Promise.allSettled([
+              const refreshTasks: Array<Promise<unknown>> = [
                 refetchCategories(),
                 refetchTransactions(),
-                refetchSummary(),
-                refetchCategorySummary(),
-                refetchTimeline(),
-              ]);
+              ];
+
+              if (!hasInvalidSummaryRange) {
+                refreshTasks.push(refetchSummary(), refetchCategorySummary(), refetchTimeline());
+              }
+
+              const results = await Promise.allSettled(refreshTasks);
               const failedCount = results.filter((result) => result.status === "rejected").length;
 
               if (failedCount === results.length) {
@@ -421,10 +434,11 @@ export const ProtectedPage = () => {
         <Link to="/transactions">Gerenciar transações</Link>
       </nav>
 
-      {categoriesError || transactionsError || summaryError || categorySummaryError || timelineError ? (
+      {categoriesError || transactionsError || hasCriticalSummaryFailure ? (
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
       {refreshError ? <p>{refreshError}</p> : null}
+      {summaryFilterValidationError ? <p>{summaryFilterValidationError}</p> : null}
 
       <section className="dashboard-summary-filters">
         <h2>Resumo por período</h2>
@@ -481,7 +495,7 @@ export const ProtectedPage = () => {
       <section className="dashboard-cards">
         <article className="dashboard-card">
           <h2>Saldo atual</h2>
-          <p>{currencyFormatter.format(summary.balance)}</p>
+          <p>{summary ? currencyFormatter.format(summary.balance) : "--"}</p>
           <Link
             className="dashboard-card-link"
             to={buildTransactionsPath({
@@ -494,7 +508,7 @@ export const ProtectedPage = () => {
         </article>
         <article className="dashboard-card">
           <h2>Receitas</h2>
-          <p>{currencyFormatter.format(summary.incomeTotal)}</p>
+          <p>{summary ? currencyFormatter.format(summary.incomeTotal) : "--"}</p>
           <Link
             className="dashboard-card-link"
             to={buildTransactionsPath({
@@ -508,7 +522,7 @@ export const ProtectedPage = () => {
         </article>
         <article className="dashboard-card">
           <h2>Despesas</h2>
-          <p>{currencyFormatter.format(summary.expenseTotal)}</p>
+          <p>{summary ? currencyFormatter.format(summary.expenseTotal) : "--"}</p>
           <Link
             className="dashboard-card-link"
             to={buildTransactionsPath({
@@ -522,7 +536,7 @@ export const ProtectedPage = () => {
         </article>
         <article className="dashboard-card">
           <h2>Transações</h2>
-          <p>{summary.totalCount}</p>
+          <p>{summary?.totalCount ?? "--"}</p>
           <Link
             className="dashboard-card-link"
             to={buildTransactionsPath({
@@ -545,7 +559,7 @@ export const ProtectedPage = () => {
       <section className="dashboard-type-breakdown">
         <h2>Distribuição por tipo</h2>
         <ul>
-          {summary.byType.map((item) => (
+          {(summary?.byType ?? []).map((item) => (
             <li key={item.type}>
               <strong>{item.type === "INCOME" ? "Receitas" : "Despesas"}</strong>
               <span>{item.count} lançamento(s)</span>
@@ -575,7 +589,7 @@ export const ProtectedPage = () => {
             </button>
           </div>
         </header>
-        {timelinePoints.length === 0 ? (
+        {!timelinePoints || timelinePoints.length === 0 ? (
           <p>Sem dados para o período selecionado.</p>
         ) : (
           <div className="dashboard-timeline-table-wrap">
@@ -609,7 +623,7 @@ export const ProtectedPage = () => {
 
       <section className="dashboard-category-ranking">
         <h2>Top categorias no período</h2>
-        {categorySummary.length === 0 ? (
+        {!categorySummary || categorySummary.length === 0 ? (
           <p>Sem movimentações no período selecionado.</p>
         ) : (
           <ul>
