@@ -3,6 +3,11 @@ import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import {
+  AUTH_FALLBACK_MESSAGES,
+  resolveAuthErrorMessage,
+  sessionExpiredMessage,
+} from "@/lib/auth/auth-errors";
 import { LOGIN_MUTATION, ME_QUERY, REGISTER_MUTATION } from "@/lib/graphql/operations";
 
 type User = {
@@ -21,70 +26,8 @@ type AuthContextData = {
   signout: () => void;
 };
 
-type AuthErrorRule = {
-  messages: string[];
-  toUserMessage: string;
-};
-
 const AuthContext = createContext<AuthContextData | null>(null);
 const sessionExpiredEventName = "financy:session-expired";
-const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
-
-const AUTH_ERROR_RULES: AuthErrorRule[] = [
-  {
-    messages: [
-      "unauthenticated",
-      "not authenticated",
-      "session expired",
-      "expired token",
-      "não autenticado",
-    ],
-    toUserMessage: sessionExpiredMessage,
-  },
-  {
-    messages: ["invalid name"],
-    toUserMessage: "Por favor, informe um nome válido.",
-  },
-  {
-    messages: ["invalid email"],
-    toUserMessage: "Por favor, informe um e-mail válido.",
-  },
-  {
-    messages: ["invalid password"],
-    toUserMessage: "A senha deve ter pelo menos 6 caracteres.",
-  },
-  {
-    messages: ["invalid credentials"],
-    toUserMessage: "E-mail ou senha inválidos.",
-  },
-  {
-    messages: ["already exists", "already registered", "conflict", "duplicate", "já cadastrado"],
-    toUserMessage: "Este e-mail já está em uso.",
-  },
-];
-
-const AUTH_FALLBACK_MESSAGES = {
-  defaultSession: "Não foi possível validar sua sessão agora. Tente novamente em instantes.",
-  defaultAuth: "Não foi possível concluir a autenticação. Tente novamente.",
-};
-
-const normalizeErrorMessage = (error: unknown) => {
-  if (error && typeof error === "object" && "message" in error) {
-    return String(error.message).toLowerCase();
-  }
-  return "";
-};
-
-const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
-  const message = normalizeErrorMessage(error);
-  const foundRule = AUTH_ERROR_RULES.find((rule) =>
-    rule.messages.some((value) => message.includes(value)),
-  );
-  if (!foundRule) {
-    return fallback;
-  }
-  return foundRule.toUserMessage;
-};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const client = useApolloClient();
