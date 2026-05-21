@@ -50,6 +50,11 @@ const run = async () => {
     await page.evaluate(() => {
       localStorage.setItem("financy.token", "invalid.token");
     });
+    await page.goto(`${frontendUrl}/categories`, { waitUntil: "domcontentloaded" });
+    const dashboardHeadingCount = await page.getByRole("heading", { name: "Dashboard" }).count();
+    if (dashboardHeadingCount > 0) {
+      throw new Error("Protected dashboard content flashed during invalid-token hydration");
+    }
     await page.reload({ waitUntil: "networkidle" });
     await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 20_000 });
 
