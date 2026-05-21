@@ -73,7 +73,12 @@ export class AuthService {
       throw new AppError("Invalid credentials", 401);
     }
 
-    const valid = await bcrypt.compare(normalizedPassword, user.password);
+    const validWithLegacyPassword = await bcrypt.compare(password, user.password);
+    const validWithNormalizedPassword =
+      normalizedPassword !== password
+        ? await bcrypt.compare(normalizedPassword, user.password)
+        : validWithLegacyPassword;
+    const valid = validWithLegacyPassword || validWithNormalizedPassword;
     if (!valid) {
       throw new AppError("Invalid credentials", 401);
     }
