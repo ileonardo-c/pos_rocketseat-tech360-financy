@@ -122,7 +122,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setAuthError(message ?? null);
       setLoading(false);
-      await client.resetStore();
+      try {
+        await client.resetStore();
+      } catch (error) {
+        console.warn("Failed to reset Apollo store during auth state cleanup", error);
+      }
     },
     [client],
   );
