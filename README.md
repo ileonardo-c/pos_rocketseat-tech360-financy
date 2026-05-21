@@ -51,6 +51,7 @@ Desafio fullstack de organização financeira com:
 - `pnpm build:frontend` gera build do frontend.
 - `pnpm smoke:graphql` executa smoke do contrato GraphQL (auth + CRUD básico).
 - `pnpm smoke:auth` executa cenários negativos e positivos de autenticação/sessão (token ausente, token inválido, usuário inexistente, senha inválida e sessão válida).
+- `pnpm smoke:auth:browser` executa fluxo de autenticação no browser (cadastro, login, logout, sessão persistida e bloqueio com token inválido).
 - `pnpm compose:logs` acompanha logs da stack.
 - `pnpm compose:down` encerra os containers.
 
