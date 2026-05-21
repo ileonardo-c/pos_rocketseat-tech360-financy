@@ -1,6 +1,6 @@
 import type { GraphQLContext } from "../../context";
 import { AppError } from "../../lib/errors";
-import { TransactionRepository } from "./transaction-repository";
+import type { TransactionRepository } from "./transaction-repository";
 
 type TransactionType = "INCOME" | "EXPENSE";
 
@@ -115,7 +115,10 @@ export class TransactionService {
     return true;
   }
 
-  async summaryByUser(ctx: GraphQLContext, input?: TransactionSummaryInput): Promise<TransactionSummary> {
+  async summaryByUser(
+    ctx: GraphQLContext,
+    input?: TransactionSummaryInput,
+  ): Promise<TransactionSummary> {
     if (!ctx.userId) {
       throw new AppError("Unauthenticated", 401);
     }
@@ -368,7 +371,11 @@ export class TransactionService {
     return normalized.length > 0 ? normalized : null;
   }
 
-  private normalizeReceiptFields(userId: string, receiptKeyInput?: string | null, _receiptUrlInput?: string | null) {
+  private normalizeReceiptFields(
+    userId: string,
+    receiptKeyInput?: string | null,
+    _receiptUrlInput?: string | null,
+  ) {
     const receiptKey = this.parseOptionalString(receiptKeyInput);
     if (!receiptKey) {
       return { receiptKey: null, receiptUrl: null };

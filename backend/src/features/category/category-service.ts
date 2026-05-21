@@ -1,6 +1,6 @@
 import type { GraphQLContext } from "../../context";
 import { AppError } from "../../lib/errors";
-import { CategoryRepository } from "./category-repository";
+import type { CategoryRepository } from "./category-repository";
 
 export class CategoryService {
   constructor(private readonly repository: CategoryRepository) {}
