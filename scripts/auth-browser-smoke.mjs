@@ -65,7 +65,6 @@ const run = async () => {
       const signupHeadingCount = await page.getByRole("heading", { name: "Criar conta" }).count();
       if (loginHeadingCount > 0 || signupHeadingCount > 0) {
         authScreenVisible = true;
-        break;
       }
 
       await page.waitForTimeout(hydrationProbeIntervalMs);
