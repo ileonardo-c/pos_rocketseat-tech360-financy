@@ -10,7 +10,7 @@ const buildUser = () => {
     email: `e2e.${suffix}@financy.local`,
     password,
     categoryName: `Categoria E2E ${suffix}`,
-    transactionTitle: `Transacao E2E ${suffix}`,
+    transactionTitle: `Transação E2E ${suffix}`,
   };
 };
 
