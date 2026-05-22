@@ -30,9 +30,7 @@
   }
 
   .t-input.is-shaking {
-    animation: t-input-shake
-      calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2)
-      linear;
+    animation: t-input-shake calc(var(--shake-dur-a) * 2 + var(--shake-dur-b) * 2) linear;
   }
 
   @keyframes t-input-shake {

@@ -82,7 +82,9 @@ export const SigninPage = () => {
             <circle cx="16" cy="17" r="5" stroke="currentColor" strokeWidth="2.5" />
             <path d="M11 10L13 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
           </svg>
-          <span className="text-3xl font-black uppercase tracking-[0.1em] sm:text-4xl">Financy</span>
+          <span className="text-3xl font-black uppercase tracking-[0.1em] sm:text-4xl">
+            Financy
+          </span>
         </header>
 
         <Card className="border border-slate-300/85 bg-white px-5 py-6 shadow-none transition-all duration-300 ease-out sm:px-8 sm:py-9">
@@ -149,7 +151,9 @@ export const SigninPage = () => {
                 />
               </div>
               {emailError ? (
-                <span className="t-error-msg mt-1 block text-sm text-red-600 sm:text-base">{emailError}</span>
+                <span className="t-error-msg mt-1 block text-sm text-red-600 sm:text-base">
+                  {emailError}
+                </span>
               ) : null}
             </label>
 
