@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 
 type ModalProps = {
@@ -8,6 +9,23 @@ type ModalProps = {
 };
 
 export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) {
     return null;
   }
@@ -16,7 +34,7 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4"
       onKeyDown={(event) => {
-        if (event.key === "Escape") {
+        if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {
           onClose();
         }
       }}
