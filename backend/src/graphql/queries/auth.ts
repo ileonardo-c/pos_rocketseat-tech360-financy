@@ -1,6 +1,6 @@
+import type { GraphQLContext } from "../../context";
 import { AuthRepository } from "../../features/auth/auth-repository";
 import { AuthService } from "../../features/auth/auth-service";
-import type { GraphQLContext } from "../../context";
 
 export const authQueries = {
   me: async (_: unknown, __: unknown, ctx: GraphQLContext) => {

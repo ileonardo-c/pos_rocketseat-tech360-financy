@@ -76,8 +76,11 @@ jobs:
       - name: Run E2E smoke flow
         run: pnpm test:e2e:smoke
 
+      - name: Run E2E visual evidence flow
+        run: pnpm test:e2e:visual
+
       - name: Upload E2E artifacts
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts
