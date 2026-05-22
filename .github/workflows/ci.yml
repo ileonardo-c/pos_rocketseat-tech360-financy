@@ -49,17 +49,17 @@ jobs:
 
           CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md' '*.yml' '*.yaml')
           if [ -z "$CHANGED_FILES" ]; then
-            echo "Nenhum arquivo elegível para Biome foi alterado."
+            echo "No Biome-eligible files changed."
             exit 0
           fi
 
           BIOME_FILES=$(echo "$CHANGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json|pnpm-workspace\.yaml)' || true)
           if [ -z "$BIOME_FILES" ]; then
-            echo "Nenhum arquivo alterado está no escopo de validação do Biome."
+            echo "No changed files are in the Biome validation scope."
             exit 0
           fi
 
-          echo "Arquivos validados pelo Biome:"
+          echo "Files validated by Biome:"
           echo "$BIOME_FILES"
           pnpm exec biome check $BIOME_FILES
 
@@ -88,7 +88,7 @@ jobs:
             fi
             sleep 1
           done
-          echo "Backend nao respondeu /health em 30s"
+          echo "Backend did not respond to /health within 30s"
           exit 1
 
       - name: Build frontend
