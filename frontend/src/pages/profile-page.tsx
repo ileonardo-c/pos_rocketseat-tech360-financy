@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@apollo/client";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { useAuth } from "@/lib/auth/auth-provider";
 import { ME_QUERY, UPDATE_PROFILE_MUTATION } from "@/lib/graphql/operations";
 
 type User = {
@@ -24,6 +25,7 @@ type ProfileForm = {
 };
 
 export const ProfilePage = () => {
+  const { updateSessionUser } = useAuth();
   const { data, loading, error } = useQuery<MeQueryData>(ME_QUERY, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -96,7 +98,7 @@ export const ProfilePage = () => {
           }
 
           try {
-            await updateProfile({
+            const result = await updateProfile({
               variables: {
                 input: {
                   name: form.name.trim(),
@@ -104,6 +106,9 @@ export const ProfilePage = () => {
                 },
               },
             });
+            if (result.data?.updateProfile) {
+              updateSessionUser(result.data.updateProfile);
+            }
             setFeedback("Perfil atualizado com sucesso.");
             setFeedbackType("success");
           } catch (mutationError) {

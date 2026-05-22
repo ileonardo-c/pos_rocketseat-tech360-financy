@@ -104,10 +104,7 @@ export class AuthService {
     return { id: user.id, name: user.name, email: user.email };
   }
 
-  async updateProfile(
-    ctx: GraphQLContext,
-    input: { name?: string | null; email?: string | null },
-  ) {
+  async updateProfile(ctx: GraphQLContext, input: { name?: string | null; email?: string | null }) {
     if (!ctx.userId) {
       throw new AppError("Unauthenticated", 401);
     }
@@ -143,7 +140,16 @@ export class AuthService {
       throw new AppError("No profile updates provided", 400);
     }
 
-    const updated = await this.repository.updateUser(ctx.userId, data);
+    let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;
+    try {
+      updated = await this.repository.updateUser(ctx.userId, data);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new AppError("Email already registered", 409);
+      }
+      throw error;
+    }
+
     return { id: updated.id, name: updated.name, email: updated.email };
   }
 }
