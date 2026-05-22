@@ -70,7 +70,7 @@ export const SigninPage = () => {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f4f6] px-4 py-8 text-slate-700 sm:py-12">
+    <main className="auth-layout min-h-screen bg-[#f3f4f6] px-4 py-8 text-slate-700 sm:py-12">
       <div className="mx-auto w-full max-w-[448px]">
         <header className="mb-6 flex items-center justify-center gap-3 text-[#24784A] sm:mb-8">
           <svg
