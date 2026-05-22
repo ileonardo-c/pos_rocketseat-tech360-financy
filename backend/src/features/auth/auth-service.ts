@@ -147,6 +147,9 @@ export class AuthService {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new AppError("Email already registered", 409);
       }
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new AppError("User not found", 404);
+      }
       throw error;
     }
 
