@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ErrorBanner } from "@/components/ui/feedback";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 
 export const SignupPage = () => {
@@ -52,11 +56,11 @@ export const SignupPage = () => {
   }
 
   return (
-    <main className="auth-layout">
-      <section className="auth-card">
-        <h1 className="auth-title">Criar conta</h1>
+    <main className="min-h-screen grid place-items-center bg-gradient-to-b from-indigo-950 via-indigo-900 to-slate-950 px-4 py-8">
+      <Card className="w-full max-w-md border-slate-200/80 bg-white/95 px-8 py-10 shadow-panel">
+        <h1 className="mb-6 text-center text-3xl font-semibold text-slate-900">Criar conta</h1>
         <form
-          className="auth-form"
+          className="flex flex-col gap-4"
           onSubmit={async (event) => {
             event.preventDefault();
             setTouched({ name: true, email: true, password: true });
@@ -71,10 +75,10 @@ export const SignupPage = () => {
             await signup({ name: name.trim(), email: email.trim(), password });
           }}
         >
-          <label>
+          <label className="space-y-1.5 text-sm font-medium text-slate-800" htmlFor="signup-name">
             Nome
-            <input
-              className="auth-input"
+            <Input
+              id="signup-name"
               required
               type="text"
               value={name}
@@ -84,12 +88,12 @@ export const SignupPage = () => {
                 setName(event.target.value);
               }}
             />
-            {nameError ? <span className="form-error">{nameError}</span> : null}
+            {nameError ? <span className="mt-1 text-xs text-red-600">{nameError}</span> : null}
           </label>
-          <label>
+          <label className="space-y-1.5 text-sm font-medium text-slate-800" htmlFor="signup-email">
             Email
-            <input
-              className="auth-input"
+            <Input
+              id="signup-email"
               autoComplete="email"
               required
               type="email"
@@ -100,12 +104,15 @@ export const SignupPage = () => {
                 setEmail(event.target.value);
               }}
             />
-            {emailError ? <span className="form-error">{emailError}</span> : null}
+            {emailError ? <span className="mt-1 text-xs text-red-600">{emailError}</span> : null}
           </label>
-          <label>
+          <label
+            className="space-y-1.5 text-sm font-medium text-slate-800"
+            htmlFor="signup-password"
+          >
             Senha
-            <input
-              className="auth-input"
+            <Input
+              id="signup-password"
               autoComplete="new-password"
               required
               type="password"
@@ -116,25 +123,29 @@ export const SignupPage = () => {
                 setPassword(event.target.value);
               }}
             />
-            {passwordError ? <span className="form-error">{passwordError}</span> : null}
+            {passwordError ? (
+              <span className="mt-1 text-xs text-red-600">{passwordError}</span>
+            ) : null}
           </label>
 
-          {authError ? <p className="form-error">{authError}</p> : null}
+          <ErrorBanner message={authError} />
 
-          <button
-            className="auth-submit"
+          <Button
             disabled={
               loading || Boolean(nameError) || Boolean(emailError) || Boolean(passwordError)
             }
             type="submit"
           >
             {loading ? "Cadastrando..." : "Cadastrar"}
-          </button>
+          </Button>
         </form>
-        <p className="auth-footer">
-          Já possui conta? <Link to="/">Entrar</Link>
+        <p className="mt-5 text-center text-sm text-slate-600">
+          Já possui conta?{" "}
+          <Link className="font-semibold text-indigo-700 hover:text-indigo-900" to="/">
+            Entrar
+          </Link>
         </p>
-      </section>
+      </Card>
     </main>
   );
 };

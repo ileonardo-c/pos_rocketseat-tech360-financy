@@ -3,11 +3,17 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "@/App";
-import { ApolloProvider } from "@/lib/graphql/apollo";
 import { AuthProvider } from "@/lib/auth/auth-provider";
-import "./styles.css";
+import { ApolloProvider } from "@/lib/graphql/apollo";
+import "./index.css";
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root");
+
+if (!root) {
+  throw new Error("Root container not found");
+}
+
+createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
       <ApolloProvider>

@@ -1,6 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ErrorBanner } from "@/components/ui/feedback";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 
 export const SigninPage = () => {
@@ -43,11 +47,13 @@ export const SigninPage = () => {
   }
 
   return (
-    <main className="auth-layout">
-      <section className="auth-card">
-        <h1 className="auth-title">Login</h1>
+    <main className="min-h-screen grid place-items-center bg-gradient-to-b from-indigo-950 via-indigo-900 to-slate-950 px-4 py-8">
+      <Card className="w-full max-w-md border-slate-200/80 bg-white/95 px-8 py-10 shadow-panel">
+        <h1 className="mb-6 text-center text-3xl font-semibold tracking-tight text-slate-900">
+          Login
+        </h1>
         <form
-          className="auth-form"
+          className="flex flex-col gap-4"
           onSubmit={async (event) => {
             event.preventDefault();
             setTouched({ email: true, password: true });
@@ -61,10 +67,10 @@ export const SigninPage = () => {
             await signin({ email: email.trim(), password });
           }}
         >
-          <label>
+          <label className="space-y-1.5 text-sm font-medium text-slate-800" htmlFor="signin-email">
             Email
-            <input
-              className="auth-input"
+            <Input
+              id="signin-email"
               autoComplete="email"
               required
               type="email"
@@ -75,12 +81,15 @@ export const SigninPage = () => {
                 setEmail(event.target.value);
               }}
             />
-            {emailError ? <span className="form-error">{emailError}</span> : null}
+            {emailError ? <span className="mt-1 text-xs text-red-600">{emailError}</span> : null}
           </label>
-          <label>
+          <label
+            className="space-y-1.5 text-sm font-medium text-slate-800"
+            htmlFor="signin-password"
+          >
             Senha
-            <input
-              className="auth-input"
+            <Input
+              id="signin-password"
               autoComplete="current-password"
               required
               type="password"
@@ -91,23 +100,24 @@ export const SigninPage = () => {
                 setPassword(event.target.value);
               }}
             />
-            {passwordError ? <span className="form-error">{passwordError}</span> : null}
+            {passwordError ? (
+              <span className="mt-1 text-xs text-red-600">{passwordError}</span>
+            ) : null}
           </label>
 
-          {authError ? <p className="form-error">{authError}</p> : null}
+          <ErrorBanner message={authError} />
 
-          <button
-            className="auth-submit"
-            disabled={loading || Boolean(emailError) || Boolean(passwordError)}
-            type="submit"
-          >
+          <Button disabled={loading || Boolean(emailError) || Boolean(passwordError)} type="submit">
             {loading ? "Entrando..." : "Entrar"}
-          </button>
+          </Button>
         </form>
-        <p className="auth-footer">
-          Não tem conta? <Link to="/signup">Cadastrar</Link>
+        <p className="mt-5 text-center text-sm text-slate-600">
+          Não tem conta?{" "}
+          <Link className="font-semibold text-indigo-700 hover:text-indigo-900" to="/signup">
+            Cadastrar
+          </Link>
         </p>
-      </section>
+      </Card>
     </main>
   );
 };
