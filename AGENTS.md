@@ -165,6 +165,11 @@ Use exatamente estas quatro seções — somente quando não houver thread de re
 <evidência: testes passando, threads resolvidas, branch atualizado, próximo passo se houver>
 ```
 
+**Regras para a seção Validação:**
+
+- Use texto puro — sem emoji. Use marcadores `*` ou `-` seguidos de texto.
+- Nunca inclua `\uFFFD` (U+FFFD) — esse caractere indica byte UTF-8 corrompido. Se aparecer, corrija a origem antes de postar.
+
 ### Resposta em uma Thread de revisão existente
 
 Use prosa curta — sem títulos (headers) — postando diretamente na thread com `gh api`:
@@ -195,12 +200,12 @@ gh api graphql -f query='
 
 ## Reações em Comentários de Revisão
 
-Após processar cada apontamento (finding) de revisão (Codex ou Copilot):
+Após processar cada apontamento de revisão (Codex ou Copilot), **duas ações são obrigatórias e inseparáveis** — a reação sem a resposta na thread é considerada incompleta:
 
-| **Resultado** | **Ação** |
+| **Resultado** | **Ação obrigatória** |
 |---|---|
-| Correção aplicada / apontamento procedente | Reagir 👍 no comentário original |
-| Apontamento rejeitado com justificativa documentada | Reagir 👎 no comentário original |
+| Correção aplicada / apontamento procedente | 1. Reagir 👍 no comentário original. 2. Responder na thread (prosa curta, sem headers). |
+| Apontamento rejeitado com justificativa documentada | 1. Reagir 👎 no comentário original. 2. Responder na thread explicando a recusa. |
 
 Comandos de referência:
 
@@ -223,13 +228,19 @@ gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions \
 3. Responder dentro da thread (prosa curta, sem headers).
 4. Postar um único Comentário Principal no PR referenciando todas as threads tratadas no ciclo.
 
+## Validação antes de postar qualquer comentário ou corpo de PR
+
+Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaixo:
+
+- Nenhuma sequência literal `\n`.
+- Nenhum caractere `\uFFFD` (U+FFFD) — indica byte UTF-8 corrompido; corrija a origem antes de postar.
+- Nenhum caractere UTF-8 ausente ou corrompido — todos os acentos do pt-BR devem estar presentes.
+- Nenhum caminho absoluto local, tokens ou credenciais/segredos.
+- Bullets de Validação usam texto puro — sem emoji.
+
 ## Padrões da CLI `gh`
 
 - **Prevenção de Erros (Footgun):** Ao usar `gh issue/pr comment` com conteúdo que contém crases, variáveis ou múltiplos parágrafos, nunca use `-b "..."`. Use sempre strings literais multilinha com *heredoc* (`-F - <<'EOF'`) para evitar corrupção por substituição de shell e *escaping*.
-- Antes de enviar qualquer comentário ou corpo de PR, valide:
-  - Nenhuma sequência literal `\n`.
-  - Nenhum caractere UTF-8 ausente ou corrompido — todos os acentos do pt-BR devem estar presentes.
-  - Nenhum caminho absoluto local, tokens ou credenciais/segredos.
 - Use `gh pr create --body-file` com um arquivo UTF-8 (sem BOM). Nunca interpole o corpo via substituição de shell.
 - O cabeçalho do corpo do PR deve ser resolvido para exatamente um de:
   - `Closes #<n>` — se este PR fechar a issue referenciada.
@@ -244,4 +255,3 @@ gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions \
   1. Valide a referência remota: `git ls-remote origin refs/pull/<n>/*`
   2. Atualize o estado do PR via um novo push ou comentário.
   3. Acione a revisão novamente.
-  
