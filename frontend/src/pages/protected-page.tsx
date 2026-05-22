@@ -432,6 +432,7 @@ export const ProtectedPage = () => {
       <nav className="dashboard-links">
         <Link to="/categories">Gerenciar categorias</Link>
         <Link to="/transactions">Gerenciar transações</Link>
+        <Link to="/profile">Meu perfil</Link>
       </nav>
 
       {categoriesError || transactionsError || hasCriticalSummaryFailure ? (

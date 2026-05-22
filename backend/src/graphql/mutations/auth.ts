@@ -19,4 +19,12 @@ export const authMutations = {
     const service = new AuthService(new AuthRepository(ctx.prisma));
     return service.login(args.input.email, args.input.password);
   },
+  updateProfile: async (
+    _: unknown,
+    args: { input: { name?: string | null; email?: string | null } },
+    ctx: GraphQLContext,
+  ) => {
+    const service = new AuthService(new AuthRepository(ctx.prisma));
+    return service.updateProfile(ctx, args.input);
+  },
 };

@@ -36,6 +36,16 @@ export const ME_QUERY = gql`
   }
 `;
 
+export const UPDATE_PROFILE_MUTATION = gql`
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
+      id
+      name
+      email
+    }
+  }
+`;
+
 export const CATEGORIES_QUERY = gql`
   query Categories {
     categories {

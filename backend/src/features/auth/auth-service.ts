@@ -103,4 +103,47 @@ export class AuthService {
 
     return { id: user.id, name: user.name, email: user.email };
   }
+
+  async updateProfile(
+    ctx: GraphQLContext,
+    input: { name?: string | null; email?: string | null },
+  ) {
+    if (!ctx.userId) {
+      throw new AppError("Unauthenticated", 401);
+    }
+
+    const data: { name?: string; email?: string } = {};
+
+    if (typeof input.name === "string") {
+      const normalizedName = input.name.trim();
+      if (!normalizedName || normalizedName.length < 2) {
+        throw new AppError("Invalid name", 400);
+      }
+      data.name = normalizedName;
+    }
+
+    if (typeof input.email === "string") {
+      const normalizedEmail = input.email.trim().toLowerCase();
+      if (!normalizedEmail) {
+        throw new AppError("Invalid email", 400);
+      }
+      const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+      if (!isValidEmail) {
+        throw new AppError("Invalid email", 400);
+      }
+
+      const existingUser = await this.repository.findByEmail(normalizedEmail);
+      if (existingUser && existingUser.id !== ctx.userId) {
+        throw new AppError("Email already registered", 409);
+      }
+      data.email = normalizedEmail;
+    }
+
+    if (!data.name && !data.email) {
+      throw new AppError("No profile updates provided", 400);
+    }
+
+    const updated = await this.repository.updateUser(ctx.userId, data);
+    return { id: updated.id, name: updated.name, email: updated.email };
+  }
 }
