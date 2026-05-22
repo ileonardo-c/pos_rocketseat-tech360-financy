@@ -123,6 +123,6 @@ test("@smoke fluxo ponta a ponta de auth, categorias, transacoes e perfil", asyn
   await page.evaluate(() => {
     localStorage.setItem("financy.token", "invalid.token.here");
   });
-  await page.goto(`${appUrl}/categories`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Login" }).waitFor();
+  await page.goto(`${appUrl}/categories`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
 });

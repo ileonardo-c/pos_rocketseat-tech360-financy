@@ -11,6 +11,9 @@ importers:
       '@biomejs/biome':
         specifier: ^1.8.3
         version: 1.9.4
+      playwright:
+        specifier: ^1.54.2
+        version: 1.60.0
 
   backend:
     dependencies:

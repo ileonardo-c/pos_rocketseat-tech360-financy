@@ -1,1 +1,4 @@
-# E2E artifacts\ntest-results/\nplaywright-report/\ncoverage/\n
+# E2E artifacts
+test-results/
+playwright-report/
+coverage/
