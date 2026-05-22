@@ -124,4 +124,3 @@ Executar antes de abrir PR:
 - PR template e checklist em `.github/pull_request_template.md`
 - CODEOWNERS em `.github/CODEOWNERS`
 - Convenções de branches em `CONTRIBUTING.md`
-- Checklist de governança de finalização em `docs/finalization-governance-checklist.md`
