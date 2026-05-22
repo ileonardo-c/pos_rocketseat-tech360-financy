@@ -22,58 +22,28 @@ const toDateInput = () => {
   return `${year}-${month}-${day}`;
 };
 
-const registerUser = async (
-  graphqlUrl: string,
-  input: { name: string; email: string; password: string },
-) => {
-  const response = await fetch(graphqlUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: `
-        mutation Register($input: RegisterInput!) {
-          register(input: $input) {
-            token
-            user {
-              id
-            }
-          }
-        }
-      `,
-      variables: {
-        input,
-      },
+const buildExpiredToken = () => {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({
+      sub: "e2e-user",
+      exp: Math.floor(Date.now() / 1000) - 3600,
     }),
-  });
-
-  const payload = (await response.json()) as {
-    data?: { register?: { token?: string } };
-    errors?: Array<{ message?: string }>;
-  };
-
-  if (!response.ok || payload.errors?.length || !payload.data?.register?.token) {
-    throw new Error(`User registration failed: ${JSON.stringify(payload.errors ?? payload)}`);
-  }
+  ).toString("base64url");
+  return `${header}.${payload}.invalidsignature`;
 };
 
 test("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", async ({ page }) => {
   const user = buildUser();
   const appUrl = process.env.E2E_APP_URL ?? "http://localhost:5173";
-  const apiUrl = process.env.E2E_API_URL ?? "http://localhost:4000/graphql";
+  const expiredToken = buildExpiredToken();
 
-  await registerUser(apiUrl, {
-    name: user.name,
-    email: user.email,
-    password: user.password,
-  });
-
-  await page.goto(`${appUrl}/`, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "Login" }).waitFor();
+  await page.goto(`${appUrl}/signup`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Criar conta" }).waitFor();
+  await page.getByLabel("Nome").fill(user.name);
   await page.getByLabel("Email").fill(user.email);
   await page.getByLabel("Senha").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await page.getByRole("button", { name: "Cadastrar" }).click();
 
   await page.getByRole("heading", { name: "Dashboard" }).waitFor({ timeout: 45_000 });
   await expect(page.getByText(`Bem-vindo, ${user.name}`)).toBeVisible();
@@ -124,5 +94,11 @@ test("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", as
     localStorage.setItem("financy.token", "invalid.token.here");
   });
   await page.goto(`${appUrl}/categories`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
+
+  await page.evaluate((token) => {
+    localStorage.setItem("financy.token", token);
+  }, expiredToken);
+  await page.goto(`${appUrl}/transactions`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
 });
