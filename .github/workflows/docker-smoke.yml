@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright Chromium
+        run: pnpm --filter @financy/frontend exec playwright install --with-deps chromium
+
       - name: Copy environment file
         run: cp .env.example .env
 
@@ -69,6 +72,19 @@ jobs:
 
       - name: Run GraphQL smoke flow
         run: pnpm smoke:graphql
+
+      - name: Run E2E smoke flow
+        run: pnpm test:e2e:smoke
+
+      - name: Upload E2E artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore
 
       - name: Show compose status
         if: always()

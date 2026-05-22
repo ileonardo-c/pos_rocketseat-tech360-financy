@@ -53,7 +53,8 @@ export const SignupPage = () => {
 
   return (
     <main className="auth-layout">
-      <h1>Criar conta</h1>
+      <section className="auth-card">
+        <h1 className="auth-title">Criar conta</h1>
       <form
         className="auth-form"
         onSubmit={async (event) => {
@@ -73,6 +74,7 @@ export const SignupPage = () => {
         <label>
           Nome
           <input
+            className="auth-input"
             required
             type="text"
             value={name}
@@ -87,6 +89,7 @@ export const SignupPage = () => {
         <label>
           Email
           <input
+            className="auth-input"
             autoComplete="email"
             required
             type="email"
@@ -102,6 +105,7 @@ export const SignupPage = () => {
         <label>
           Senha
           <input
+            className="auth-input"
             autoComplete="new-password"
             required
             type="password"
@@ -118,15 +122,17 @@ export const SignupPage = () => {
         {authError ? <p className="form-error">{authError}</p> : null}
 
         <button
+          className="auth-submit"
           disabled={loading || Boolean(nameError) || Boolean(emailError) || Boolean(passwordError)}
           type="submit"
         >
           {loading ? "Cadastrando..." : "Cadastrar"}
         </button>
       </form>
-      <p>
+      <p className="auth-footer">
         Já possui conta? <Link to="/">Entrar</Link>
       </p>
+      </section>
     </main>
   );
 };

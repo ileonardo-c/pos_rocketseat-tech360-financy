@@ -44,7 +44,8 @@ export const SigninPage = () => {
 
   return (
     <main className="auth-layout">
-      <h1>Login</h1>
+      <section className="auth-card">
+        <h1 className="auth-title">Login</h1>
       <form
         className="auth-form"
         onSubmit={async (event) => {
@@ -59,13 +60,14 @@ export const SigninPage = () => {
 
           await signin({ email: email.trim(), password });
         }}
-      >
-        <label>
-          Email
-          <input
-            autoComplete="email"
-            required
-            type="email"
+        >
+          <label>
+            Email
+            <input
+              className="auth-input"
+              autoComplete="email"
+              required
+              type="email"
             value={email}
             onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
             onChange={(event) => {
@@ -78,6 +80,7 @@ export const SigninPage = () => {
         <label>
           Senha
           <input
+            className="auth-input"
             autoComplete="current-password"
             required
             type="password"
@@ -93,13 +96,18 @@ export const SigninPage = () => {
 
         {authError ? <p className="form-error">{authError}</p> : null}
 
-        <button disabled={loading || Boolean(emailError) || Boolean(passwordError)} type="submit">
+        <button
+          className="auth-submit"
+          disabled={loading || Boolean(emailError) || Boolean(passwordError)}
+          type="submit"
+        >
           {loading ? "Entrando..." : "Entrar"}
         </button>
       </form>
-      <p>
+      <p className="auth-footer">
         Não tem conta? <Link to="/signup">Cadastrar</Link>
       </p>
+      </section>
     </main>
   );
 };
