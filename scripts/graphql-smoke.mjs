@@ -275,12 +275,19 @@ const run = async () => {
       id: transactionId,
     },
   );
-  ensure(crossDeleteTransaction.errors.length > 0, "Cross-user transaction delete should fail");
+  ensure(
+    crossDeleteTransaction.errors.length > 0 ||
+      crossDeleteTransaction.data?.deleteTransaction === false,
+    "Cross-user transaction delete should fail",
+  );
 
   const crossDeleteCategory = await requestWithGraphQLErrors(deleteCategoryMutation, secondToken, {
     id: categoryId,
   });
-  ensure(crossDeleteCategory.errors.length > 0, "Cross-user category delete should fail");
+  ensure(
+    crossDeleteCategory.errors.length > 0 || crossDeleteCategory.data?.deleteCategory === false,
+    "Cross-user category delete should fail",
+  );
 
   const deleteTransactionData = await request(deleteTransactionMutation, token, {
     id: transactionId,

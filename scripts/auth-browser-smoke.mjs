@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 
-const frontendUrl = process.env.FRONTEND_URL ?? "http://127.0.0.1:5173";
+const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const password = "SmokePass123!";
 const hydrationWindowTimeoutMs = 4000;
 const hydrationProbeIntervalMs = 50;
