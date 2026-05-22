@@ -28,6 +28,123 @@ main.profile-layout {
   margin: 0 auto;
 }
 
+main.profile-shell {
+  max-width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background: #f3f4f6;
+}
+
+.profile-topbar {
+  height: 70px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+}
+
+.profile-nav {
+  display: flex;
+  gap: 30px;
+  align-items: center;
+}
+
+.profile-nav a {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.profile-card {
+  width: 100%;
+  max-width: 520px;
+  margin: 48px auto 0;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 28px 32px 30px;
+  text-align: center;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: #d1d5db;
+  color: #111827;
+  font-size: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px auto 14px;
+}
+
+.profile-card h1 {
+  margin: 0;
+  font-size: 38px;
+}
+
+.profile-email {
+  margin: 10px 0 0;
+  color: #6b7280;
+  font-size: 18px;
+}
+
+.profile-divider {
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 26px 0;
+}
+
+.profile-form {
+  text-align: left;
+  gap: 8px;
+}
+
+.profile-form input {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.profile-muted {
+  margin: 0 0 10px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.profile-success {
+  color: #047857;
+  margin: 0 0 14px;
+  text-align: left;
+}
+
+.profile-form button[type="submit"] {
+  margin-top: 8px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #1f7a4b;
+  background: #1f7a4b;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.profile-signout {
+  margin-top: 8px;
+  height: 48px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  font-size: 16px;
+  font-weight: 500;
+}
+
 main.auth-layout {
   max-width: 420px;
   margin: 48px auto;
@@ -747,5 +864,25 @@ li {
   .transactions-pagination {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .profile-topbar {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+
+  .profile-nav {
+    gap: 16px;
+  }
+
+  .profile-card {
+    margin: 20px 12px 0;
+    width: auto;
+    padding: 20px 18px 22px;
+  }
+
+  .profile-form button[type="submit"],
+  .profile-signout {
+    font-size: 15px;
   }
 }
