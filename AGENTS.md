@@ -9,7 +9,7 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 ## Diretrizes Gerais do Repositório e GitHub
 
 - **Referências de Arquivos:** Em respostas no chat, as referências a arquivos devem ser estritamente relativas à raiz do repositório (exemplo: `frontend/src/components/Button.tsx:80`); nunca use caminhos absolutos ou `~/...`.
-- **Links Automáticos:** Não envolva referências de Issues/PRs em crases quando desejar o auto-link do GitHub. Use apenas `#123` em vez de `` `#123` ``.
+- **Links Automáticos:** Não envolva referências de Issues/PRs em crases nem em hyperlinks manuais (`[#123](url)`) quando desejar o auto-link do GitHub. Use apenas `#123` — o GitHub resolve automaticamente.
 - **Resolução de Threads:** Se um bot ou agente deixar comentários de revisão no seu PR, aplique as correções e resolva as conversas você mesmo. Não deixe a limpeza de conversas de bots para os mantenedores.
 - **Commits em PRs:** Ao postar comentários de conclusão de PR, sempre torne os SHAs dos commits clicáveis com links completos.
 
@@ -147,6 +147,21 @@ Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
 
 > **Regra principal:** se existe uma thread de revisão aberta (Codex, Copilot ou humano), a resposta deve ser feita *dentro* dessa thread via `gh api` — nunca como um novo `gh pr comment` separado.
 
+### Corpo do PR (descrição ao abrir o PR)
+A estrutura do corpo do PR obedece a uma hierarquia de precedência:
+
+1. **Se existir um template no repositório** (ex: `.github/pull_request_template.md`): O corpo do PR deve seguir estritamente o formato, as seções e o estilo definidos no arquivo. Se o template utilizar emojis em cabeçalhos (ex: 📝, 🔨), eles **devem** ser mantidos.
+2. **Se NÃO existir um template no repositório (Fallback):** Utilize as mesmas quatro seções do Comentário Principal (Contexto / Causa / Correção / Validação) e use texto puro (zero emojis).
+
+**Regra inegociável de limpeza:** Independentemente do formato adotado, **nenhuma instrução de template** (como delimitadores `<!-- -->`, mensagens do tipo "Escolha UMA linha", "Não use \n literal" ou "Use nomes de paths em crase"), placeholder vazio ou meta-comentário deve permanecer no corpo publicado. A IA deve ler as instruções invisíveis, aplicá-las e apagá-las do texto final antes de abrir o PR.
+
+### Comentário Principal do PR (novo tópico geral)
+*(Mantenha as quatro seções Contexto/Causa/Correção/Validação)*
+
+Regras para a seção Validação e Comentários:
+* Use texto puro — **sem emoji**. (A permissão para emojis aplica-se única e exclusivamente ao Corpo do PR quando exigido pelo template do repositório. Comentários e threads de revisão nunca usam emojis, exceto nas reações automáticas via API).
+* Nunca inclua `\uFFFD` (U+FFFD) — esse caractere indica byte UTF-8 corrompido. Se aparecer, corrija a origem antes de postar.
+
 ### Comentário Principal do PR (novo tópico geral)
 
 Use exatamente estas quatro seções — somente quando não houver thread de revisão prévia sobre o assunto:
@@ -236,6 +251,7 @@ Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaix
 - Nenhum caractere `\uFFFD` (U+FFFD) — indica byte UTF-8 corrompido; corrija a origem antes de postar.
 - Nenhum caractere UTF-8 ausente ou corrompido — todos os acentos do pt-BR devem estar presentes.
 - Nenhum caminho absoluto local, tokens ou credenciais/segredos.
+- Nenhuma instrução de template ou meta-comentário remanescente (ex: "Use nomes de paths em crase", "Não use `\n` literal").
 - Bullets de Validação usam texto puro — sem emoji.
 
 ## Padrões da CLI `gh`
