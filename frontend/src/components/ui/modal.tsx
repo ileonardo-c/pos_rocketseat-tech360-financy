@@ -33,12 +33,7 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4"
-      onKeyDown={(event) => {
-        if ((event.key === "Enter" || event.key === " ") && event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
-      onClick={(event) => {
+      onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
         }
