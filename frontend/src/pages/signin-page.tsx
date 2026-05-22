@@ -11,7 +11,6 @@ export const SigninPage = () => {
   const { user, signin, loading, authError, clearAuthError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [shakeEmail, setShakeEmail] = useState(false);
   const [shakePassword, setShakePassword] = useState(false);
@@ -48,6 +47,7 @@ export const SigninPage = () => {
 
   useEffect(() => {
     if (!emailError) {
+      setShakeEmail(false);
       return;
     }
     setShakeEmail(true);
@@ -57,6 +57,7 @@ export const SigninPage = () => {
 
   useEffect(() => {
     if (!passwordError) {
+      setShakePassword(false);
       return;
     }
     setShakePassword(true);
@@ -233,19 +234,7 @@ export const SigninPage = () => {
             <ErrorBanner message={authError} />
 
             <div className="flex items-center justify-between text-sm sm:text-lg">
-              <label
-                className="flex cursor-pointer items-center gap-2 text-slate-600"
-                htmlFor="remember-me"
-              >
-                <input
-                  checked={rememberMe}
-                  className="h-4 w-4 rounded border-slate-300 text-[#24784A] focus:ring-[#24784A]/25"
-                  id="remember-me"
-                  type="checkbox"
-                  onChange={(event) => setRememberMe(event.target.checked)}
-                />
-                Lembrar-me
-              </label>
+              <span className="text-slate-500">Sua sessão será mantida neste navegador</span>
               <span className="font-semibold text-slate-400">Recuperação de senha em breve</span>
             </div>
 
