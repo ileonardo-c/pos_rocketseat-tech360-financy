@@ -56,7 +56,7 @@ export const SignupPage = () => {
   }
 
   return (
-    <main className="min-h-screen grid place-items-center bg-gradient-to-b from-indigo-950 via-indigo-900 to-slate-950 px-4 py-8">
+    <main className="auth-layout min-h-screen grid place-items-center bg-gradient-to-b from-indigo-950 via-indigo-900 to-slate-950 px-4 py-8">
       <Card className="w-full max-w-md border-slate-200/80 bg-white/95 px-8 py-10 shadow-panel">
         <h1 className="mb-6 text-center text-3xl font-semibold text-slate-900">Criar conta</h1>
         <form
