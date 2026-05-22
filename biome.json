@@ -23,7 +23,9 @@
       "**/node_modules/**",
       "**/dist/**",
       ".github/**",
-      "**/.next/**"
+      "**/.next/**",
+      "**/test-results/**",
+      "**/playwright-report/**"
     ]
   }
 }
