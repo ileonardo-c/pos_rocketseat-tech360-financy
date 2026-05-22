@@ -58,7 +58,7 @@ const registerUser = async (
   }
 };
 
-test("@smoke fluxo ponta a ponta de auth, categorias, transacoes e perfil", async ({ page }) => {
+test("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", async ({ page }) => {
   const user = buildUser();
   const appUrl = process.env.E2E_APP_URL ?? "http://localhost:5173";
   const apiUrl = process.env.E2E_API_URL ?? "http://localhost:4000/graphql";
