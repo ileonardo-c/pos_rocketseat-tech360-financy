@@ -8,8 +8,9 @@ const buildUser = () => {
   return {
     name: `Visual User ${suffix}`,
     email: `visual.${suffix}@financy.local`,
-    categoryName: `Categoria Visual ${suffix}`,
     password,
+    categoryName: `Categoria Visual ${suffix}`,
+    transactionTitle: `Transação Visual ${suffix}`,
   };
 };
 
@@ -21,7 +22,6 @@ const capture = async (page: Page, testInfo: TestInfo, name: string) => {
     animations: "disabled",
     caret: "hide",
   });
-
   await testInfo.attach(`evidence-${name}`, {
     path,
     contentType: "image/png",
@@ -29,8 +29,8 @@ const capture = async (page: Page, testInfo: TestInfo, name: string) => {
 };
 
 test("@visual gera evidência visual das páginas críticas", async ({ page }, testInfo) => {
-  const appUrl = process.env.E2E_APP_URL ?? "http://localhost:5173";
   const user = buildUser();
+  const appUrl = process.env.E2E_APP_URL ?? "http://localhost:5173";
 
   await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Login" }).waitFor();
