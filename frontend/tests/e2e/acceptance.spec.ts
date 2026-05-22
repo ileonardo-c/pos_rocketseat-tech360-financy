@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import { expect, test } from "@playwright/test";
 
 const password = "SmokePass123!";
@@ -22,15 +23,20 @@ const toDateInput = () => {
   return `${year}-${month}-${day}`;
 };
 
+const encodeBase64Url = (value: string) => Buffer.from(value).toString("base64url");
+
 const buildExpiredToken = () => {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const payload = Buffer.from(
+  const secret = process.env.JWT_SECRET ?? "changeme";
+  const header = encodeBase64Url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const payload = encodeBase64Url(
     JSON.stringify({
       sub: "e2e-user",
       exp: Math.floor(Date.now() / 1000) - 3600,
     }),
-  ).toString("base64url");
-  return `${header}.${payload}.invalidsignature`;
+  );
+  const content = `${header}.${payload}`;
+  const signature = createHmac("sha256", secret).update(content).digest("base64url");
+  return `${content}.${signature}`;
 };
 
 test("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", async ({ page }) => {
