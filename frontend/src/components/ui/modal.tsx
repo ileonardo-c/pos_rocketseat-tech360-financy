@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
 type ModalProps = {
@@ -9,22 +9,28 @@ type ModalProps = {
 };
 
 export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+
+    return () => {
+      if (dialog.open) {
+        dialog.close();
       }
     };
-
-    window.addEventListener("keydown", onEscape);
-    return () => {
-      window.removeEventListener("keydown", onEscape);
-    };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) {
     return null;
@@ -47,6 +53,7 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
         type="button"
       />
       <dialog
+        ref={dialogRef}
         aria-label={title}
         aria-modal="true"
         className="relative w-full max-w-md rounded-lg border border-slate-200 bg-white p-4 shadow-2xl"
@@ -54,7 +61,6 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
           event.preventDefault();
           onClose();
         }}
-        open
       >
         <h2 className="mb-3 text-lg font-semibold text-slate-900">{title}</h2>
         {children}
