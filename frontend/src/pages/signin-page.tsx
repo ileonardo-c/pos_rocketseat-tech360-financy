@@ -44,62 +44,70 @@ export const SigninPage = () => {
 
   return (
     <main className="auth-layout">
-      <h1>Login</h1>
-      <form
-        className="auth-form"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          setTouched({ email: true, password: true });
+      <section className="auth-card">
+        <h1 className="auth-title">Login</h1>
+        <form
+          className="auth-form"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setTouched({ email: true, password: true });
 
-          const submitEmailError = getEmailError(email);
-          const submitPasswordError = getPasswordError(password);
-          if (submitEmailError || submitPasswordError) {
-            return;
-          }
+            const submitEmailError = getEmailError(email);
+            const submitPasswordError = getPasswordError(password);
+            if (submitEmailError || submitPasswordError) {
+              return;
+            }
 
-          await signin({ email: email.trim(), password });
-        }}
-      >
-        <label>
-          Email
-          <input
-            autoComplete="email"
-            required
-            type="email"
-            value={email}
-            onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
-            onChange={(event) => {
-              clearAuthError();
-              setEmail(event.target.value);
-            }}
-          />
-          {emailError ? <span className="form-error">{emailError}</span> : null}
-        </label>
-        <label>
-          Senha
-          <input
-            autoComplete="current-password"
-            required
-            type="password"
-            value={password}
-            onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
-            onChange={(event) => {
-              clearAuthError();
-              setPassword(event.target.value);
-            }}
-          />
-          {passwordError ? <span className="form-error">{passwordError}</span> : null}
-        </label>
+            await signin({ email: email.trim(), password });
+          }}
+        >
+          <label>
+            Email
+            <input
+              className="auth-input"
+              autoComplete="email"
+              required
+              type="email"
+              value={email}
+              onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
+              onChange={(event) => {
+                clearAuthError();
+                setEmail(event.target.value);
+              }}
+            />
+            {emailError ? <span className="form-error">{emailError}</span> : null}
+          </label>
+          <label>
+            Senha
+            <input
+              className="auth-input"
+              autoComplete="current-password"
+              required
+              type="password"
+              value={password}
+              onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
+              onChange={(event) => {
+                clearAuthError();
+                setPassword(event.target.value);
+              }}
+            />
+            {passwordError ? <span className="form-error">{passwordError}</span> : null}
+          </label>
 
-        {authError ? <p className="form-error">{authError}</p> : null}
+          {authError ? <p className="form-error">{authError}</p> : null}
 
-        <button disabled={loading || Boolean(emailError) || Boolean(passwordError)} type="submit">
-          {loading ? "Entrando..." : "Entrar"}
-        </button>
-      </form>
-      <p>
-        Não tem conta? <Link to="/signup">Cadastrar</Link>
-      </p>
+          <button
+            className="auth-submit"
+            disabled={loading || Boolean(emailError) || Boolean(passwordError)}
+            type="submit"
+          >
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
+        </form>
+        <p className="auth-footer">
+          Não tem conta? <Link to="/signup">Cadastrar</Link>
+        </p>
+      </section>
     </main>
   );
 };

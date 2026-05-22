@@ -18,7 +18,9 @@
     "prisma:generate": "pnpm --filter @financy/backend prisma:generate",
     "smoke:graphql": "node scripts/graphql-smoke.mjs",
     "smoke:auth": "node scripts/auth-regression.mjs",
-    "smoke:auth:browser": "node scripts/auth-browser-smoke.mjs"
+    "smoke:auth:browser": "node scripts/auth-browser-smoke.mjs",
+    "test:e2e": "pnpm --filter @financy/frontend test:e2e",
+    "test:e2e:smoke": "pnpm --filter @financy/frontend test:e2e:smoke"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
