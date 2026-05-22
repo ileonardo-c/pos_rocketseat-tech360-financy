@@ -5,15 +5,15 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "@/App";
 import { AuthProvider } from "@/lib/auth/auth-provider";
 import { ApolloProvider } from "@/lib/graphql/apollo";
-import "./styles.css";
+import "./index.css";
 
-const rootElement = document.getElementById("root");
+const root = document.getElementById("root");
 
-if (!rootElement) {
-  throw new Error("Root element not found");
+if (!root) {
+  throw new Error("Root container not found");
 }
 
-createRoot(rootElement).render(
+createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
       <ApolloProvider>
