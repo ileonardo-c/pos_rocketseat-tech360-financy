@@ -2,6 +2,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { CategoriesPage } from "@/pages/categories-page";
+import { ProfilePage } from "@/pages/profile-page";
 import { ProtectedPage } from "@/pages/protected-page";
 import { SigninPage } from "@/pages/signin-page";
 import { SignupPage } from "@/pages/signup-page";
@@ -41,6 +42,14 @@ export function App() {
         element={
           <RequireAuth isAuthenticated={Boolean(user)}>
             <TransactionsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <RequireAuth isAuthenticated={Boolean(user)}>
+            <ProfilePage />
           </RequireAuth>
         }
       />

@@ -90,6 +90,11 @@ export const typeDefs = `
     password: String!
   }
 
+  input UpdateProfileInput {
+    name: String
+    email: String
+  }
+
   input CreateCategoryInput {
     name: String!
   }
@@ -155,6 +160,7 @@ export const typeDefs = `
   type Mutation {
     register(input: RegisterInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
+    updateProfile(input: UpdateProfileInput!): User!
     createCategory(input: CreateCategoryInput!): Category!
     updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
     deleteCategory(id: ID!): Boolean!

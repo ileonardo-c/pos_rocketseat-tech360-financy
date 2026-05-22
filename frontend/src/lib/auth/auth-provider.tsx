@@ -21,6 +21,7 @@ type AuthContextData = {
   loading: boolean;
   authError: string | null;
   clearAuthError: () => void;
+  updateSessionUser: (user: User | null) => void;
   signup: (input: { name: string; email: string; password: string }) => Promise<void>;
   signin: (input: { email: string; password: string }) => Promise<void>;
   signout: () => void;
@@ -103,6 +104,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAuthError(null);
   }, []);
 
+  const updateSessionUser = useCallback((nextUser: User | null) => {
+    setUser(nextUser);
+  }, []);
+
   const signin = useCallback(
     async (input: { email: string; password: string }) => {
       setLoading(true);
@@ -165,8 +170,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [handleSessionExpired]);
 
   const value = useMemo<AuthContextData>(
-    () => ({ user, loading, authError, clearAuthError, signin, signup, signout }),
-    [clearAuthError, loading, signin, signup, signout, user, authError],
+    () => ({
+      user,
+      loading,
+      authError,
+      clearAuthError,
+      updateSessionUser,
+      signin,
+      signup,
+      signout,
+    }),
+    [clearAuthError, loading, signin, signup, signout, updateSessionUser, user, authError],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

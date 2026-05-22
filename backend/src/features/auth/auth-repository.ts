@@ -36,4 +36,11 @@ export class AuthRepository {
       where: { id },
     });
   }
+
+  updateUser(id: string, data: { name?: string; email?: string }): Promise<User> {
+    return this.prisma.user.update({
+      where: { id },
+      data,
+    });
+  }
 }
