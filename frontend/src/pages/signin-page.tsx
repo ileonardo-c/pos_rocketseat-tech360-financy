@@ -15,6 +15,7 @@ export const SigninPage = () => {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [shakeEmail, setShakeEmail] = useState(false);
   const [shakePassword, setShakePassword] = useState(false);
+  const [shakeNonce, setShakeNonce] = useState({ email: 0, password: 0 });
 
   const getEmailError = (value: string) => {
     if (!value.trim()) {
@@ -52,7 +53,7 @@ export const SigninPage = () => {
     setShakeEmail(true);
     const timeout = window.setTimeout(() => setShakeEmail(false), 320);
     return () => window.clearTimeout(timeout);
-  }, [emailError]);
+  }, [emailError, shakeNonce.email]);
 
   useEffect(() => {
     if (!passwordError) {
@@ -61,7 +62,7 @@ export const SigninPage = () => {
     setShakePassword(true);
     const timeout = window.setTimeout(() => setShakePassword(false), 320);
     return () => window.clearTimeout(timeout);
-  }, [passwordError]);
+  }, [passwordError, shakeNonce.password]);
 
   if (user) {
     return <Navigate to="/" replace />;
@@ -103,6 +104,10 @@ export const SigninPage = () => {
               const submitEmailError = getEmailError(email);
               const submitPasswordError = getPasswordError(password);
               if (submitEmailError || submitPasswordError) {
+                setShakeNonce((prev) => ({
+                  email: submitEmailError ? prev.email + 1 : prev.email,
+                  password: submitPasswordError ? prev.password + 1 : prev.password,
+                }));
                 return;
               }
 
@@ -241,12 +246,7 @@ export const SigninPage = () => {
                 />
                 Lembrar-me
               </label>
-              <button
-                className="font-semibold text-[#24784A] transition hover:text-[#1b5b38]"
-                type="button"
-              >
-                Recuperar senha
-              </button>
+              <span className="font-semibold text-slate-400">Recuperação de senha em breve</span>
             </div>
 
             <Button
