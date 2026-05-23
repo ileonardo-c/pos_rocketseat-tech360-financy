@@ -197,6 +197,8 @@ const buildTransactionPayload = (form: TransactionForm) => ({
   receiptUrl: form.receiptUrl.trim() || null,
 });
 
+const modalCloseDurationMs = 150;
+
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamsString = searchParams.toString();
@@ -226,6 +228,8 @@ export const TransactionsPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateDialogClosing, setIsCreateDialogClosing] = useState(false);
+  const [isEditDialogClosing, setIsEditDialogClosing] = useState(false);
   const [filter, setFilter] = useState<TransactionFilter>(() =>
     parseFilterFromSearchParams(searchParams),
   );
@@ -238,6 +242,8 @@ export const TransactionsPage = () => {
   const [page, setPage] = useState(1);
   const editingIdRef = useRef<string | null>(null);
   const createDialogCycleRef = useRef(0);
+  const createCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemsPerPage = 10;
 
   const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
@@ -260,6 +266,18 @@ export const TransactionsPage = () => {
   useEffect(() => {
     editingIdRef.current = editingId;
   }, [editingId]);
+
+  useEffect(
+    () => () => {
+      if (createCloseTimeoutRef.current) {
+        clearTimeout(createCloseTimeoutRef.current);
+      }
+      if (editCloseTimeoutRef.current) {
+        clearTimeout(editCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const parsedFilter = parseFilterFromSearchParams(searchParams);
@@ -591,6 +609,66 @@ export const TransactionsPage = () => {
     return fallback;
   };
 
+  const openCreateDialog = () => {
+    if (createCloseTimeoutRef.current) {
+      clearTimeout(createCloseTimeoutRef.current);
+      createCloseTimeoutRef.current = null;
+    }
+    setIsCreateDialogClosing(false);
+    setIsCreateDialogOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    if (!isCreateDialogOpen) {
+      return;
+    }
+    setIsCreateDialogClosing(true);
+    if (createCloseTimeoutRef.current) {
+      clearTimeout(createCloseTimeoutRef.current);
+    }
+    createCloseTimeoutRef.current = setTimeout(() => {
+      setIsCreateDialogOpen(false);
+      setIsCreateDialogClosing(false);
+      createCloseTimeoutRef.current = null;
+    }, modalCloseDurationMs);
+  };
+
+  const openEditDialog = (transaction: Transaction) => {
+    if (editCloseTimeoutRef.current) {
+      clearTimeout(editCloseTimeoutRef.current);
+      editCloseTimeoutRef.current = null;
+    }
+    setIsEditDialogClosing(false);
+    setActionError(null);
+    setEditingId(transaction.id);
+    setEditingForm({
+      title: transaction.title,
+      description: transaction.description ?? "",
+      amount: String(transaction.amount),
+      type: transaction.type,
+      date: toLocalDateInput(transaction.date),
+      categoryId: transaction.categoryId,
+      receiptKey: transaction.receiptKey ?? "",
+      receiptUrl: transaction.receiptUrl ?? "",
+    });
+  };
+
+  const closeEditDialog = () => {
+    if (!editingId) {
+      return;
+    }
+    setIsEditDialogClosing(true);
+    if (editCloseTimeoutRef.current) {
+      clearTimeout(editCloseTimeoutRef.current);
+    }
+    editCloseTimeoutRef.current = setTimeout(() => {
+      setEditingId(null);
+      setEditingForm(emptyForm);
+      setIsEditDialogClosing(false);
+      editCloseTimeoutRef.current = null;
+    }, modalCloseDurationMs);
+  };
+
   return (
     <main className="transactions-layout">
       <p>
@@ -672,7 +750,7 @@ export const TransactionsPage = () => {
                 setActionSuccess(null);
                 setForm(emptyForm);
                 createDialogCycleRef.current += 1;
-                setIsCreateDialogOpen(true);
+                openCreateDialog();
               }}
             >
               Nova transação
@@ -825,19 +903,19 @@ export const TransactionsPage = () => {
       </section>
 
       <section className="transactions-summary-grid">
-        <article className="transactions-summary-card">
+        <article className="transactions-summary-card t-resize">
           <h3>Total filtrado</h3>
           <p>{sortedTransactions.length}</p>
         </article>
-        <article className="transactions-summary-card">
+        <article className="transactions-summary-card t-resize">
           <h3>Receitas filtradas</h3>
           <p>{currencyFormatter.format(incomeTotal)}</p>
         </article>
-        <article className="transactions-summary-card">
+        <article className="transactions-summary-card t-resize">
           <h3>Despesas filtradas</h3>
           <p>{currencyFormatter.format(expenseTotal)}</p>
         </article>
-        <article className="transactions-summary-card">
+        <article className="transactions-summary-card t-resize">
           <h3>Saldo filtrado</h3>
           <p>{currencyFormatter.format(balance)}</p>
         </article>
@@ -884,23 +962,7 @@ export const TransactionsPage = () => {
                             ) : null}
                           </div>
                           <div className="transactions-item-actions">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActionError(null);
-                                setEditingId(transaction.id);
-                                setEditingForm({
-                                  title: transaction.title,
-                                  description: transaction.description ?? "",
-                                  amount: String(transaction.amount),
-                                  type: transaction.type,
-                                  date: toLocalDateInput(transaction.date),
-                                  categoryId: transaction.categoryId,
-                                  receiptKey: transaction.receiptKey ?? "",
-                                  receiptUrl: transaction.receiptUrl ?? "",
-                                });
-                              }}
-                            >
+                            <button type="button" onClick={() => openEditDialog(transaction)}>
                               Editar
                             </button>
                             <button
@@ -970,7 +1032,10 @@ export const TransactionsPage = () => {
 
       {isCreateDialogOpen ? (
         <div className="modal-overlay" role="presentation">
-          <dialog className="modal-card transactions-modal" open>
+          <dialog
+            className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
+            open
+          >
             <h2>Nova transação</h2>
             <form
               onSubmit={async (event) => {
@@ -988,7 +1053,7 @@ export const TransactionsPage = () => {
                   });
                   setForm(emptyForm);
                   if (createDialogCycleRef.current === currentCreateCycle) {
-                    setIsCreateDialogOpen(false);
+                    closeCreateDialog();
                   }
                   setActionSuccess("Transação criada com sucesso.");
                 } catch (mutationError) {
@@ -1143,7 +1208,7 @@ export const TransactionsPage = () => {
                 <button disabled={isCreateDisabled} type="submit">
                   {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
                 </button>
-                <button type="button" onClick={() => setIsCreateDialogOpen(false)}>
+                <button type="button" onClick={closeCreateDialog}>
                   Cancelar
                 </button>
               </div>
@@ -1154,7 +1219,10 @@ export const TransactionsPage = () => {
 
       {editingId ? (
         <div className="modal-overlay" role="presentation">
-          <dialog className="modal-card transactions-modal" open>
+          <dialog
+            className={`modal-card transactions-modal t-modal ${isEditDialogClosing ? "is-closing" : "is-open"}`}
+            open
+          >
             <h2>Editar transação</h2>
             <form
               onSubmit={async (event) => {
@@ -1172,8 +1240,7 @@ export const TransactionsPage = () => {
                       input: buildTransactionPayload(editingForm),
                     },
                   });
-                  setEditingId(null);
-                  setEditingForm(emptyForm);
+                  closeEditDialog();
                   setActionSuccess("Transação atualizada com sucesso.");
                 } catch (mutationError) {
                   setActionError(
@@ -1318,13 +1385,7 @@ export const TransactionsPage = () => {
                 <button disabled={isUpdateDisabled} type="submit">
                   {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditingId(null);
-                    setEditingForm(emptyForm);
-                  }}
-                >
+                <button type="button" onClick={closeEditDialog}>
                   Cancelar
                 </button>
               </div>
