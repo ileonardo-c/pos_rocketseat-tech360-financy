@@ -3,6 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.5.0",
   "scripts": {
+    "prepare": "cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit",
     "install:all": "pnpm install",
     "biome": "biome check .",
     "format": "biome format .",
