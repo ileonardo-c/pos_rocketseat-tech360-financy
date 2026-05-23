@@ -53,6 +53,8 @@ test("@visual gera evidência visual das páginas críticas", async ({ page }, t
   await capture(page, testInfo, "categorias");
 
   await page.getByRole("button", { name: "Nova categoria" }).click();
+  await page.getByRole("heading", { name: "Nova categoria" }).waitFor();
+  await capture(page, testInfo, "categorias-nova-categoria");
   await page.getByLabel("Nome").fill(user.categoryName);
   await page.getByRole("button", { name: "Criar" }).click();
   await expect(page.getByText(user.categoryName)).toBeVisible();
@@ -62,6 +64,11 @@ test("@visual gera evidência visual das páginas críticas", async ({ page }, t
   await page.getByRole("link", { name: "Gerenciar transações" }).click();
   await page.getByRole("heading", { name: "Transações" }).waitFor();
   await capture(page, testInfo, "transacoes");
+
+  await page.getByRole("button", { name: "Nova transação" }).click();
+  await page.getByRole("heading", { name: "Nova transação" }).waitFor();
+  await capture(page, testInfo, "transacoes-nova-transacao");
+  await page.getByRole("button", { name: "Cancelar" }).click();
 
   await page.getByRole("link", { name: "Voltar" }).click();
   await page.getByRole("heading", { name: "Dashboard" }).waitFor();

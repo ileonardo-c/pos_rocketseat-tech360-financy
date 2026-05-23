@@ -737,7 +737,7 @@ export const TransactionsPage = () => {
                 }
               }}
             >
-              {isRefreshing ? "Atualizando..." : "Atualizar"}
+              <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
             </button>
             <button type="button" onClick={handleExportCsv}>
               Exportar CSV filtrado
@@ -1206,7 +1206,9 @@ export const TransactionsPage = () => {
               ) : null}
               <div className="modal-actions">
                 <button disabled={isCreateDisabled} type="submit">
-                  {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
+                  <span className="t-text-swap">
+                    {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
+                  </span>
                 </button>
                 <button type="button" onClick={closeCreateDialog}>
                   Cancelar
@@ -1383,7 +1385,9 @@ export const TransactionsPage = () => {
               ) : null}
               <div className="modal-actions">
                 <button disabled={isUpdateDisabled} type="submit">
-                  {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
+                  <span className="t-text-swap">
+                    {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
+                  </span>
                 </button>
                 <button type="button" onClick={closeEditDialog}>
                   Cancelar
