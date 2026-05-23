@@ -6,6 +6,7 @@ import { ProfilePage } from "@/pages/profile-page";
 import { ProtectedPage } from "@/pages/protected-page";
 import { SigninPage } from "@/pages/signin-page";
 import { SignupPage } from "@/pages/signup-page";
+import { StyleGuidePage } from "@/pages/style-guide-page";
 import { TransactionsPage } from "@/pages/transactions-page";
 
 const RequireAuth = ({
@@ -53,6 +54,9 @@ export function App() {
           </RequireAuth>
         }
       />
+      {import.meta.env.DEV ? (
+        <Route path="/style-guide" element={<StyleGuidePage />} />
+      ) : null}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

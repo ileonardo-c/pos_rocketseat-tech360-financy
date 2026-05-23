@@ -25,8 +25,6 @@
 
 ## 🚀 Tecnologias
 
-Este projeto utiliza as seguintes tecnologias:
-
 **Backend**
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -59,7 +57,7 @@ Este projeto utiliza as seguintes tecnologias:
 - 💸 CRUD completo de transações (receitas e despesas)
 - 📊 Dashboard com resumo por período, por categoria e timeline
 - 🧾 Upload de comprovantes via URL assinada (AWS S3 / MinIO)
-- 🧪 Smoke tests, E2E e evidência visual automatizados com Playwright
+- 🧪 Testes E2E e evidência visual automatizados com Playwright
 
 ---
 
@@ -74,7 +72,7 @@ flowchart LR
     E --> F[(MinIO / S3)]
 ```
 
-O projeto é um **monorepo** gerenciado com `pnpm workspaces`:
+Monorepo gerenciado com `pnpm workspaces`:
 
 ```text
 .
@@ -90,50 +88,55 @@ O projeto é um **monorepo** gerenciado com `pnpm workspaces`:
 
 ### Pré-requisitos
 
-- [Node.js 20+](https://nodejs.org)
-- [pnpm 10.5+](https://pnpm.io) — `corepack enable`
-- [Docker Desktop 24+](https://www.docker.com)
+- [Node.js 20+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
+- [Docker Desktop 24+](https://www.docker.com/products/docker-desktop/)
 
-### Passo a passo
+### Desenvolvimento
 
 ```bash
 # 1. Instale as dependências
 pnpm install
 
-# 2. Configure as variáveis de ambiente
+# 2. Copie as variáveis de ambiente
 cp .env.example .env
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
 
-# 3. Suba o stack com Docker
+# 3. Suba o ambiente completo
 pnpm compose:up
-
-# 4. Sincronize o banco (apenas na primeira execução)
-docker compose exec -T backend pnpm --filter @financy/backend exec prisma db push
 ```
-
-Após subir, os serviços estarão disponíveis em:
 
 | Serviço | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
+| Style Guide | http://localhost:5173/style-guide |
 | Backend / GraphQL | http://localhost:4000/graphql |
 | MinIO Console | http://localhost:9001 |
 
-> Para encerrar: `pnpm compose:down`
+> **Primeira execução** — após os containers subirem, sincronize o banco:
+> ```bash
+> pnpm --filter @financy/backend exec prisma db push
+> ```
+
+Para encerrar: `pnpm compose:down`
+
+### Produção
+
+```bash
+pnpm compose:up:prod
+
+# Encerrar
+pnpm compose:down:prod
+```
 
 ---
 
 ## 🧪 Testes
 
+### E2E (Playwright)
+
+Os testes E2E rodam em um container dedicado com Chromium pré-instalado.
+
 ```bash
-# Smoke completo da API GraphQL (register, login, CRUD, upload)
-pnpm smoke:graphql
-
-# Regressão de autenticação (cenários positivos e negativos)
-pnpm smoke:auth
-
-# Suíte E2E completa com Playwright
+# Suíte completa do Style Guide
 pnpm test:e2e
 
 # Apenas smoke E2E
@@ -143,15 +146,23 @@ pnpm test:e2e:smoke
 pnpm test:e2e:visual
 ```
 
-Os relatórios ficam em `frontend/playwright-report` após a execução.
+### Smoke tests (API GraphQL)
 
-Os cenários de E2E não dependem de conta administrativa fixa. Cada execução gera usuário transitório no fluxo de signup (`/signup`) para validação ponta a ponta com credenciais limpas por ambiente.
+```bash
+# Smoke completo da API (register, login, CRUD, upload)
+pnpm smoke:graphql
+
+# Regressão de autenticação (cenários positivos e negativos)
+pnpm smoke:auth
+```
+
+Os relatórios E2E ficam em `frontend/playwright-report` após a execução.
+
+---
 
 ## 🧭 Governança
 
-Este repositório segue documentação de governança para revisão, qualidade e rastreio de entrega:
-
 - Licença: [MIT](LICENSE)
-- Template e checklist de PR: [`.github/pull_request_template.md`](.github/pull_request_template.md)
+- Template de PR: [`.github/pull_request_template.md`](.github/pull_request_template.md)
 - Revisões e aprovação: [`.github/CODEOWNERS`](.github/CODEOWNERS)
-- Convenções de branch e fluxo de contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Convenções de branch e contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)

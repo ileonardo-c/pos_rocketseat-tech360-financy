@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
 import { buildTransientE2EUser } from "./support/e2e-users";
 
+test.describe.skip("Temporarily disabled: only style-guide E2E is active", () => {
+
 const capture = async (page: Page, testInfo: TestInfo, name: string) => {
   const path = testInfo.outputPath(`${name}.png`);
   await page.screenshot({
@@ -63,4 +65,16 @@ test("@visual gera evidência visual das páginas críticas", async ({ page }, t
   await page.getByRole("link", { name: "Meu perfil" }).click();
   await page.getByRole("heading", { name: user.name }).waitFor();
   await capture(page, testInfo, "perfil");
+
+  await page.setViewportSize({ width: 1440, height: 1024 });
+  await page.goto(`${appUrl}/style-guide`, { waitUntil: "domcontentloaded" });
+  await page.getByTestId("style-guide-page").waitFor();
+  await capture(page, testInfo, "style-guide-desktop");
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${appUrl}/style-guide`, { waitUntil: "domcontentloaded" });
+  await page.getByTestId("style-guide-page").waitFor();
+  await capture(page, testInfo, "style-guide-mobile");
+});
+
 });

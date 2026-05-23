@@ -183,6 +183,7 @@ export const CategoriesPage = () => {
         <label>
           Buscar categoria
           <input
+            data-testid="categories-search"
             autoComplete="off"
             placeholder="Ex.: Alimentação"
             type="text"
@@ -191,6 +192,7 @@ export const CategoriesPage = () => {
           />
         </label>
         <button
+          data-testid="categories-refresh"
           disabled={isRefreshing}
           type="button"
           onClick={async () => {
@@ -206,6 +208,7 @@ export const CategoriesPage = () => {
           <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
         </button>
         <button
+          data-testid="categories-open-create-modal"
           type="button"
           onClick={() => {
             setActionError(null);
@@ -239,10 +242,15 @@ export const CategoriesPage = () => {
           <>
             <ul className="categories-list">
               {pagedCategories.map((category) => (
-                <li key={category.id} className="categories-item">
+                <li
+                  key={category.id}
+                  className="categories-item"
+                  data-testid={`category-item-${category.id}`}
+                >
                   <strong>{category.name}</strong>
                   <div className="categories-item-actions">
                     <button
+                      data-testid={`category-edit-${category.id}`}
                       type="button"
                       onClick={() => {
                         setActionError(null);
@@ -253,6 +261,7 @@ export const CategoriesPage = () => {
                       Editar
                     </button>
                     <button
+                      data-testid={`category-delete-${category.id}`}
                       disabled={deleting}
                       type="button"
                       onClick={async () => {
@@ -316,6 +325,7 @@ export const CategoriesPage = () => {
       {isCreateDialogOpen ? (
         <div className="modal-overlay" role="presentation">
           <dialog
+            data-testid="categories-create-modal"
             className={`modal-card categories-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
             onCancel={(event) => {
               event.preventDefault();
@@ -349,6 +359,7 @@ export const CategoriesPage = () => {
               <label>
                 Nome
                 <input
+                  data-testid="categories-create-name"
                   autoComplete="off"
                   required
                   type="text"
@@ -357,10 +368,10 @@ export const CategoriesPage = () => {
                 />
               </label>
               <div className="modal-actions">
-                <button disabled={creating} type="submit">
+                <button data-testid="categories-create-confirm" disabled={creating} type="submit">
                   <span className="t-text-swap">{creating ? "Criando..." : "Criar"}</span>
                 </button>
-                <button type="button" onClick={closeCreateDialog}>
+                <button data-testid="categories-create-cancel" type="button" onClick={closeCreateDialog}>
                   Cancelar
                 </button>
               </div>
@@ -372,6 +383,7 @@ export const CategoriesPage = () => {
       {editingCategory ? (
         <div className="modal-overlay" role="presentation">
           <dialog
+            data-testid="categories-edit-modal"
             className={`modal-card categories-modal t-modal ${isEditDialogClosing ? "is-closing" : "is-open"}`}
             onCancel={(event) => {
               event.preventDefault();
@@ -406,6 +418,7 @@ export const CategoriesPage = () => {
               <label>
                 Nome
                 <input
+                  data-testid="categories-edit-name"
                   autoComplete="off"
                   required
                   type="text"
@@ -414,10 +427,10 @@ export const CategoriesPage = () => {
                 />
               </label>
               <div className="modal-actions">
-                <button disabled={updating} type="submit">
+                <button data-testid="categories-edit-confirm" disabled={updating} type="submit">
                   <span className="t-text-swap">{updating ? "Salvando..." : "Salvar"}</span>
                 </button>
-                <button type="button" onClick={closeEditDialog}>
+                <button data-testid="categories-edit-cancel" type="button" onClick={closeEditDialog}>
                   Cancelar
                 </button>
               </div>

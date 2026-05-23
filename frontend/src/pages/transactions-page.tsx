@@ -693,6 +693,7 @@ export const TransactionsPage = () => {
             <label>
               Ordenar por
               <select
+                data-testid="transactions-sort-field"
                 value={sortField}
                 onChange={(event) => setSortField(event.target.value as SortField)}
               >
@@ -704,6 +705,7 @@ export const TransactionsPage = () => {
             <label>
               Direção
               <select
+                data-testid="transactions-sort-direction"
                 value={sortDirection}
                 onChange={(event) => setSortDirection(event.target.value as SortDirection)}
               >
@@ -714,6 +716,7 @@ export const TransactionsPage = () => {
           </div>
           <div className="transactions-toolbar-actions">
             <button
+              data-testid="transactions-refresh"
               disabled={isRefreshing}
               type="button"
               onClick={async () => {
@@ -743,6 +746,7 @@ export const TransactionsPage = () => {
               Exportar CSV filtrado
             </button>
             <button
+              data-testid="transactions-open-create-modal"
               disabled={categories.length === 0}
               type="button"
               onClick={() => {
@@ -799,6 +803,7 @@ export const TransactionsPage = () => {
           <label>
             Busca
             <input
+              data-testid="transactions-search"
               placeholder="Título, descrição ou categoria"
               type="text"
               value={filter.query}
@@ -814,6 +819,7 @@ export const TransactionsPage = () => {
           <label>
             Tipo
             <select
+              data-testid="transactions-type-filter"
               value={filter.type}
               onChange={(event) =>
                 setFilter((prev) => ({
@@ -831,6 +837,7 @@ export const TransactionsPage = () => {
           <label>
             Categoria
             <select
+              data-testid="transactions-category-filter"
               value={filter.categoryId}
               onChange={(event) =>
                 setFilter((prev) => ({
@@ -851,6 +858,7 @@ export const TransactionsPage = () => {
           <label>
             De
             <input
+              data-testid="transactions-filter-from"
               type="date"
               value={filter.from}
               onChange={(event) =>
@@ -865,6 +873,7 @@ export const TransactionsPage = () => {
           <label>
             Até
             <input
+              data-testid="transactions-filter-to"
               type="date"
               value={filter.to}
               onChange={(event) =>
@@ -878,7 +887,11 @@ export const TransactionsPage = () => {
         </div>
 
         <div className="transactions-filter-actions">
-          <button type="button" onClick={() => setFilter(emptyFilter)}>
+          <button
+            data-testid="transactions-clear-filters"
+            type="button"
+            onClick={() => setFilter(emptyFilter)}
+          >
             Limpar filtros
           </button>
         </div>
@@ -944,62 +957,69 @@ export const TransactionsPage = () => {
                     {group.transactions.map((transaction) => {
                       return (
                         <li key={transaction.id} className="transactions-item">
-                          <div className="transactions-item-main">
-                            <strong>{transaction.title}</strong>
-                            <p>
-                              {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
-                              {currencyFormatter.format(transaction.amount)} ·{" "}
-                              {transaction.category?.name ?? "Sem categoria"} ·{" "}
-                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                            </p>
-                            {transaction.description ? <p>{transaction.description}</p> : null}
-                            {transaction.receiptUrl ? (
+                          <article data-testid={`transaction-item-${transaction.id}`}>
+                            <div className="transactions-item-main">
+                              <strong>{transaction.title}</strong>
                               <p>
-                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                                  Comprovante
-                                </a>
+                                {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
+                                {currencyFormatter.format(transaction.amount)} ·{" "}
+                                {transaction.category?.name ?? "Sem categoria"} ·{" "}
+                                {new Date(transaction.date).toLocaleDateString("pt-BR")}
                               </p>
-                            ) : null}
-                          </div>
-                          <div className="transactions-item-actions">
-                            <button type="button" onClick={() => openEditDialog(transaction)}>
-                              Editar
-                            </button>
-                            <button
-                              disabled={deleting}
-                              type="button"
-                              onClick={async () => {
-                                const confirmed = window.confirm(
-                                  "Deseja realmente excluir esta transação?",
-                                );
-                                if (!confirmed) {
-                                  return;
-                                }
-
-                                try {
-                                  setActionError(null);
-                                  setActionSuccess(null);
-                                  const response = await deleteTransaction({
-                                    variables: { id: transaction.id },
-                                  });
-                                  if (response.data?.deleteTransaction) {
-                                    setActionSuccess("Transação excluída com sucesso.");
-                                  } else {
-                                    setActionError("Transação não encontrada para exclusão.");
-                                  }
-                                } catch (mutationError) {
-                                  setActionError(
-                                    getTransactionActionErrorMessage(
-                                      mutationError,
-                                      "Não foi possível excluir a transação.",
-                                    ),
+                              {transaction.description ? <p>{transaction.description}</p> : null}
+                              {transaction.receiptUrl ? (
+                                <p>
+                                  <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                                    Comprovante
+                                  </a>
+                                </p>
+                              ) : null}
+                            </div>
+                            <div className="transactions-item-actions">
+                              <button
+                                data-testid={`transaction-edit-${transaction.id}`}
+                                type="button"
+                                onClick={() => openEditDialog(transaction)}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                data-testid={`transaction-delete-${transaction.id}`}
+                                disabled={deleting}
+                                type="button"
+                                onClick={async () => {
+                                  const confirmed = window.confirm(
+                                    "Deseja realmente excluir esta transação?",
                                   );
-                                }
-                              }}
-                            >
-                              Excluir
-                            </button>
-                          </div>
+                                  if (!confirmed) {
+                                    return;
+                                  }
+
+                                  try {
+                                    setActionError(null);
+                                    setActionSuccess(null);
+                                    const response = await deleteTransaction({
+                                      variables: { id: transaction.id },
+                                    });
+                                    if (response.data?.deleteTransaction) {
+                                      setActionSuccess("Transação excluída com sucesso.");
+                                    } else {
+                                      setActionError("Transação não encontrada para exclusão.");
+                                    }
+                                  } catch (mutationError) {
+                                    setActionError(
+                                      getTransactionActionErrorMessage(
+                                        mutationError,
+                                        "Não foi possível excluir a transação.",
+                                      ),
+                                    );
+                                  }
+                                }}
+                              >
+                                Excluir
+                              </button>
+                            </div>
+                          </article>
                         </li>
                       );
                     })}
@@ -1033,6 +1053,7 @@ export const TransactionsPage = () => {
       {isCreateDialogOpen ? (
         <div className="modal-overlay" role="presentation">
           <dialog
+            data-testid="transactions-create-modal"
             className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
             open
           >
@@ -1069,6 +1090,7 @@ export const TransactionsPage = () => {
               <label>
                 Título
                 <input
+                  data-testid="transactions-create-title"
                   autoComplete="off"
                   required
                   type="text"
@@ -1079,6 +1101,7 @@ export const TransactionsPage = () => {
               <label>
                 Descrição
                 <input
+                  data-testid="transactions-create-description"
                   autoComplete="off"
                   type="text"
                   value={form.description}
@@ -1093,6 +1116,7 @@ export const TransactionsPage = () => {
               <label>
                 Valor
                 <input
+                  data-testid="transactions-create-amount"
                   min="0"
                   required
                   step="0.01"
@@ -1109,6 +1133,7 @@ export const TransactionsPage = () => {
               <label>
                 Tipo
                 <select
+                  data-testid="transactions-create-type"
                   value={form.type}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -1124,6 +1149,7 @@ export const TransactionsPage = () => {
               <label>
                 Data
                 <input
+                  data-testid="transactions-create-date"
                   required
                   type="date"
                   value={form.date}
@@ -1138,6 +1164,7 @@ export const TransactionsPage = () => {
               <label>
                 Categoria
                 <select
+                  data-testid="transactions-create-category"
                   required
                   value={form.categoryId}
                   onChange={(event) =>
@@ -1158,6 +1185,7 @@ export const TransactionsPage = () => {
               <label>
                 Comprovante
                 <input
+                  data-testid="transactions-create-receipt"
                   accept=".pdf,image/*"
                   type="file"
                   onChange={async (event) => {
@@ -1205,12 +1233,20 @@ export const TransactionsPage = () => {
                 </p>
               ) : null}
               <div className="modal-actions">
-                <button disabled={isCreateDisabled} type="submit">
+                <button
+                  data-testid="transactions-create-confirm"
+                  disabled={isCreateDisabled}
+                  type="submit"
+                >
                   <span className="t-text-swap">
                     {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
                   </span>
                 </button>
-                <button type="button" onClick={closeCreateDialog}>
+                <button
+                  data-testid="transactions-create-cancel"
+                  type="button"
+                  onClick={closeCreateDialog}
+                >
                   Cancelar
                 </button>
               </div>
@@ -1222,6 +1258,7 @@ export const TransactionsPage = () => {
       {editingId ? (
         <div className="modal-overlay" role="presentation">
           <dialog
+            data-testid="transactions-edit-modal"
             className={`modal-card transactions-modal t-modal ${isEditDialogClosing ? "is-closing" : "is-open"}`}
             open
           >
@@ -1257,6 +1294,7 @@ export const TransactionsPage = () => {
               <label>
                 Título
                 <input
+                  data-testid="transactions-edit-title"
                   autoComplete="off"
                   required
                   type="text"
@@ -1272,6 +1310,7 @@ export const TransactionsPage = () => {
               <label>
                 Descrição
                 <input
+                  data-testid="transactions-edit-description"
                   autoComplete="off"
                   type="text"
                   value={editingForm.description}
@@ -1286,6 +1325,7 @@ export const TransactionsPage = () => {
               <label>
                 Valor
                 <input
+                  data-testid="transactions-edit-amount"
                   min="0"
                   required
                   step="0.01"
@@ -1302,6 +1342,7 @@ export const TransactionsPage = () => {
               <label>
                 Tipo
                 <select
+                  data-testid="transactions-edit-type"
                   value={editingForm.type}
                   onChange={(event) =>
                     setEditingForm((prev) => ({
@@ -1317,6 +1358,7 @@ export const TransactionsPage = () => {
               <label>
                 Data
                 <input
+                  data-testid="transactions-edit-date"
                   required
                   type="date"
                   value={editingForm.date}
@@ -1331,6 +1373,7 @@ export const TransactionsPage = () => {
               <label>
                 Categoria
                 <select
+                  data-testid="transactions-edit-category"
                   required
                   value={editingForm.categoryId}
                   onChange={(event) =>
@@ -1351,6 +1394,7 @@ export const TransactionsPage = () => {
               <label>
                 Comprovante
                 <input
+                  data-testid="transactions-edit-receipt"
                   accept=".pdf,image/*"
                   type="file"
                   onChange={async (event) => {
@@ -1384,12 +1428,20 @@ export const TransactionsPage = () => {
                 </p>
               ) : null}
               <div className="modal-actions">
-                <button disabled={isUpdateDisabled} type="submit">
+                <button
+                  data-testid="transactions-edit-confirm"
+                  disabled={isUpdateDisabled}
+                  type="submit"
+                >
                   <span className="t-text-swap">
                     {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
                   </span>
                 </button>
-                <button type="button" onClick={closeEditDialog}>
+                <button
+                  data-testid="transactions-edit-cancel"
+                  type="button"
+                  onClick={closeEditDialog}
+                >
                   Cancelar
                 </button>
               </div>

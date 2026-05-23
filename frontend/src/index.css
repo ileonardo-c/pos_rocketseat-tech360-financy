@@ -1,26 +1,111 @@
+/* Self-hosted variable fonts — bundled by Vite, no CDN dependency */
+@import "@fontsource-variable/plus-jakarta-sans/wght.css";
+@import "@fontsource-variable/martian-mono/wght.css";
+
 @import "tailwindcss";
-@import "./styles.css";
 @plugin "@tailwindcss/forms";
 @plugin "@tailwindcss/typography";
 
+@theme {
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-jakarta: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", sans-serif;
+  --font-mono-martian: "Martian Mono Variable", "Martian Mono", ui-monospace, monospace;
+
+  /* Financy surface & layout */
+  --color-financy-page: #f2f3f5;
+  --color-financy-surface: #ffffff;
+  --color-financy-surface-soft: #f5f5f7;
+  --color-financy-border: #d8dee9;
+  --color-financy-border-strong: #b8c1cf;
+
+  /* Text */
+  --color-financy-muted: #6b7280;
+  --color-financy-text: #1f2937;
+  --color-financy-text-inverse: #f9fafb;
+  --color-financy-text-subtle: #8a94a6;
+
+  /* Link */
+  --color-financy-link: #4f46e5;
+  --color-financy-link-hover: #4338ca;
+  --color-financy-link-press: #3730a3;
+
+  /* Brand — Figma: Brand/brand-base #1F6F43, Brand/brand-dark #124B2B */
+  --color-financy-brand-base: #1f6f43;
+  --color-financy-brand-dark: #124b2b;
+  --color-financy-primary: #1f6f43;
+  --color-financy-primary-hover: #124b2b;
+  --color-financy-primary-press: #0d3a1e;
+  --color-financy-surface-on-primary: #f3fff6;
+  --color-financy-accent: #0f172a;
+
+  /* Feedback — Figma: Feedback/success #19AD70, Feedback/danger #EF4444 */
+  --color-financy-success: #19ad70;
+  --color-financy-danger: #dc2626;
+  --color-financy-warning: #d97706;
+  --color-financy-disabled: #d1d5db;
+  --color-financy-surface-elevated: #ffffff;
+
+  /* Component-level tokens — Figma field, button and text specs */
+  --color-financy-field-text: #111827;        /* input value text */
+  --color-financy-field-border: #d1d5db;      /* default input / icon-button border */
+  --color-financy-field-error: #ef4444;       /* Figma input error border & ring */
+  --color-financy-field-placeholder: #9ca3af; /* input icon & placeholder colour */
+  --color-financy-surface-hover: #e5e7eb;     /* button / icon-button hover bg */
+  --color-financy-text-secondary: #374151;    /* label default, icon-button text */
+
+  /* Tag palette — Figma exact tokens */
+  --color-financy-tag-gray-bg: #e5e7eb;
+  --color-financy-tag-gray-text: #374151;
+  --color-financy-tag-blue-bg: #dbeafe;
+  --color-financy-tag-blue-text: #1d4ed8;
+  --color-financy-tag-purple-bg: #f3e8ff;
+  --color-financy-tag-purple-text: #7e22ce;
+  --color-financy-tag-pink-bg: #fce7f3;
+  --color-financy-tag-pink-text: #be185d;
+  --color-financy-tag-red-bg: #fee2e2;
+  --color-financy-tag-red-text: #b91c1c;
+  --color-financy-tag-orange-bg: #ffedd5;
+  --color-financy-tag-orange-text: #c2410c;
+  --color-financy-tag-yellow-bg: #f7f3ca;
+  --color-financy-tag-yellow-text: #a16207;
+  --color-financy-tag-green-bg: #e0fae9;
+  --color-financy-tag-green-text: #15803d;
+
+  --radius-financy-card: 14px;
+  --shadow-financy-elevated: 0 20px 40px -18px rgb(15 23 42 / 0.25);
+}
+
 @layer base {
   :root {
+    /* transitions-dev — universal install (subset used by this project) */
+    /* Card resize */
     --resize-dur: 300ms;
     --resize-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Menu dropdown — consumed by .t-dropdown and Select.tsx via getComputedStyle */
+    --dropdown-open-dur: 250ms;
+    --dropdown-close-dur: 150ms;
+    --dropdown-pre-scale: 0.97;
+    --dropdown-closing-scale: 0.99;
+    --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Modal open / close */
     --modal-open-dur: 250ms;
     --modal-close-dur: 150ms;
     --modal-scale: 0.96;
     --modal-scale-close: 0.96;
     --modal-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Text states swap */
     --text-swap-dur: 150ms;
     --text-swap-translate-y: 4px;
     --text-swap-blur: 2px;
     --text-swap-ease: ease-in-out;
+    /* Error state shake */
     --shake-distance: 6px;
     --shake-overshoot: 4px;
     --shake-dur-a: 80ms;
     --shake-dur-b: 60ms;
     --shake-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --revert-hold: 3000ms;
+    --revert-dur: 280ms;
   }
 
   html,
@@ -30,8 +115,28 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-financy-page font-sans text-financy-text antialiased;
   }
+}
+
+@utility sg-shell {
+  @apply mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8;
+}
+
+@utility sg-section {
+  @apply rounded-[var(--radius-financy-card)] border border-financy-border bg-financy-surface p-5;
+}
+
+@utility sg-eyebrow {
+  @apply mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-financy-muted;
+}
+
+@utility sg-section-title {
+  @apply text-lg font-semibold text-financy-text;
+}
+
+@utility sg-chip {
+  @apply inline-flex rounded-full border border-financy-border px-2.5 py-1 text-xs font-semibold text-financy-muted;
 }
 
 @layer components {
@@ -107,6 +212,49 @@
     pointer-events: none;
     transition: transform var(--modal-close-dur) var(--modal-ease), opacity var(--modal-close-dur)
       var(--modal-ease);
+  }
+
+  .t-dropdown {
+    transform-origin: top;
+    transform: scaleY(0.98);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform var(--resize-dur) var(--resize-ease),
+      opacity var(--resize-dur) var(--resize-ease),
+      visibility 0ms linear var(--resize-dur);
+    visibility: hidden;
+    will-change: transform, opacity;
+  }
+
+  .t-dropdown.is-open {
+    transform: scaleY(1);
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition:
+      transform var(--resize-dur) var(--resize-ease),
+      opacity var(--resize-dur) var(--resize-ease),
+      visibility 0ms linear 0ms;
+  }
+
+  .t-dropdown.is-closing {
+    transform: scaleY(0.98);
+    opacity: 0;
+    pointer-events: none;
+    visibility: visible;
+    transition:
+      transform var(--dropdown-close-dur, 150ms) ease-in,
+      opacity var(--dropdown-close-dur, 150ms) ease-in;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-dropdown,
+    .t-dropdown.is-open,
+    .t-dropdown.is-closing {
+      transition: none !important;
+      transform: none !important;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

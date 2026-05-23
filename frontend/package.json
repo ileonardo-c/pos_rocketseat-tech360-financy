@@ -15,13 +15,15 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.4",
+    "@fontsource-variable/martian-mono": "^5.2.7",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.27.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
-    "@playwright/test": "^1.54.2",
+    "@playwright/test": "1.60.0",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.3.0",
@@ -33,3 +35,4 @@
     "vite": "^5.4.8"
   }
 }
+

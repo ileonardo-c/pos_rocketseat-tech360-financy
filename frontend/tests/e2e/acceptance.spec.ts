@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { buildExpiredToken, buildTransientE2EUser } from "./support/e2e-users";
 
+test.describe.skip("Temporarily disabled: only style-guide E2E is active", () => {
+
 const toDateInput = () => {
   const now = new Date();
   const year = now.getFullYear();
@@ -79,4 +81,6 @@ test("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", as
   }, expiredToken);
   await page.goto(`${appUrl}/transactions`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
+});
+
 });

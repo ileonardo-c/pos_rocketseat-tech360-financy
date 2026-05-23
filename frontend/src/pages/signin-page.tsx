@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
@@ -70,9 +69,12 @@ export const SigninPage = () => {
   }
 
   return (
-    <main className="auth-layout min-h-screen bg-[#f3f4f6] px-4 py-8 text-slate-700 sm:py-12">
-      <div className="mx-auto w-full max-w-[448px]">
-        <header className="mb-6 flex items-center justify-center gap-3 text-[#24784A] sm:mb-8">
+    <main
+      className="min-h-screen bg-[#f2f3f5] px-4 py-6 text-slate-700 sm:px-6 sm:py-10"
+      data-testid="signin-page"
+    >
+      <div className="mx-auto flex w-full max-w-[448px] flex-col items-center pt-4 sm:pt-2">
+        <header className="mb-7 flex items-center justify-center gap-3 text-[#24784A] sm:mb-8">
           <svg
             aria-hidden="true"
             className="h-8 w-8"
@@ -84,20 +86,27 @@ export const SigninPage = () => {
             <circle cx="16" cy="17" r="5" stroke="currentColor" strokeWidth="2.5" />
             <path d="M11 10L13 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
           </svg>
-          <span className="text-3xl font-black uppercase tracking-[0.1em] sm:text-4xl">
+          <span className="text-3xl font-black uppercase leading-none tracking-[0.02em] sm:text-[44px]">
             Financy
           </span>
         </header>
 
-        <Card className="border border-slate-300/85 bg-white px-5 py-6 shadow-none transition-all duration-300 ease-out sm:px-8 sm:py-9">
-          <h1 className="text-center text-3xl font-bold leading-[1.15] text-slate-900 sm:text-[40px]">
+        <Card
+          className="w-full rounded-[14px] border border-[#d0d5dd] bg-[#f5f5f6] px-5 py-7 shadow-none sm:px-8 sm:py-8"
+          data-testid="signin-card"
+        >
+          <h1
+            className="text-center text-3xl font-bold leading-[1.12] text-[#1f2937] sm:text-[46px] sm:leading-[1.08]"
+            data-testid="signin-title"
+          >
             Fazer login
           </h1>
-          <p className="mt-2 text-center text-base leading-[1.35] text-slate-600 sm:mt-3 sm:text-[34px] sm:leading-[1.15]">
+          <p className="mt-3 text-center text-base leading-[1.35] text-[#4b5563] sm:mt-2 sm:text-[18px] sm:leading-[1.35]">
             Entre na sua conta para continuar
           </p>
           <form
-            className="mt-7 flex flex-col gap-4 sm:mt-9 sm:gap-5"
+            className="mt-8 flex flex-col gap-5 sm:mt-9"
+            data-testid="signin-form"
             onSubmit={async (event) => {
               event.preventDefault();
               setTouched({ email: true, password: true });
@@ -116,7 +125,7 @@ export const SigninPage = () => {
             }}
           >
             <label
-              className="space-y-2 text-base font-semibold text-slate-700 sm:text-xl"
+              className="space-y-2 text-base font-semibold text-[#374151] sm:text-[18px] sm:leading-[1.2]"
               htmlFor="signin-email"
             >
               E-mail
@@ -144,7 +153,8 @@ export const SigninPage = () => {
                 <Input
                   id="signin-email"
                   autoComplete="email"
-                  className={`t-input h-12 rounded-xl border-slate-300 bg-white pl-12 text-base text-slate-500 placeholder:text-slate-400 focus:border-[#24784A] focus:ring-[#24784A]/15 sm:h-14 sm:text-2xl ${shakeEmail ? "is-shaking" : ""}`}
+                  className={`t-input h-12 rounded-[10px] border-[#b8c0cc] bg-[#f4f5f7] pl-12 text-base text-[#334155] placeholder:text-[#9ca3af] focus:border-[#24784A] focus:ring-2 focus:ring-[#24784A]/20 sm:h-[56px] sm:text-[18px] ${shakeEmail ? "is-shaking" : ""}`}
+                  data-testid="signin-email"
                   placeholder="mail@exemplo.com"
                   required
                   type="email"
@@ -164,7 +174,7 @@ export const SigninPage = () => {
             </label>
 
             <label
-              className="space-y-2 text-base font-semibold text-slate-700 sm:text-xl"
+              className="space-y-2 text-base font-semibold text-[#374151] sm:text-[18px] sm:leading-[1.2]"
               htmlFor="signin-password"
             >
               Senha
@@ -196,7 +206,8 @@ export const SigninPage = () => {
                 <Input
                   id="signin-password"
                   autoComplete="current-password"
-                  className={`t-input h-12 rounded-xl border-slate-300 bg-white px-12 text-base text-slate-500 placeholder:text-slate-400 focus:border-[#24784A] focus:ring-[#24784A]/15 sm:h-14 sm:text-2xl ${shakePassword ? "is-shaking" : ""}`}
+                  className={`t-input h-12 rounded-[10px] border-[#b8c0cc] bg-[#f4f5f7] px-12 text-base text-[#334155] placeholder:text-[#9ca3af] focus:border-[#24784A] focus:ring-2 focus:ring-[#24784A]/20 sm:h-[56px] sm:text-[18px] ${shakePassword ? "is-shaking" : ""}`}
+                  data-testid="signin-password"
                   placeholder="Digite sua senha"
                   required
                   type="password"
@@ -233,31 +244,40 @@ export const SigninPage = () => {
 
             <ErrorBanner message={authError} />
 
-            <div className="flex items-center justify-between text-sm sm:text-lg">
-              <span className="text-slate-500">Sua sessão será mantida neste navegador</span>
-              <span className="font-semibold text-slate-400">Recuperação de senha em breve</span>
+            <div className="flex items-center justify-between text-sm text-[#4b5563] sm:text-[18px]">
+              <label className="flex flex-row items-center gap-2 text-inherit">
+                <input
+                  className="h-[18px] w-[18px] rounded-[4px] border-[#b8c0cc] text-[#24784A] focus:ring-[#24784A]/20"
+                  data-testid="signin-remember"
+                  type="checkbox"
+                />
+                <span>Lembrar-me</span>
+              </label>
+              <span className="font-semibold text-[#24784A]">Recuperar senha</span>
             </div>
 
-            <Button
-              className="mt-1 h-12 rounded-xl bg-[#24784A] text-lg font-bold transition-colors duration-200 hover:bg-[#1f6941] sm:h-14 sm:text-2xl"
+            <button
+              className="mt-1 h-12 rounded-[10px] bg-[#24784A] px-4 text-lg font-bold text-white transition-colors duration-200 hover:bg-[#1f6941] disabled:cursor-not-allowed disabled:opacity-50 sm:h-[56px] sm:text-[18px]"
+              data-testid="signin-submit"
               disabled={loading || Boolean(emailError) || Boolean(passwordError)}
               type="submit"
             >
               <span className="t-text-swap">{loading ? "Entrando..." : "Entrar"}</span>
-            </Button>
+            </button>
           </form>
 
-          <div className="mt-6 sm:mt-8">
-            <div className="flex items-center gap-3 text-sm text-slate-500 sm:text-lg">
+          <div className="mt-7 sm:mt-8">
+            <div className="flex items-center gap-3 text-sm text-[#6b7280] sm:text-[18px]">
               <span className="h-px flex-1 bg-slate-300" />
               <span>Ou</span>
               <span className="h-px flex-1 bg-slate-300" />
             </div>
-            <p className="mt-6 text-center text-base text-slate-600 sm:mt-7 sm:text-[31px]">
+            <p className="mt-7 text-center text-base text-[#4b5563] sm:text-[18px] sm:leading-[1.2]">
               Ainda não tem uma conta?
             </p>
             <Link
-              className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 text-lg font-semibold text-slate-700 transition duration-200 hover:bg-slate-50 sm:h-14 sm:text-3xl"
+              className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-[10px] border border-[#b8c0cc] text-lg font-semibold text-[#374151] transition duration-200 hover:bg-slate-50 sm:h-[56px] sm:text-[18px]"
+              data-testid="signin-create-account-link"
               to="/signup"
             >
               <span aria-hidden="true" className="inline-flex h-5 w-5 items-center justify-center">
