@@ -3,13 +3,10 @@ import { S3Client } from "@aws-sdk/client-s3";
 import type { GraphQLContext } from "../../context";
 import { StorageService } from "../../features/storage/storage-service";
 import { AppError } from "../../lib/errors";
+import { getStorageConfig } from "../../lib/storage-env";
 
 const createS3Client = () => {
-  const accessKeyId = process.env.S3_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  const region = process.env.S3_REGION || "us-east-1";
-  const endpoint = process.env.S3_ENDPOINT;
-  const forcePathStyle = process.env.S3_FORCE_PATH_STYLE === "true";
+  const { region, accessKeyId, secretAccessKey, endpoint, forcePathStyle } = getStorageConfig();
 
   return new S3Client({
     region,

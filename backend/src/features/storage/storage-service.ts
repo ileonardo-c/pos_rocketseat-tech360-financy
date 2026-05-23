@@ -3,6 +3,7 @@ import { PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { AppError } from "../../lib/errors";
+import { getStorageConfig } from "../../lib/storage-env";
 
 type UploadInput = {
   fileName: string;
@@ -24,9 +25,10 @@ export class StorageService {
 
   constructor(s3Client: S3Client) {
     this.s3 = s3Client;
-    this.endpoint = process.env.S3_ENDPOINT || "";
-    this.bucket = process.env.S3_BUCKET || "";
-    this.expiresIn = Number(process.env.S3_URL_EXPIRES_IN || "900");
+    const { endpoint, bucket, urlExpiresIn } = getStorageConfig();
+    this.endpoint = endpoint || "";
+    this.bucket = bucket || "";
+    this.expiresIn = urlExpiresIn;
   }
 
   async requestUploadUrl(userId: string, input: UploadInput): Promise<RequestUploadUrlResult> {
