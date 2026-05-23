@@ -109,6 +109,7 @@ export const DASHBOARD_CATEGORIES_QUERY = gql`
   query DashboardCategories {
     categories {
       id
+      name
     }
   }
 `;
