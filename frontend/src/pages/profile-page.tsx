@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth/auth-provider";
@@ -42,6 +42,9 @@ export const ProfilePage = () => {
   const [form, setForm] = useState<ProfileForm>({ name: "", email: "" });
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<"error" | "success" | null>(null);
+  const [isNameInputShaking, setIsNameInputShaking] = useState(false);
+  const shakeReplayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const me = data?.me ?? null;
 
@@ -51,6 +54,18 @@ export const ProfilePage = () => {
     }
     setForm({ name: me.name, email: me.email });
   }, [me]);
+
+  useEffect(
+    () => () => {
+      if (shakeReplayTimeoutRef.current) {
+        clearTimeout(shakeReplayTimeoutRef.current);
+      }
+      if (shakeTimeoutRef.current) {
+        clearTimeout(shakeTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const hasChanges = useMemo(() => {
     if (!me) {
@@ -70,6 +85,27 @@ export const ProfilePage = () => {
     }
     return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
   }, [me?.name, user?.name]);
+
+  const triggerNameShake = () => {
+    if (shakeReplayTimeoutRef.current) {
+      clearTimeout(shakeReplayTimeoutRef.current);
+      shakeReplayTimeoutRef.current = null;
+    }
+    if (shakeTimeoutRef.current) {
+      clearTimeout(shakeTimeoutRef.current);
+      shakeTimeoutRef.current = null;
+    }
+
+    setIsNameInputShaking(false);
+    shakeReplayTimeoutRef.current = setTimeout(() => {
+      setIsNameInputShaking(true);
+      shakeReplayTimeoutRef.current = null;
+      shakeTimeoutRef.current = setTimeout(() => {
+        setIsNameInputShaking(false);
+        shakeTimeoutRef.current = null;
+      }, 420);
+    }, 0);
+  };
 
   if (loading && !me) {
     return (
@@ -99,7 +135,7 @@ export const ProfilePage = () => {
         </nav>
       </header>
 
-      <section className="profile-card">
+      <section className="profile-card t-resize">
         <div className="profile-avatar">{initials}</div>
         <h1>{me.name}</h1>
         <p className="profile-email">{me.email}</p>
@@ -118,6 +154,8 @@ export const ProfilePage = () => {
 
             if (!hasChanges) {
               setFeedback("Nenhuma alteração para salvar.");
+              setFeedbackType("error");
+              triggerNameShake();
               return;
             }
 
@@ -142,6 +180,7 @@ export const ProfilePage = () => {
                   : "Não foi possível atualizar o perfil.";
               setFeedback(message);
               setFeedbackType("error");
+              triggerNameShake();
             }
           }}
         >
@@ -149,6 +188,7 @@ export const ProfilePage = () => {
             Nome completo
             <input
               autoComplete="name"
+              className={`t-input ${isNameInputShaking ? "is-shaking" : ""}`}
               required
               type="text"
               value={form.name}
