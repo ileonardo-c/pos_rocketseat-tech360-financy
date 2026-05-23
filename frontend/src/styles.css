@@ -785,6 +785,10 @@ main.auth-layout {
   max-width: 640px;
 }
 
+.categories-modal {
+  max-width: 520px;
+}
+
 .transactions-pagination {
   display: flex;
   justify-content: space-between;
