@@ -155,12 +155,11 @@ A estrutura do corpo do PR obedece a uma hierarquia de precedência:
 
 **Regra inegociável de limpeza:** Independentemente do formato adotado, **nenhuma instrução de template** (como delimitadores `<!-- -->`, mensagens do tipo "Escolha UMA linha", "Não use \n literal" ou "Use nomes de paths em crase"), placeholder vazio ou meta-comentário deve permanecer no corpo publicado. A IA deve ler as instruções invisíveis, aplicá-las e apagá-las do texto final antes de abrir o PR.
 
-### Comentário Principal do PR (novo tópico geral)
-*(Mantenha as quatro seções Contexto/Causa/Correção/Validação)*
+**Seção de Screenshots:** O template instrui a apagar a seção se não houver alterações visuais. Escrever `N/A` não é equivalente a apagar — a seção deve ser **removida por completo**. Se o PR implementar alterações visuais e o agente tiver acesso ao Figma via MCP, deve incluir o URL do frame de referência como evidência. Exemplo:
 
-Regras para a seção Validação e Comentários:
-* Use texto puro — **sem emoji**. (A permissão para emojis aplica-se única e exclusivamente ao Corpo do PR quando exigido pelo template do repositório. Comentários e threads de revisão nunca usam emojis, exceto nas reações automáticas via API).
-* Nunca inclua `\uFFFD` (U+FFFD) — esse caractere indica byte UTF-8 corrompido. Se aparecer, corrija a origem antes de postar.
+```
+[Nome da tela — Figma](https://www.figma.com/file/.../NomeDaTela?node-id=...)
+```
 
 ### Comentário Principal do PR (novo tópico geral)
 
@@ -180,10 +179,11 @@ Use exatamente estas quatro seções — somente quando não houver thread de re
 <evidência: testes passando, threads resolvidas, branch atualizado, próximo passo se houver>
 ```
 
-**Regras para a seção Validação:**
+**Regras para comentários e threads de revisão:**
 
-- Use texto puro — sem emoji. Use marcadores `*` ou `-` seguidos de texto.
-- Nunca inclua `\uFFFD` (U+FFFD) — esse caractere indica byte UTF-8 corrompido. Se aparecer, corrija a origem antes de postar.
+- Use texto puro — **sem emoji**. A permissão para emojis aplica-se única e exclusivamente ao corpo do PR quando exigido pelo template. Comentários e threads nunca usam emojis, exceto nas reações via API.
+- Use marcadores `*` ou `-` seguidos de texto.
+- Nunca inclua `\uFFFD` (U+FFFD) — indica byte UTF-8 corrompido; corrija a origem antes de postar.
 
 ### Resposta em uma Thread de revisão existente
 
@@ -271,3 +271,4 @@ Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaix
   1. Valide a referência remota: `git ls-remote origin refs/pull/<n>/*`
   2. Atualize o estado do PR via um novo push ou comentário.
   3. Acione a revisão novamente.
+  

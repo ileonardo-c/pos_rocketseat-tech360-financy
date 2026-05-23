@@ -5,6 +5,8 @@
 
 @layer base {
   :root {
+    --resize-dur: 300ms;
+    --resize-ease: cubic-bezier(0.22, 1, 0.36, 1);
     --shake-distance: 6px;
     --shake-overshoot: 4px;
     --shake-dur-a: 80ms;
@@ -59,6 +61,18 @@
     .t-input {
       animation: none !important;
       transform: none !important;
+    }
+  }
+
+  .t-resize {
+    transition: width var(--resize-dur) var(--resize-ease), height var(--resize-dur)
+      var(--resize-ease);
+    will-change: width, height;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-resize {
+      transition: none !important;
     }
   }
 }
