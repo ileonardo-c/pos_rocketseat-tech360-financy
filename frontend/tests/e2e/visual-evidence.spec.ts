@@ -1,18 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page, TestInfo } from "@playwright/test";
-
-const password = "VisualPass123!";
-
-const buildUser = () => {
-  const suffix = Math.random().toString(36).slice(2, 10);
-  return {
-    name: `Visual User ${suffix}`,
-    email: `visual.${suffix}@financy.local`,
-    password,
-    categoryName: `Categoria Visual ${suffix}`,
-    transactionTitle: `Transação Visual ${suffix}`,
-  };
-};
+import { buildTransientE2EUser } from "./support/e2e-users";
 
 const capture = async (page: Page, testInfo: TestInfo, name: string) => {
   const path = testInfo.outputPath(`${name}.png`);
@@ -29,7 +17,7 @@ const capture = async (page: Page, testInfo: TestInfo, name: string) => {
 };
 
 test("@visual gera evidência visual das páginas críticas", async ({ page }, testInfo) => {
-  const user = buildUser();
+  const user = buildTransientE2EUser();
   const appUrl = process.env.E2E_APP_URL ?? "http://localhost:5173";
 
   await page.goto(`${appUrl}/`, { waitUntil: "domcontentloaded" });

@@ -76,7 +76,7 @@ flowchart LR
 
 O projeto é um **monorepo** gerenciado com `pnpm workspaces`:
 
-```
+```text
 .
 ├── backend/     # API GraphQL, Prisma, domínios (auth, category, transaction, storage)
 ├── frontend/    # App React, páginas protegidas, testes E2E
@@ -145,6 +145,8 @@ pnpm test:e2e:visual
 
 Os relatórios ficam em `frontend/playwright-report` após a execução.
 
+Os cenários de E2E não dependem de conta administrativa fixa. Cada execução gera usuário transitório no fluxo de signup (`/signup`) para validação ponta a ponta com credenciais limpas por ambiente.
+
 ## 🧭 Governança
 
 Este repositório segue documentação de governança para revisão, qualidade e rastreio de entrega:
@@ -153,13 +155,3 @@ Este repositório segue documentação de governança para revisão, qualidade e
 - Template e checklist de PR: [`.github/pull_request_template.md`](.github/pull_request_template.md)
 - Revisões e aprovação: [`.github/CODEOWNERS`](.github/CODEOWNERS)
 - Convenções de branch e fluxo de contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)
-
-Observação de ambiente:
-
-- Não há conta de acesso fixa para homologação. Use criação de usuário pelo fluxo da própria aplicação para testes e E2E; os cenários devem usar credenciais transitórias e limpas por ambiente.
-
----
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
