@@ -43,8 +43,11 @@ main.transactions-layout {
 }
 
 main.dashboard {
-  max-width: 980px;
+  max-width: 1120px;
   margin: 0 auto;
+  background: #f3f4f6;
+  min-height: 100vh;
+  color: #1f2937;
 }
 
 main.categories-layout {
@@ -335,6 +338,7 @@ main.auth-layout {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 16px;
 }
 
 .page-actions {
@@ -343,26 +347,39 @@ main.auth-layout {
 }
 
 .dashboard-header h1 {
-  margin-bottom: 4px;
+  margin: 0 0 4px;
+  font-size: 40px;
+  line-height: 1.1;
 }
 
 .dashboard-header p {
-  margin-top: 0;
+  margin: 0;
+  color: #6b7280;
+  font-size: 18px;
 }
 
 .dashboard-links {
   display: flex;
   gap: 12px;
-  margin: 20px 0;
+  margin: 0 0 22px;
 }
 
 .dashboard-links a {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
-  border: 1px solid #d0d7de;
-  border-radius: 8px;
-  padding: 8px 12px;
-  color: #24292f;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: #374151;
+  background: #ffffff;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.dashboard-links a:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
 }
 
 .dashboard-cards {
@@ -373,22 +390,25 @@ main.auth-layout {
 }
 
 .dashboard-card {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 14px;
-  background: #f6f8fa;
+  background: #ffffff;
 }
 
 .dashboard-card h2 {
   margin-top: 0;
   margin-bottom: 8px;
   font-size: 14px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
 .dashboard-card p {
   margin: 0;
-  font-size: 20px;
+  font-size: 28px;
   font-weight: 700;
+  color: #111827;
 }
 
 .dashboard-card-link {
@@ -404,10 +424,11 @@ main.auth-layout {
 }
 
 .dashboard-summary-filters {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 14px;
   margin-bottom: 16px;
+  background: #ffffff;
 }
 
 .dashboard-summary-filters h2 {
@@ -424,13 +445,15 @@ main.auth-layout {
 .dashboard-summary-filter-actions {
   display: flex;
   gap: 10px;
+  margin-top: 12px;
 }
 
 .dashboard-type-breakdown {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
+  background: #ffffff;
 }
 
 .dashboard-type-breakdown h2 {
@@ -453,10 +476,11 @@ main.auth-layout {
 }
 
 .dashboard-timeline {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
+  background: #ffffff;
 }
 
 .dashboard-timeline-header {
@@ -484,9 +508,9 @@ main.auth-layout {
 }
 
 .dashboard-timeline-interval button.is-active {
-  background: #0969da;
+  background: #24784a;
   color: #ffffff;
-  border-color: #0969da;
+  border-color: #24784a;
 }
 
 .dashboard-timeline-table-wrap {
@@ -513,10 +537,11 @@ main.auth-layout {
 }
 
 .dashboard-category-ranking {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
+  background: #ffffff;
 }
 
 .dashboard-category-ranking h2 {
@@ -559,13 +584,14 @@ main.auth-layout {
 .dashboard-category-ranking-bar {
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #1f6feb, #2da44e);
+  background: linear-gradient(90deg, #2b8f5a, #58c28a);
 }
 
 .dashboard-recent {
-  border: 1px solid #d0d7de;
-  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
   padding: 16px;
+  background: #ffffff;
 }
 
 .dashboard-recent h2 {
@@ -812,6 +838,10 @@ li {
 @media (max-width: 560px) {
   main.dashboard {
     padding: 16px;
+  }
+
+  .dashboard-header h1 {
+    font-size: 32px;
   }
 
   main.categories-layout {

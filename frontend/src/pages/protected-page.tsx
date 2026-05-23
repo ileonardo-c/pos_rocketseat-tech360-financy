@@ -441,7 +441,7 @@ export const ProtectedPage = () => {
       {refreshError ? <p>{refreshError}</p> : null}
       {summaryFilterValidationError ? <p>{summaryFilterValidationError}</p> : null}
 
-      <section className="dashboard-summary-filters">
+      <section className="dashboard-summary-filters t-resize">
         <h2>Resumo por período</h2>
         <div className="dashboard-summary-filter-grid">
           <label>
@@ -494,7 +494,7 @@ export const ProtectedPage = () => {
       </section>
 
       <section className="dashboard-cards">
-        <article className="dashboard-card">
+        <article className="dashboard-card t-resize">
           <h2>Saldo atual</h2>
           <p>{summary ? currencyFormatter.format(summary.balance) : "--"}</p>
           <Link
@@ -507,7 +507,7 @@ export const ProtectedPage = () => {
             Ver no extrato
           </Link>
         </article>
-        <article className="dashboard-card">
+        <article className="dashboard-card t-resize">
           <h2>Receitas</h2>
           <p>{summary ? currencyFormatter.format(summary.incomeTotal) : "--"}</p>
           <Link
@@ -521,7 +521,7 @@ export const ProtectedPage = () => {
             Ver receitas
           </Link>
         </article>
-        <article className="dashboard-card">
+        <article className="dashboard-card t-resize">
           <h2>Despesas</h2>
           <p>{summary ? currencyFormatter.format(summary.expenseTotal) : "--"}</p>
           <Link
@@ -535,7 +535,7 @@ export const ProtectedPage = () => {
             Ver despesas
           </Link>
         </article>
-        <article className="dashboard-card">
+        <article className="dashboard-card t-resize">
           <h2>Transações</h2>
           <p>{summary?.totalCount ?? "--"}</p>
           <Link
@@ -548,7 +548,7 @@ export const ProtectedPage = () => {
             Ver todas
           </Link>
         </article>
-        <article className="dashboard-card">
+        <article className="dashboard-card t-resize">
           <h2>Categorias</h2>
           <p>{categories.length}</p>
           <Link className="dashboard-card-link" to="/categories">
@@ -557,7 +557,7 @@ export const ProtectedPage = () => {
         </article>
       </section>
 
-      <section className="dashboard-type-breakdown">
+      <section className="dashboard-type-breakdown t-resize">
         <h2>Distribuição por tipo</h2>
         <ul>
           {(summary?.byType ?? []).map((item) => (
@@ -570,7 +570,7 @@ export const ProtectedPage = () => {
         </ul>
       </section>
 
-      <section className="dashboard-timeline">
+      <section className="dashboard-timeline t-resize">
         <header className="dashboard-timeline-header">
           <h2>Evolução financeira</h2>
           <div className="dashboard-timeline-interval">
@@ -622,7 +622,7 @@ export const ProtectedPage = () => {
         )}
       </section>
 
-      <section className="dashboard-category-ranking">
+      <section className="dashboard-category-ranking t-resize">
         <h2>Top categorias no período</h2>
         {!categorySummary || categorySummary.length === 0 ? (
           <p>Sem movimentações no período selecionado.</p>
@@ -664,7 +664,7 @@ export const ProtectedPage = () => {
         )}
       </section>
 
-      <section className="dashboard-recent">
+      <section className="dashboard-recent t-resize">
         <h2>Últimas transações</h2>
         {latestTransactions.length === 0 ? (
           <p>Nenhuma transação cadastrada até o momento.</p>
