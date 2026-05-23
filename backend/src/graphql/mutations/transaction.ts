@@ -1,6 +1,6 @@
-import type { GraphQLContext } from "../../context";
-import { TransactionRepository } from "../../features/transaction/transaction-repository";
-import { TransactionService } from "../../features/transaction/transaction-service";
+import type { GraphQLContext } from "@/context";
+import { TransactionRepository } from "@/features/transaction/transaction-repository";
+import { TransactionService } from "@/features/transaction/transaction-service";
 
 const service = (ctx: GraphQLContext) =>
   new TransactionService(new TransactionRepository(ctx.prisma));
@@ -60,3 +60,4 @@ export const transactionMutations = {
     return service(ctx).delete(ctx, args.id);
   },
 };
+

@@ -1,6 +1,6 @@
-import type { GraphQLContext } from "../../context";
-import { AuthRepository } from "../../features/auth/auth-repository";
-import { AuthService } from "../../features/auth/auth-service";
+import type { GraphQLContext } from "@/context";
+import { AuthRepository } from "@/features/auth/auth-repository";
+import { AuthService } from "@/features/auth/auth-service";
 
 export const authMutations = {
   register: async (
@@ -28,3 +28,4 @@ export const authMutations = {
     return service.updateProfile(ctx, args.input);
   },
 };
+

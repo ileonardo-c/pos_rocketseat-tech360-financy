@@ -145,6 +145,19 @@ pnpm test:e2e:visual
 
 Os relatórios ficam em `frontend/playwright-report` após a execução.
 
+## 🧭 Governança
+
+Este repositório segue documentação de governança para revisão, qualidade e rastreio de entrega:
+
+- Licença: [MIT](LICENSE)
+- Template e checklist de PR: [`.github/pull_request_template.md`](.github/pull_request_template.md)
+- Revisões e aprovação: [`.github/CODEOWNERS`](.github/CODEOWNERS)
+- Convenções de branch e fluxo de contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+Observação de ambiente:
+
+- Não há conta de acesso fixa para homologação. Use criação de usuário pelo fluxo da própria aplicação para testes e E2E; os cenários devem usar credenciais transitórias e limpas por ambiente.
+
 ---
 
 ## 📄 Licença

@@ -1,6 +1,6 @@
-import type { GraphQLContext } from "../../context";
-import { AppError } from "../../lib/errors";
-import { getStorageConfig } from "../../lib/storage-env";
+import type { GraphQLContext } from "@/context";
+import { AppError } from "@/lib/errors";
+import { getStorageConfig } from "@/lib/storage-env";
 import type { TransactionRepository } from "./transaction-repository";
 
 type TransactionType = "INCOME" | "EXPENSE";
@@ -554,3 +554,4 @@ export class TransactionService {
     }
   }
 }
+
