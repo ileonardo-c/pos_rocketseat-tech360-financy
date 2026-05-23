@@ -1,12 +1,13 @@
 import { useAuth } from "@/lib/auth/auth-provider";
 import {
+  CREATE_TRANSACTION_MUTATION,
   DASHBOARD_CATEGORIES_QUERY,
   DASHBOARD_TRANSACTIONS_QUERY,
   DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY,
   DASHBOARD_TRANSACTION_SUMMARY_QUERY,
   DASHBOARD_TRANSACTION_TIMELINE_QUERY,
 } from "@/lib/graphql/operations";
-import { useQuery } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -64,6 +65,14 @@ type TransactionCategorySummaryNode = {
 };
 
 type TimelineInterval = "DAY" | "MONTH";
+
+type TransactionForm = {
+  title: string;
+  amount: string;
+  type: "INCOME" | "EXPENSE";
+  date: string;
+  categoryId: string;
+};
 
 type TransactionTimelineNode = {
   transactionTimeline: Array<{
@@ -198,6 +207,26 @@ const isSameSummaryFilter = (left: SummaryFilter, right: SummaryFilter) =>
 const isInvalidSummaryRange = (filter: SummaryFilter) =>
   Boolean(filter.from && filter.to && filter.from > filter.to);
 
+const toLocalDateInput = (value: string | Date) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const emptyTransactionForm: TransactionForm = {
+  title: "",
+  amount: "",
+  type: "EXPENSE",
+  date: "",
+  categoryId: "",
+};
+
 export const ProtectedPage = () => {
   const { user, signout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -213,11 +242,30 @@ export const ProtectedPage = () => {
     parsedState.timelineInterval,
   );
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateDialogClosing, setIsCreateDialogClosing] = useState(false);
+  const [form, setForm] = useState<TransactionForm>(emptyTransactionForm);
+  const createCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const modalCloseDurationMs = 150;
   const isSyncingFromUrlRef = useRef(false);
   const hasInvalidSummaryRange = isInvalidSummaryRange(summaryFilter);
   const summaryFilterValidationError = hasInvalidSummaryRange
     ? "Período inválido: a data inicial deve ser menor ou igual à final."
     : null;
+  const [createTransaction, { loading: creatingTransaction }] = useMutation(
+    CREATE_TRANSACTION_MUTATION,
+    {
+      refetchQueries: [
+        { query: DASHBOARD_TRANSACTIONS_QUERY },
+        { query: DASHBOARD_TRANSACTION_SUMMARY_QUERY },
+        { query: DASHBOARD_TRANSACTION_CATEGORY_SUMMARY_QUERY },
+        { query: DASHBOARD_TRANSACTION_TIMELINE_QUERY },
+      ],
+      awaitRefetchQueries: true,
+    },
+  );
 
   useEffect(() => {
     const nextParsedState = parseDashboardStateFromSearchParams(searchParams);
@@ -264,6 +312,15 @@ export const ProtectedPage = () => {
       setSearchParams(nextSearchParams, { replace: true });
     }
   }, [searchParamsString, setSearchParams, summaryFilter, timelineInterval]);
+
+  useEffect(
+    () => () => {
+      if (createCloseTimeoutRef.current) {
+        clearTimeout(createCloseTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const {
     data: categoriesData,
@@ -370,6 +427,44 @@ export const ProtectedPage = () => {
       categorySummaryLoading ||
       timelineLoading);
 
+  const openCreateDialog = () => {
+    if (createCloseTimeoutRef.current) {
+      clearTimeout(createCloseTimeoutRef.current);
+      createCloseTimeoutRef.current = null;
+    }
+    setIsCreateDialogClosing(false);
+    setForm((previous) => ({
+      ...emptyTransactionForm,
+      date: previous.date || toLocalDateInput(new Date()),
+    }));
+    setActionError(null);
+    setActionSuccess(null);
+    setIsCreateDialogOpen(true);
+  };
+
+  const closeCreateDialog = () => {
+    if (!isCreateDialogOpen) {
+      return;
+    }
+    setIsCreateDialogClosing(true);
+    if (createCloseTimeoutRef.current) {
+      clearTimeout(createCloseTimeoutRef.current);
+    }
+    createCloseTimeoutRef.current = setTimeout(() => {
+      setIsCreateDialogOpen(false);
+      setIsCreateDialogClosing(false);
+      createCloseTimeoutRef.current = null;
+    }, modalCloseDurationMs);
+  };
+
+  const isCreateDisabled =
+    creatingTransaction ||
+    !form.title.trim() ||
+    !form.amount ||
+    !form.date ||
+    !form.categoryId ||
+    categories.length === 0;
+
   if (isInitialLoading) {
     return (
       <main className="dashboard">
@@ -426,6 +521,9 @@ export const ProtectedPage = () => {
           <button onClick={signout} type="button">
             Sair
           </button>
+          <button disabled={categories.length === 0} type="button" onClick={openCreateDialog}>
+            Nova transação
+          </button>
         </div>
       </header>
 
@@ -439,6 +537,8 @@ export const ProtectedPage = () => {
         <p>Não foi possível carregar todas as informações do dashboard.</p>
       ) : null}
       {refreshError ? <p>{refreshError}</p> : null}
+      {actionError ? <p>{actionError}</p> : null}
+      {actionSuccess ? <p>{actionSuccess}</p> : null}
       {summaryFilterValidationError ? <p>{summaryFilterValidationError}</p> : null}
 
       <section className="dashboard-summary-filters t-resize">
@@ -696,6 +796,123 @@ export const ProtectedPage = () => {
           </ul>
         )}
       </section>
+
+      {isCreateDialogOpen ? (
+        <div className="modal-overlay" role="presentation">
+          <dialog
+            className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
+            open
+          >
+            <h2>Nova transação</h2>
+            <form
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (isCreateDisabled) {
+                  return;
+                }
+
+                try {
+                  setActionError(null);
+                  setActionSuccess(null);
+                  await createTransaction({
+                    variables: {
+                      input: {
+                        title: form.title.trim(),
+                        amount: Number(form.amount),
+                        type: form.type,
+                        date: new Date(`${form.date}T00:00:00`).toISOString(),
+                        categoryId: form.categoryId,
+                        description: null,
+                      },
+                    },
+                  });
+                  closeCreateDialog();
+                  setActionSuccess("Transação criada com sucesso.");
+                } catch {
+                  setActionError("Não foi possível criar a transação.");
+                }
+              }}
+            >
+              <label>
+                Título
+                <input
+                  autoComplete="off"
+                  required
+                  type="text"
+                  value={form.title}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, title: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                Valor
+                <input
+                  min="0"
+                  required
+                  step="0.01"
+                  type="number"
+                  value={form.amount}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, amount: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                Tipo
+                <select
+                  value={form.type}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      type: event.target.value as TransactionForm["type"],
+                    }))
+                  }
+                >
+                  <option value="EXPENSE">Despesa</option>
+                  <option value="INCOME">Receita</option>
+                </select>
+              </label>
+              <label>
+                Data
+                <input
+                  required
+                  type="date"
+                  value={form.date}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, date: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                Categoria
+                <select
+                  required
+                  value={form.categoryId}
+                  onChange={(event) =>
+                    setForm((previous) => ({ ...previous, categoryId: event.target.value }))
+                  }
+                >
+                  <option value="">Selecione</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="modal-actions">
+                <button disabled={isCreateDisabled} type="submit">
+                  {creatingTransaction ? "Criando..." : "Criar transação"}
+                </button>
+                <button type="button" onClick={closeCreateDialog}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </dialog>
+        </div>
+      ) : null}
     </main>
   );
 };
