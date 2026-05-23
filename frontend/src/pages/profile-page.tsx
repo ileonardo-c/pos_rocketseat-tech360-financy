@@ -43,6 +43,7 @@ export const ProfilePage = () => {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<"error" | "success" | null>(null);
   const [isNameInputShaking, setIsNameInputShaking] = useState(false);
+  const shakeReplayTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const me = data?.me ?? null;
@@ -56,6 +57,9 @@ export const ProfilePage = () => {
 
   useEffect(
     () => () => {
+      if (shakeReplayTimeoutRef.current) {
+        clearTimeout(shakeReplayTimeoutRef.current);
+      }
       if (shakeTimeoutRef.current) {
         clearTimeout(shakeTimeoutRef.current);
       }
@@ -83,16 +87,24 @@ export const ProfilePage = () => {
   }, [me?.name, user?.name]);
 
   const triggerNameShake = () => {
+    if (shakeReplayTimeoutRef.current) {
+      clearTimeout(shakeReplayTimeoutRef.current);
+      shakeReplayTimeoutRef.current = null;
+    }
     if (shakeTimeoutRef.current) {
       clearTimeout(shakeTimeoutRef.current);
-    }
-    setIsNameInputShaking(false);
-    void document.body.offsetHeight;
-    setIsNameInputShaking(true);
-    shakeTimeoutRef.current = setTimeout(() => {
-      setIsNameInputShaking(false);
       shakeTimeoutRef.current = null;
-    }, 420);
+    }
+
+    setIsNameInputShaking(false);
+    shakeReplayTimeoutRef.current = setTimeout(() => {
+      setIsNameInputShaking(true);
+      shakeReplayTimeoutRef.current = null;
+      shakeTimeoutRef.current = setTimeout(() => {
+        setIsNameInputShaking(false);
+        shakeTimeoutRef.current = null;
+      }, 420);
+    }, 0);
   };
 
   if (loading && !me) {
