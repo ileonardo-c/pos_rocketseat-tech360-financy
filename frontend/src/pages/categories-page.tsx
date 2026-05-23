@@ -203,7 +203,7 @@ export const CategoriesPage = () => {
             }
           }}
         >
-          {isRefreshing ? "Atualizando..." : "Atualizar"}
+          <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
         </button>
         <button
           type="button"
@@ -317,6 +317,10 @@ export const CategoriesPage = () => {
         <div className="modal-overlay" role="presentation">
           <dialog
             className={`modal-card categories-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
+            onCancel={(event) => {
+              event.preventDefault();
+              closeCreateDialog();
+            }}
             open
           >
             <h2>Nova categoria</h2>
@@ -354,7 +358,7 @@ export const CategoriesPage = () => {
               </label>
               <div className="modal-actions">
                 <button disabled={creating} type="submit">
-                  Criar
+                  <span className="t-text-swap">{creating ? "Criando..." : "Criar"}</span>
                 </button>
                 <button type="button" onClick={closeCreateDialog}>
                   Cancelar
@@ -369,6 +373,10 @@ export const CategoriesPage = () => {
         <div className="modal-overlay" role="presentation">
           <dialog
             className={`modal-card categories-modal t-modal ${isEditDialogClosing ? "is-closing" : "is-open"}`}
+            onCancel={(event) => {
+              event.preventDefault();
+              closeEditDialog();
+            }}
             open
           >
             <h2>Editar categoria</h2>
@@ -407,7 +415,7 @@ export const CategoriesPage = () => {
               </label>
               <div className="modal-actions">
                 <button disabled={updating} type="submit">
-                  Salvar
+                  <span className="t-text-swap">{updating ? "Salvando..." : "Salvar"}</span>
                 </button>
                 <button type="button" onClick={closeEditDialog}>
                   Cancelar

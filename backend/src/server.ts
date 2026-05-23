@@ -59,7 +59,7 @@ app.setErrorHandler((error, request, reply) => {
       ? (error as { statusCode: number }).statusCode
       : 500;
   const statusCode = error instanceof AppError ? error.statusCode : fallbackStatusCode;
-  const message = error instanceof AppError ? error.message : "Erro interno";
+  const message = error instanceof AppError ? error.message : "Internal server error";
   return reply.status(statusCode).send({ message });
 });
 

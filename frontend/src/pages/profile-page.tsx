@@ -201,7 +201,7 @@ export const ProfilePage = () => {
           </label>
           <p className="profile-muted">O e-mail não pode ser alterado.</p>
           <button disabled={updating || !hasChanges} type="submit">
-            {updating ? "Salvando..." : "Salvar alterações"}
+            <span className="t-text-swap">{updating ? "Salvando..." : "Salvar alterações"}</span>
           </button>
           <button className="profile-signout" onClick={() => signout()} type="button">
             Sair da conta

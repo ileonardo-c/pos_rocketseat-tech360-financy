@@ -1,126 +1,152 @@
-# pos_rocketseat-tech360-financy
+<h1 align="center">
+  <img src=".github/assets/logo.svg" alt="Financy" width="200"/>
+</h1>
 
-Desafio fullstack de organização financeira com:
+<p align="center">
+  Plataforma full stack de gestão financeira pessoal — controle de receitas, despesas, categorias e dashboard analítico.
+</p>
 
-- Backend: TypeScript + Fastify + GraphQL + Prisma + PostgreSQL
-- Frontend: TypeScript + React + Vite + GraphQL
+<p align="center">
+  <a href="#-tecnologias">Tecnologias</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#-funcionalidades">Funcionalidades</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#-como-executar">Como Executar</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#-testes">Testes</a>&nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="#-licença">Licença</a>
+</p>
 
-## Estrutura
+<p align="center">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
+  <img alt="Node" src="https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white"/>
+  <img alt="pnpm" src="https://img.shields.io/badge/pnpm-10.5+-F69220?style=flat-square&logo=pnpm&logoColor=white"/>
+  <img alt="Docker" src="https://img.shields.io/badge/docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white"/>
+</p>
 
-- `backend/` resolução completa da API
-- `frontend/` resolução completa da SPA
-- `docker-compose.yml` para ambiente local com PostgreSQL + MinIO (S3-compatible)
-- `biome.json` e scripts de qualidade no root
-- `frontend/Dockerfile` e `backend/Dockerfile` para execução FullStack via Docker
+---
 
-## Portas e serviços
+## 🚀 Tecnologias
 
-- `frontend`: `http://localhost:5173`
-- `backend/graphql`: `http://localhost:4000/graphql`
-- `backend/health`: `http://localhost:4000/health/ready`
-- `postgres`: `localhost:5432`
-- `minio-api`: `http://localhost:9000`
-- `minio-console`: `http://localhost:9001`
+Este projeto utiliza as seguintes tecnologias:
 
-## Objetivos obrigatórios
+**Backend**
 
-- Usuário criar conta e login
-- Usuário visualizar e gerenciar somente seus próprios dados
-- CRUD de transações
-- CRUD de categorias
-- Backend e frontend em GraphQL com CORS e `.env.example`
-- Upload opcional local suportado via padrão **AWS S3** em container **MinIO**.
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Fastify](https://img.shields.io/badge/Fastify-000000?style=flat-square&logo=fastify&logoColor=white)
+![GraphQL](https://img.shields.io/badge/GraphQL-E10098?style=flat-square&logo=graphql&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS_S3-FF9900?style=flat-square&logo=amazons3&logoColor=white)
 
-## Variáveis de ambiente
+**Frontend**
 
-Backend (`backend/.env.example`):
+![React](https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+![Apollo](https://img.shields.io/badge/Apollo_Client-311C87?style=flat-square&logo=apollographql&logoColor=white)
 
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-- `CORS_ORIGIN`
-- `S3_ENDPOINT`
-- `S3_REGION`
-- `S3_ACCESS_KEY_ID`
-- `S3_SECRET_ACCESS_KEY`
-- `S3_BUCKET`
-- `S3_FORCE_PATH_STYLE`
+**Qualidade & CI**
 
-Frontend (`frontend/.env.example`):
+![Biome](https://img.shields.io/badge/Biome-60A5FA?style=flat-square&logo=biome&logoColor=white)
+![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat-square&logo=githubactions&logoColor=white)
 
-- `VITE_BACKEND_URL`
+---
 
-### Início rápido
+## ✨ Funcionalidades
 
-1. Copie `.env.example` para `.env`.
-2. Instale dependências:
-   - `pnpm install`
-3. Gere o client do Prisma:
-   - `pnpm prisma:generate`
-4. Suba a stack completa (PostgreSQL + MinIO + backend + frontend):
-   - `pnpm compose:up`
-5. Acesse:
-   - Frontend: `http://localhost:5173`
-   - Backend GraphQL: `http://localhost:4000/graphql`
-   - MinIO Console: `http://localhost:9001`
+- 🔐 Autenticação completa — cadastro, login e logout com sessão JWT
+- 👤 Dados isolados por usuário em todas as operações
+- 🗂️ CRUD completo de categorias
+- 💸 CRUD completo de transações (receitas e despesas)
+- 📊 Dashboard com resumo por período, por categoria e timeline
+- 🧾 Upload de comprovantes via URL assinada (AWS S3 / MinIO)
+- 🧪 Smoke tests, E2E e evidência visual automatizados com Playwright
 
-### Desenvolvimento local sem Docker para apps
+---
 
-- Infra com Docker:
-  - `pnpm compose:up`
-- Apps localmente:
-  - Backend: `pnpm dev:backend`
-  - Frontend: `pnpm dev:frontend`
+## 🏗️ Arquitetura
 
-### Scripts úteis
+```mermaid
+flowchart LR
+    A([React + Apollo]) --> B([Fastify + Mercurius])
+    B --> C([Prisma])
+    C --> D[(PostgreSQL)]
+    B --> E([S3 Storage Service])
+    E --> F[(MinIO / S3)]
+```
 
-- `pnpm check` valida regras do Biome.
-- `pnpm build:backend` gera build do backend.
-- `pnpm build:frontend` gera build do frontend.
-- `pnpm smoke:graphql` executa smoke do contrato GraphQL (auth + CRUD básico).
-- `pnpm smoke:auth` executa cenários negativos e positivos de autenticação/sessão (token ausente, token inválido, usuário inexistente, senha inválida e sessão válida).
-- `pnpm smoke:auth:browser` executa fluxo de autenticação no browser (cadastro, login, logout, sessão persistida e bloqueio com token inválido).
-- `pnpm compose:logs` acompanha logs da stack.
-- `pnpm compose:down` encerra os containers.
+O projeto é um **monorepo** gerenciado com `pnpm workspaces`:
 
-### Validação padrão de entrega
+```
+.
+├── backend/     # API GraphQL, Prisma, domínios (auth, category, transaction, storage)
+├── frontend/    # App React, páginas protegidas, testes E2E
+├── scripts/     # Smoke tests de integração local
+└── .github/     # Workflows de CI, hooks e template de PR
+```
 
-Executar antes de abrir PR:
+---
 
-1. `pnpm check`
-2. `pnpm build:backend`
-3. `pnpm build:frontend`
-4. `pnpm smoke:graphql`
-5. `pnpm smoke:auth`
-6. `pnpm smoke:auth:browser`
+## 🖥️ Como Executar
 
-### Pipelines de CI
+### Pré-requisitos
 
-- `ci`: instala dependências, roda `pnpm check`, gera Prisma Client e valida build de backend/frontend.
-- `docker-smoke`: sobe a stack completa com `docker compose` e valida disponibilidade de:
-  - `http://localhost:4000/health/ready`
-  - `http://localhost:5173`
-  - fluxo GraphQL smoke (`register`, `login`, `me`, `categories`, `transactions`)
+- [Node.js 20+](https://nodejs.org)
+- [pnpm 10.5+](https://pnpm.io) — `corepack enable`
+- [Docker Desktop 24+](https://www.docker.com)
 
-### Endpoints de saúde do backend
+### Passo a passo
 
-- `GET /health`: compatibilidade simples (`status: ok`)
-- `GET /health/live`: liveness do processo
-- `GET /health/ready`: readiness com verificação de banco (retorna `503` se indisponível)
+```bash
+# 1. Instale as dependências
+pnpm install
 
-## Matriz de cobertura por bloco
+# 2. Configure as variáveis de ambiente
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 
-| Bloco | Backend | Frontend | Integração | Evidência |
-| --- | --- | --- | --- | --- |
-| A — Autenticação e sessão | `register`, `login`, `me`, JWT/contexto | login/cadastro/logout e guardas | smoke auth + browser auth | `pnpm smoke:auth`, `pnpm smoke:auth:browser` |
-| B — Categorias | CRUD com ownership por `userId` | listagem/criação/edição/remoção | fluxo GraphQL de domínio | `pnpm smoke:graphql` |
-| C — Transações | CRUD com vínculo de categoria e ownership | listagem/criação/edição/remoção | fluxo GraphQL de domínio | `pnpm smoke:graphql` |
-| D — Dashboard e consolidação | resumo e consultas consolidadas | dashboard e navegação protegida | persistência de sessão e navegação | `pnpm smoke:auth:browser` |
-| E — Infra e storage | S3-compatible upload URL + health/readiness | consumo da API e sessão | compose + smoke E2E | `pnpm compose:up`, `pnpm smoke:*` |
+# 3. Suba o stack com Docker
+pnpm compose:up
 
-## Governança
+# 4. Sincronize o banco (apenas na primeira execução)
+docker compose exec -T backend pnpm --filter @financy/backend exec prisma db push
+```
 
-- Licença: MIT
-- PR template e checklist em `.github/pull_request_template.md`
-- CODEOWNERS em `.github/CODEOWNERS`
-- Convenções de branches em `CONTRIBUTING.md`
+Após subir, os serviços estarão disponíveis em:
+
+| Serviço | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend / GraphQL | http://localhost:4000/graphql |
+| MinIO Console | http://localhost:9001 |
+
+> Para encerrar: `pnpm compose:down`
+
+---
+
+## 🧪 Testes
+
+```bash
+# Smoke completo da API GraphQL (register, login, CRUD, upload)
+pnpm smoke:graphql
+
+# Regressão de autenticação (cenários positivos e negativos)
+pnpm smoke:auth
+
+# Suíte E2E completa com Playwright
+pnpm test:e2e
+
+# Apenas smoke E2E
+pnpm test:e2e:smoke
+
+# Evidência visual automatizada
+pnpm test:e2e:visual
+```
+
+Os relatórios ficam em `frontend/playwright-report` após a execução.
+
+---
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.

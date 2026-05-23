@@ -1,5 +1,6 @@
 import type { GraphQLContext } from "../../context";
 import { AppError } from "../../lib/errors";
+import { getStorageConfig } from "../../lib/storage-env";
 import type { TransactionRepository } from "./transaction-repository";
 
 type TransactionType = "INCOME" | "EXPENSE";
@@ -400,15 +401,13 @@ export class TransactionService {
   }
 
   private buildPublicReceiptUrl(receiptKey: string) {
-    const endpoint = process.env.S3_ENDPOINT?.trim() ?? "";
-    const bucket = process.env.S3_BUCKET?.trim() ?? "";
+    const { endpoint = "", bucket = "" } = getStorageConfig();
 
     return `${endpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
   }
 
   private hasStorageConfiguration() {
-    const endpoint = process.env.S3_ENDPOINT?.trim();
-    const bucket = process.env.S3_BUCKET?.trim();
+    const { endpoint, bucket } = getStorageConfig();
     return Boolean(endpoint && bucket);
   }
 

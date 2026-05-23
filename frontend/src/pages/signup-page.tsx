@@ -287,7 +287,7 @@ export const SignupPage = () => {
               }
               type="submit"
             >
-              {loading ? "Cadastrando..." : "Cadastrar"}
+              <span className="t-text-swap">{loading ? "Cadastrando..." : "Cadastrar"}</span>
             </Button>
           </form>
 

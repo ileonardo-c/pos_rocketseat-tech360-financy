@@ -12,8 +12,6 @@ frontend/dist/
 .agents/
 backend/.agents/
 frontend/.agents/
-backend/skills-lock.json
-frontend/skills-lock.json
 
 # OS/editor noise
 .DS_Store

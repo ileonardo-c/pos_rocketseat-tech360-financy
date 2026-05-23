@@ -243,7 +243,7 @@ export const SigninPage = () => {
               disabled={loading || Boolean(emailError) || Boolean(passwordError)}
               type="submit"
             >
-              {loading ? "Entrando..." : "Entrar"}
+              <span className="t-text-swap">{loading ? "Entrando..." : "Entrar"}</span>
             </Button>
           </form>
 

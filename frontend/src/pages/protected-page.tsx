@@ -516,7 +516,7 @@ export const ProtectedPage = () => {
               }
             }}
           >
-            {isRefreshing ? "Atualizando..." : "Atualizar"}
+            <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
           </button>
           <button onClick={signout} type="button">
             Sair
@@ -801,6 +801,10 @@ export const ProtectedPage = () => {
         <div className="modal-overlay" role="presentation">
           <dialog
             className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
+            onCancel={(event) => {
+              event.preventDefault();
+              closeCreateDialog();
+            }}
             open
           >
             <h2>Nova transação</h2>
@@ -903,7 +907,9 @@ export const ProtectedPage = () => {
               </label>
               <div className="modal-actions">
                 <button disabled={isCreateDisabled} type="submit">
-                  {creatingTransaction ? "Criando..." : "Criar transação"}
+                  <span className="t-text-swap">
+                    {creatingTransaction ? "Criando..." : "Criar transação"}
+                  </span>
                 </button>
                 <button type="button" onClick={closeCreateDialog}>
                   Cancelar
