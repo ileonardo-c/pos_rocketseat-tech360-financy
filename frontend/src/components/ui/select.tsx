@@ -1,5 +1,6 @@
 import {
   type ChangeEvent,
+  Children,
   type KeyboardEvent,
   type ReactNode,
   isValidElement,
@@ -72,7 +73,7 @@ export const Select = ({
   const triggerId = useId();
 
   const options = useMemo<SelectOption[]>(() => {
-    return Array.from(children as Iterable<ReactNode>)
+    return Children.toArray(children)
       .filter(
         (child): child is React.ReactElement<HTMLOptionElement> =>
           isValidElement(child) && child.type === "option",

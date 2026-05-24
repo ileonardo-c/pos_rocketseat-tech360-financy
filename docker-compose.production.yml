@@ -67,6 +67,9 @@ services:
       S3_FORCE_PATH_STYLE: "true"
     ports:
       - "4000:4000"
+    command: >
+      /bin/sh -c "pnpm --filter @financy/backend build &&
+      pnpm --filter @financy/backend start"
     healthcheck:
       test:
         [
@@ -92,6 +95,9 @@ services:
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
     ports:
       - "5173:5173"
+    command: >
+      /bin/sh -c "pnpm --filter @financy/frontend build &&
+      pnpm --filter @financy/frontend preview --host 0.0.0.0 --port 5173"
 
 volumes:
   postgres_data:
