@@ -65,6 +65,13 @@ const pickAuthErrorCode = (error: unknown): string => {
     return "";
   }
 
+  const topLevelExtensionCode = toLowerCaseString(
+    (error as { extensions?: { code?: unknown } }).extensions?.code,
+  );
+  if (topLevelExtensionCode) {
+    return topLevelExtensionCode.toUpperCase();
+  }
+
   const directCode = toLowerCaseString((error as { code?: unknown }).code);
   if (directCode) {
     return directCode.toUpperCase();

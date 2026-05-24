@@ -34,12 +34,13 @@ export class AuthService {
     if (normalizedPassword.length < 6) {
       throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
-    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
 
     const existingUser = await this.repository.findByEmail(normalizedEmail);
     if (existingUser) {
       throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
     }
+
+    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
 
     let user: Awaited<ReturnType<AuthRepository["createUser"]>>;
     try {
