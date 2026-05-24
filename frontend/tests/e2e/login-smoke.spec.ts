@@ -85,5 +85,7 @@ test("@smoke-login fluxo de login funcional com usuário transitório", async ({
   });
 
   await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
-  await waitForLoginScreen(page);
+  await expect(page.getByRole("heading", { name: "Categorias" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
