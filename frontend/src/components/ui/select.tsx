@@ -396,14 +396,26 @@ export const Select = ({
         </ul>
       ) : null}
 
-      <input
-        type="hidden"
+      <select
+        aria-hidden="true"
+        className="pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
         name={name}
         value={selectedValue}
-        readOnly
         disabled={disabled}
         required={required}
-      />
+        onChange={() => undefined}
+        tabIndex={-1}
+      >
+        {options.map((option) => (
+          <option
+            key={`${option.value}-${option.label}`}
+            disabled={option.disabled}
+            value={option.value}
+          >
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 };

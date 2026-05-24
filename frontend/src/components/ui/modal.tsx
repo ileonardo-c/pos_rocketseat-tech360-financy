@@ -27,6 +27,11 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
   // Sync isOpen prop → animated state machine (t-modal pattern from transitions-dev)
   useEffect(() => {
     if (isOpen) {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       setModalState("open");
 
       const dialog = dialogRef.current;
