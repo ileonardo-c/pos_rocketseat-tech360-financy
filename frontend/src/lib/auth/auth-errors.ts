@@ -8,12 +8,19 @@ export type AuthErrorRule = {
 
 export const AUTH_ERROR_RULES: AuthErrorRule[] = [
   {
-    codes: ["AUTH_UNAUTHENTICATED", "UNAUTHENTICATED", "AUTH_TOKEN_EXPIRED"],
+    codes: [
+      "AUTH_UNAUTHENTICATED",
+      "UNAUTHENTICATED",
+      "AUTH_TOKEN_EXPIRED",
+      "AUTH_USER_NOT_FOUND",
+      "AUTH_NOT_FOUND",
+    ],
     messages: [
       "unauthenticated",
       "not authenticated",
       "session expired",
       "expired token",
+      "user not found",
       "não autenticado",
     ],
     toUserMessage: sessionExpiredMessage,
@@ -34,7 +41,7 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
     toUserMessage: "E-mail ou senha inválidos.",
   },
   {
-    codes: ["AUTH_EMAIL_ALREADY_REGISTERED", "AUTH_USER_NOT_FOUND", "AUTH_NOT_FOUND"],
+    codes: ["AUTH_EMAIL_ALREADY_REGISTERED"],
     messages: ["already exists", "already registered", "conflict", "duplicate", "já cadastrado"],
     toUserMessage: "Este e-mail já está em uso.",
   },
@@ -133,7 +140,16 @@ export const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
 
 export const isAuthenticationGraphQLError = (error: unknown) => {
   const code = pickAuthErrorCode(error);
-  if (code && AUTH_ERROR_RULES.some((rule) => rule.codes.includes(code))) {
+  if (
+    code &&
+    [
+      "AUTH_UNAUTHENTICATED",
+      "UNAUTHENTICATED",
+      "AUTH_TOKEN_EXPIRED",
+      "AUTH_USER_NOT_FOUND",
+      "AUTH_NOT_FOUND",
+    ].includes(code)
+  ) {
     return true;
   }
 
@@ -141,6 +157,8 @@ export const isAuthenticationGraphQLError = (error: unknown) => {
   return (
     message.includes("unauthenticated") ||
     message.includes("not authenticated") ||
+    message.includes("session expired") ||
+    message.includes("user not found") ||
     message.includes("não autenticado")
   );
 };
