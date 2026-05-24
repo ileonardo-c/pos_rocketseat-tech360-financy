@@ -16,12 +16,69 @@ app.register(cors, {
   origin: process.env.CORS_ORIGIN || "http://localhost:5173",
 });
 
+const getErrorCode = (error: unknown) => {
+  if (error instanceof AppError) {
+    return error.code;
+  }
+
+  const errorLike = error as { code?: unknown };
+  return typeof errorLike?.code === "string" ? errorLike.code : "INTERNAL_ERROR";
+};
+
+const getErrorStatusCode = (error: unknown) => {
+  const errorLike = error as { statusCode?: unknown };
+  if (error instanceof AppError) {
+    return error.statusCode;
+  }
+  if (typeof errorLike?.statusCode === "number") {
+    return errorLike.statusCode;
+  }
+  return 500;
+};
+
 app.register(mercurius, {
   schema: typeDefs,
   resolvers,
-  context: async (req) => ({ ...(await buildContext(req)), prisma }),
+  context: async (req) => await buildContext(req),
   path: "/graphql",
   graphiql: true,
+  errorFormatter: (
+    execution: { errors?: unknown[]; statusCode?: number; [key: string]: unknown },
+    _context,
+  ) => {
+    const graphQLErrors = (execution.errors ?? []).map((rawGraphQLError: unknown) => {
+      const graphQLError = rawGraphQLError as {
+        extensions?: {
+          statusCode?: number;
+          code?: string;
+        };
+        originalError?: {
+          statusCode?: number;
+          code?: string;
+        };
+      };
+
+      const extensionLike = graphQLError.extensions ?? {};
+      const extensionSource = graphQLError.originalError ?? {};
+
+      return {
+        ...graphQLError,
+        extensions: {
+          ...extensionLike,
+          statusCode: extensionLike.statusCode ?? getErrorStatusCode(extensionSource),
+          code: extensionLike.code ?? getErrorCode(extensionSource),
+        },
+      };
+    });
+
+    return {
+      statusCode: 200,
+      response: {
+        ...execution,
+        errors: graphQLErrors,
+      },
+    };
+  },
 });
 
 const startedAt = new Date().toISOString();
@@ -50,17 +107,6 @@ app.get("/health/ready", async (_, reply) => {
       startedAt,
     });
   }
-});
-
-app.setErrorHandler((error, request, reply) => {
-  app.log.error(error);
-  const fallbackStatusCode =
-    typeof (error as { statusCode?: unknown }).statusCode === "number"
-      ? (error as { statusCode: number }).statusCode
-      : 500;
-  const statusCode = error instanceof AppError ? error.statusCode : fallbackStatusCode;
-  const message = error instanceof AppError ? error.message : "Internal server error";
-  return reply.status(statusCode).send({ message });
 });
 
 app.addHook("onClose", async () => {

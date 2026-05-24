@@ -55,6 +55,28 @@ const ensureHasErrorMessage = (errors, expected) => {
   ensure(raw.includes(expected), `Expected error message to include "${expected}", got: ${raw}`);
 };
 
+const getFirstErrorExtensionCode = (errors) => {
+  const first = errors?.[0];
+  if (!first || typeof first !== "object") {
+    return "";
+  }
+
+  return `${first?.extensions?.code ?? ""}`.toLowerCase();
+};
+
+const ensureHasErrorCode = (errors, expected) => {
+  const code = getFirstErrorExtensionCode(errors);
+  ensure(code === expected.toLowerCase(), `Expected error code "${expected}", got "${code}"`);
+};
+
+const ensureHasErrorStatus = (errors, expectedStatus) => {
+  const rawStatus = `${errors?.[0]?.extensions?.statusCode ?? ""}`.toLowerCase() ?? "";
+  ensure(
+    String(rawStatus) === String(expectedStatus),
+    `Expected error statusCode "${expectedStatus}", got "${rawStatus}"`,
+  );
+};
+
 const ensureStatus = (status, allowed, context) => {
   const normalized = Array.isArray(allowed) ? allowed : [allowed];
   ensure(
@@ -129,6 +151,16 @@ const run = async () => {
   ensureStatus(duplicateEmailResult.httpStatus, [200, 409], "Duplicate register request");
   ensure(duplicateEmailResult.errors.length > 0, "Duplicate register must return error");
   ensureHasErrorMessage(duplicateEmailResult.errors, "already");
+  ensureHasErrorCode(duplicateEmailResult.errors, "AUTH_EMAIL_ALREADY_REGISTERED");
+
+  const invalidRegister = await request(registerMutation, undefined, {
+    input: { name: "a", email: "invalid-email", password: "123" },
+  });
+  ensureStatus(invalidRegister.httpStatus, [200, 422], "Register with invalid input");
+  ensure(invalidRegister.errors.length > 0, "Register with invalid input must return error");
+  ensureHasErrorMessage(invalidRegister.errors, "invalid");
+  ensureHasErrorCode(invalidRegister.errors, "AUTH_INVALID_NAME");
+  ensureHasErrorStatus(invalidRegister.errors, 422);
 
   const missingUser = await request(loginMutation, undefined, {
     input: { email: `notfound-${user.email}`, password: user.password },
@@ -143,6 +175,16 @@ const run = async () => {
   ensureStatus(wrongPassword.httpStatus, [200, 401], "Login with wrong password");
   ensure(wrongPassword.errors.length > 0, "Login with wrong password must return error");
   ensureHasErrorMessage(wrongPassword.errors, "invalid credentials");
+  ensureHasErrorStatus(wrongPassword.errors, 401);
+
+  const emptyPassword = await request(loginMutation, undefined, {
+    input: { email: user.email, password: "" },
+  });
+  ensureStatus(emptyPassword.httpStatus, [200, 422], "Login with empty password");
+  ensure(emptyPassword.errors.length > 0, "Login with empty password must return error");
+  ensureHasErrorMessage(emptyPassword.errors, "invalid password");
+  ensureHasErrorCode(emptyPassword.errors, "AUTH_INVALID_PASSWORD");
+  ensureHasErrorStatus(emptyPassword.errors, 422);
 
   const loginData = await request(loginMutation, undefined, {
     input: { email: user.email, password: user.password },

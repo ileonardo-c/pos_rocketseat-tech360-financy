@@ -15,38 +15,38 @@ export class AuthService {
   async register(name: string, email: string, password: string) {
     const normalizedName = name.trim();
     if (!normalizedName) {
-      throw new AppError("Invalid name", 400);
+      throw new AppError("Invalid name", 422, "AUTH_INVALID_NAME");
     }
     if (normalizedName.length < 2) {
-      throw new AppError("Invalid name", 400);
+      throw new AppError("Invalid name", 422, "AUTH_INVALID_NAME");
     }
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      throw new AppError("Invalid email", 400);
+      throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
     }
     const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
     if (!isValidEmail) {
-      throw new AppError("Invalid email", 400);
+      throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
     }
 
     const normalizedPassword = password.trim();
     if (normalizedPassword.length < 6) {
-      throw new AppError("Invalid password", 400);
+      throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
+    const hashedPassword = await bcrypt.hash(normalizedPassword, 10);
 
     const existingUser = await this.repository.findByEmail(normalizedEmail);
     if (existingUser) {
-      throw new AppError("Email already registered", 409);
+      throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
     }
 
-    const hashed = await bcrypt.hash(normalizedPassword, 10);
     let user: Awaited<ReturnType<AuthRepository["createUser"]>>;
     try {
-      user = await this.repository.createUser(normalizedName, normalizedEmail, hashed);
+      user = await this.repository.createUser(normalizedName, normalizedEmail, hashedPassword);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Email already registered", 409);
+        throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
       }
       throw error;
     }
@@ -61,16 +61,19 @@ export class AuthService {
   async login(email: string, password: string) {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
-      throw new AppError("Invalid email", 400);
+      throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
     }
     if (!password.length) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
     const normalizedPassword = password.trim();
+    if (!normalizedPassword.length) {
+      throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
+    }
 
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError("Invalid credentials", 401, "AUTH_INVALID_CREDENTIALS");
     }
 
     const validWithLegacyPassword = await bcrypt.compare(password, user.password);
@@ -80,7 +83,7 @@ export class AuthService {
         : validWithLegacyPassword;
     const valid = validWithLegacyPassword || validWithNormalizedPassword;
     if (!valid) {
-      throw new AppError("Invalid credentials", 401);
+      throw new AppError("Invalid credentials", 401, "AUTH_INVALID_CREDENTIALS");
     }
 
     const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
@@ -93,12 +96,12 @@ export class AuthService {
 
   async me(ctx: GraphQLContext) {
     if (!ctx.userId) {
-      throw new AppError("Unauthenticated", 401);
+      throw new AppError("Unauthenticated", 401, "AUTH_UNAUTHENTICATED");
     }
 
     const user = await this.repository.findById(ctx.userId);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
     }
 
     return { id: user.id, name: user.name, email: user.email };
@@ -106,7 +109,7 @@ export class AuthService {
 
   async updateProfile(ctx: GraphQLContext, input: { name?: string | null; email?: string | null }) {
     if (!ctx.userId) {
-      throw new AppError("Unauthenticated", 401);
+      throw new AppError("Unauthenticated", 401, "AUTH_UNAUTHENTICATED");
     }
 
     const data: { name?: string; email?: string } = {};
@@ -114,7 +117,7 @@ export class AuthService {
     if (typeof input.name === "string") {
       const normalizedName = input.name.trim();
       if (!normalizedName || normalizedName.length < 2) {
-        throw new AppError("Invalid name", 400);
+        throw new AppError("Invalid name", 422, "AUTH_INVALID_NAME");
       }
       data.name = normalizedName;
     }
@@ -122,22 +125,22 @@ export class AuthService {
     if (typeof input.email === "string") {
       const normalizedEmail = input.email.trim().toLowerCase();
       if (!normalizedEmail) {
-        throw new AppError("Invalid email", 400);
+        throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
       }
       const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
       if (!isValidEmail) {
-        throw new AppError("Invalid email", 400);
+        throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
       }
 
       const existingUser = await this.repository.findByEmail(normalizedEmail);
       if (existingUser && existingUser.id !== ctx.userId) {
-        throw new AppError("Email already registered", 409);
+        throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
       }
       data.email = normalizedEmail;
     }
 
     if (!data.name && !data.email) {
-      throw new AppError("No profile updates provided", 400);
+      throw new AppError("No profile updates provided", 422, "AUTH_INVALID_PROFILE_UPDATE");
     }
 
     let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;
@@ -145,10 +148,10 @@ export class AuthService {
       updated = await this.repository.updateUser(ctx.userId, data);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Email already registered", 409);
+        throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
       }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-        throw new AppError("User not found", 404);
+        throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
       }
       throw error;
     }

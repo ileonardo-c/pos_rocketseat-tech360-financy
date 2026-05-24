@@ -10,6 +10,7 @@ export const SigninPage = () => {
   const { user, signin, loading, authError, clearAuthError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [shakeEmail, setShakeEmail] = useState(false);
   const [shakePassword, setShakePassword] = useState(false);
@@ -121,7 +122,7 @@ export const SigninPage = () => {
                 return;
               }
 
-              await signin({ email: email.trim(), password });
+              await signin({ email: email.trim(), password, rememberMe });
             }}
           >
             <label
@@ -249,6 +250,8 @@ export const SigninPage = () => {
                 <input
                   className="h-[18px] w-[18px] rounded-[4px] border-[#b8c0cc] text-[#24784A] focus:ring-[#24784A]/20"
                   data-testid="signin-remember"
+                  checked={rememberMe}
+                  onChange={(event) => setRememberMe(event.target.checked)}
                   type="checkbox"
                 />
                 <span>Lembrar-me</span>

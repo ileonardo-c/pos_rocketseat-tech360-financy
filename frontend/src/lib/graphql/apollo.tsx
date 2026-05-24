@@ -17,8 +17,16 @@ const httpLink = createHttpLink({
   uri: `${import.meta.env.VITE_BACKEND_URL || "http://localhost:4000"}/graphql`,
 });
 
+const AUTH_TOKEN_STORAGE_KEY = "financy.token";
+
+const getStoredToken = () => {
+  return (
+    localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+  );
+};
+
 const authLink = setContext((_, { headers }) => {
-  const token = localStorage.getItem("financy.token");
+  const token = getStoredToken();
   if (!token) {
     return { headers };
   }
@@ -38,7 +46,7 @@ const emitSessionExpired = () => {
 };
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
-  if (graphQLErrors?.some((error) => isAuthenticationGraphQLError(error.message))) {
+  if (graphQLErrors?.some((error) => isAuthenticationGraphQLError(error))) {
     emitSessionExpired();
     return;
   }
