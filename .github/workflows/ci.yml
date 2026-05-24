@@ -75,7 +75,7 @@ jobs:
           export PORT=4100
           export JWT_SECRET="$(openssl rand -hex 32)"
           export DATABASE_URL=postgresql://localhost:5432/financy
-          pnpm --filter backend start &
+          pnpm --filter @financy/backend start &
           SERVER_PID=$!
           cleanup() {
             kill "$SERVER_PID" >/dev/null 2>&1 || true
