@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { buildExpiredToken, buildTransientE2EUser } from "./support/e2e-users";
 
-test.describe.skip("Temporarily disabled: only style-guide E2E is active", () => {
+test.describe("@smoke fluxo ponta a ponta de auth, categorias, transações e perfil", () => {
   const toDateInput = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -62,23 +62,42 @@ test.describe.skip("Temporarily disabled: only style-guide E2E is active", () =>
 
     await page.getByRole("button", { name: "Sair da conta" }).click();
     await Promise.race([
-      page.getByRole("heading", { name: "Criar conta" }).waitFor(),
-      page.getByRole("heading", { name: "Login" }).waitFor(),
+      page
+        .locator("h1")
+        .filter({ hasText: /^(Fazer login|Login|Criar conta)$/ })
+        .first()
+        .waitFor(),
+      page
+        .getByRole("button", { name: "Entrar" })
+        .waitFor()
+        .catch(() => {}),
     ]);
 
     await page.goto(`${appUrl}/profile`, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "Login" }).waitFor();
+    await page
+      .locator("h1")
+      .filter({ hasText: /^(Fazer login|Login|Criar conta)$/ })
+      .first()
+      .waitFor();
 
     await page.evaluate(() => {
       localStorage.setItem("financy.token", "invalid.token.here");
     });
     await page.goto(`${appUrl}/categories`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
+    await page
+      .locator("h1")
+      .filter({ hasText: /^(Fazer login|Login|Criar conta)$/ })
+      .first()
+      .waitFor({ timeout: 15_000 });
 
     await page.evaluate((token) => {
       localStorage.setItem("financy.token", token);
     }, expiredToken);
     await page.goto(`${appUrl}/transactions`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Login" }).waitFor({ timeout: 15_000 });
+    await page
+      .locator("h1")
+      .filter({ hasText: /^(Fazer login|Login|Criar conta)$/ })
+      .first()
+      .waitFor({ timeout: 15_000 });
   });
 });

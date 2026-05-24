@@ -1,13 +1,9 @@
-import { useApolloClient, useLazyQuery, useMutation } from "@apollo/client";
-import type { ReactNode } from "react";
+import { type ApolloError, useApolloClient, useLazyQuery, useMutation } from "@apollo/client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
-import {
-  AUTH_FALLBACK_MESSAGES,
-  resolveAuthErrorMessage,
-  sessionExpiredMessage,
-} from "@/lib/auth/auth-errors";
+import { AUTH_FALLBACK_MESSAGES, resolveAuthErrorMessage } from "@/lib/auth/auth-errors";
 import { LOGIN_MUTATION, ME_QUERY, REGISTER_MUTATION } from "@/lib/graphql/operations";
 
 type User = {
@@ -22,13 +18,42 @@ type AuthContextData = {
   authError: string | null;
   clearAuthError: () => void;
   updateSessionUser: (user: User | null) => void;
+  signin: (input: { email: string; password: string; rememberMe?: boolean }) => Promise<void>;
   signup: (input: { name: string; email: string; password: string }) => Promise<void>;
-  signin: (input: { email: string; password: string }) => Promise<void>;
   signout: () => void;
 };
 
 const AuthContext = createContext<AuthContextData | null>(null);
 const sessionExpiredEventName = "financy:session-expired";
+const AUTH_TOKEN_STORAGE_KEY = "financy.token";
+
+const readStoredToken = () =>
+  localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+
+const writeAuthToken = (token: string, keepSignedIn = false) => {
+  if (keepSignedIn) {
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    return;
+  }
+
+  sessionStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+};
+
+const clearAuthToken = () => {
+  localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+  sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+};
+
+const isApolloError = (error: unknown): error is ApolloError => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "graphQLErrors" in error &&
+    "networkError" in error
+  );
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const client = useApolloClient();
@@ -53,14 +78,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         AUTH_FALLBACK_MESSAGES.defaultSession,
       );
       setAuthError((current) =>
-        current === sessionExpiredMessage ? sessionExpiredMessage : hydrationMessage,
+        current === AUTH_FALLBACK_MESSAGES.defaultSession
+          ? AUTH_FALLBACK_MESSAGES.defaultSession
+          : hydrationMessage,
       );
       setLoading(false);
     },
   });
 
   const hydrate = useCallback(() => {
-    const token = localStorage.getItem("financy.token");
+    const token = readStoredToken();
     if (!token) {
       setUser(null);
       setAuthError(null);
@@ -74,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const clearAuthState = useCallback(
     async (message?: string | null) => {
-      localStorage.removeItem("financy.token");
+      clearAuthToken();
       setUser(null);
       setAuthError(message ?? null);
       setLoading(false);
@@ -88,8 +115,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const persistAuth = useCallback(
-    async (token: string) => {
-      localStorage.setItem("financy.token", token);
+    async (token: string, keepSignedIn = false) => {
+      writeAuthToken(token, keepSignedIn);
       try {
         await client.resetStore();
       } catch (error) {
@@ -108,17 +135,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(nextUser);
   }, []);
 
+  const normalizeAuthError = (error: unknown, fallback: string) => {
+    if (isApolloError(error)) {
+      return resolveAuthErrorMessage(error, fallback);
+    }
+    return resolveAuthErrorMessage(error, fallback);
+  };
+
   const signin = useCallback(
-    async (input: { email: string; password: string }) => {
+    async ({
+      email,
+      password,
+      rememberMe,
+    }: {
+      email: string;
+      password: string;
+      rememberMe?: boolean;
+    }) => {
       setLoading(true);
       setAuthError(null);
       try {
-        const response = await signinMutation({ variables: { input } });
-        await persistAuth(response.data.login.token);
+        const response = await signinMutation({ variables: { input: { email, password } } });
+        await persistAuth(response.data.login.token, rememberMe);
         setUser(response.data.login.user);
         navigate("/");
       } catch (error) {
-        setAuthError(resolveAuthErrorMessage(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
+        setAuthError(normalizeAuthError(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
       } finally {
         setLoading(false);
       }
@@ -127,16 +169,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signup = useCallback(
-    async (input: { name: string; email: string; password: string }) => {
+    async ({ name, email, password }: { name: string; email: string; password: string }) => {
       setLoading(true);
       setAuthError(null);
       try {
-        const response = await signupMutation({ variables: { input } });
-        await persistAuth(response.data.register.token);
+        const response = await signupMutation({ variables: { input: { name, email, password } } });
+        await persistAuth(response.data.register.token, true);
         setUser(response.data.register.user);
         navigate("/");
       } catch (error) {
-        setAuthError(resolveAuthErrorMessage(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
+        setAuthError(normalizeAuthError(error, AUTH_FALLBACK_MESSAGES.defaultAuth));
       } finally {
         setLoading(false);
       }
@@ -146,12 +188,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signout = useCallback(() => {
     void clearAuthState().then(() => {
-      navigate("/signup", { replace: true });
+      navigate("/", { replace: true });
     });
   }, [clearAuthState, navigate]);
 
   const handleSessionExpired = useCallback(async () => {
-    await clearAuthState(sessionExpiredMessage);
+    await clearAuthState(AUTH_FALLBACK_MESSAGES.defaultSession);
     navigate("/", { replace: true });
   }, [clearAuthState, navigate]);
 
