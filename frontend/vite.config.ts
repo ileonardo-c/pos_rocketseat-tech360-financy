@@ -10,4 +10,10 @@ export default defineConfig({
       "@": path.resolve(process.cwd(), "src"),
     },
   },
+  server: {
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
+  },
 });

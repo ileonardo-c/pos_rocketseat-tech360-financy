@@ -1,6 +1,6 @@
-import type { GraphQLContext } from "../../context";
-import { CategoryRepository } from "../../features/category/category-repository";
-import { CategoryService } from "../../features/category/category-service";
+import type { GraphQLContext } from "@/context";
+import { CategoryRepository } from "@/features/category/category-repository";
+import { CategoryService } from "@/features/category/category-service";
 
 const service = (ctx: GraphQLContext) => new CategoryService(new CategoryRepository(ctx.prisma));
 

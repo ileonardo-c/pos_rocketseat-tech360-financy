@@ -1,0 +1,14 @@
+node_modules
+backend/node_modules
+backend/.pnpm-store
+frontend/node_modules
+frontend/.pnpm-store
+.git
+.github
+.vscode
+.idea
+dist
+build
+coverage
+playwright-report
+test-results

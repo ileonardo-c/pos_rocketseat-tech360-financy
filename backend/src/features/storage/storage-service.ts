@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { AppError } from "../../lib/errors";
-import { getStorageConfig } from "../../lib/storage-env";
+import { AppError } from "@/lib/errors";
+import { getStorageConfig } from "@/lib/storage-env";
 
 type UploadInput = {
   fileName: string;

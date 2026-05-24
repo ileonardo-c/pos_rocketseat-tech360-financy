@@ -1,10 +1,10 @@
+import type { GraphQLContext } from "@/context";
+import { getRequiredEnv } from "@/lib/env";
+import { AppError } from "@/lib/errors";
 import { Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
-import type { GraphQLContext } from "../../context";
-import { getRequiredEnv } from "../../lib/env";
-import { AppError } from "../../lib/errors";
 import type { AuthRepository } from "./auth-repository";
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";

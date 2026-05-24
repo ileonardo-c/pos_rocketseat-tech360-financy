@@ -15,5 +15,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
     headless: true,
+    launchOptions: {
+      args: ["--no-sandbox", "--disable-dev-shm-usage"],
+    },
   },
 });

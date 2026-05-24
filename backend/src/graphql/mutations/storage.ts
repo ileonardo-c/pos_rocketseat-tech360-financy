@@ -1,9 +1,9 @@
 import { S3Client } from "@aws-sdk/client-s3";
 
-import type { GraphQLContext } from "../../context";
-import { StorageService } from "../../features/storage/storage-service";
-import { AppError } from "../../lib/errors";
-import { getStorageConfig } from "../../lib/storage-env";
+import type { GraphQLContext } from "@/context";
+import { StorageService } from "@/features/storage/storage-service";
+import { AppError } from "@/lib/errors";
+import { getStorageConfig } from "@/lib/storage-env";
 
 const createS3Client = () => {
   const { region, accessKeyId, secretAccessKey, endpoint, forcePathStyle } = getStorageConfig();

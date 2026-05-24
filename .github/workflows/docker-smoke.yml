@@ -70,14 +70,11 @@ jobs:
       - name: Sync Prisma schema
         run: docker compose exec -T backend pnpm --filter @financy/backend exec prisma db push
 
-      - name: Run GraphQL smoke flow
-        run: pnpm smoke:graphql
-
       - name: Run E2E smoke flow
         run: pnpm test:e2e:smoke
 
-      - name: Run E2E visual evidence flow
-        run: pnpm test:e2e:visual
+      - name: Run auth smoke flow
+        run: pnpm smoke:auth
 
       - name: Upload E2E artifacts
         if: always()

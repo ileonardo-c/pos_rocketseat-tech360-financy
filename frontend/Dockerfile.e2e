@@ -1,0 +1,20 @@
+# E2E runner image — based on the official Playwright image.
+# Includes Chromium + all system dependencies out of the box.
+# Used by the `e2e` service in docker-compose.development.yml.
+FROM mcr.microsoft.com/playwright:v1.60.0-noble
+
+WORKDIR /app
+
+RUN corepack enable
+RUN corepack prepare pnpm@10.5.0 --activate
+
+# Install all workspace dependencies (including @playwright/test)
+COPY package.json pnpm-workspace.yaml .npmrc* ./
+COPY frontend/package.json ./frontend/package.json
+RUN pnpm install --filter @financy/frontend
+
+# Copy source so tests and playwright.config.ts are available
+COPY frontend ./frontend
+
+# Default command: run the style-guide E2E suite
+CMD ["pnpm", "--filter", "@financy/frontend", "test:e2e"]

@@ -47,13 +47,13 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md' '*.yml' '*.yaml')
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md')
           if [ -z "$CHANGED_FILES" ]; then
             echo "No Biome-eligible files changed."
             exit 0
           fi
 
-          BIOME_FILES=$(echo "$CHANGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json|pnpm-workspace\.yaml)' || true)
+          BIOME_FILES=$(echo "$CHANGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json)' || true)
           if [ -z "$BIOME_FILES" ]; then
             echo "No changed files are in the Biome validation scope."
             exit 0
@@ -61,7 +61,7 @@ jobs:
 
           echo "Files validated by Biome:"
           echo "$BIOME_FILES"
-          pnpm exec biome check $BIOME_FILES
+          pnpm exec biome check --no-errors-on-unmatched $BIOME_FILES
 
       - name: Generate Prisma client
         run: pnpm --filter @financy/backend prisma:generate
@@ -75,7 +75,7 @@ jobs:
           export PORT=4100
           export JWT_SECRET="$(openssl rand -hex 32)"
           export DATABASE_URL=postgresql://localhost:5432/financy
-          pnpm --filter backend start &
+          pnpm --filter @financy/backend start &
           SERVER_PID=$!
           cleanup() {
             kill "$SERVER_PID" >/dev/null 2>&1 || true
