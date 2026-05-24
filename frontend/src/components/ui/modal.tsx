@@ -33,11 +33,6 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
       }
 
       setModalState("open");
-
-      const dialog = dialogRef.current;
-      if (dialog && !dialog.open) {
-        dialog.showModal();
-      }
     } else if (modalState === "open") {
       // Start closing animation
       setModalState("closing");
@@ -58,6 +53,18 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Ensure dialog is opened via dialog API once it is mounted in the open state.
+  useEffect(() => {
+    if (modalState !== "open") {
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }, [modalState]);
 
   // Cancel any pending close timer on unmount
   useEffect(() => {
