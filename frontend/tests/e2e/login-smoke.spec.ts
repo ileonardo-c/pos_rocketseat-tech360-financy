@@ -1,11 +1,12 @@
-import { expect, type Page, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
 import { buildTransientE2EUser } from "./support/e2e-users";
 
 const APP_URL = process.env.E2E_APP_URL ?? "http://localhost:5173";
 const APP_BASE_URL = new URL(APP_URL);
 const API_BASE_HOST = process.env.E2E_API_HOST ?? APP_BASE_URL.hostname;
-const API_URL = process.env.E2E_API_URL ?? `${APP_BASE_URL.protocol}//${API_BASE_HOST}:4000/graphql`;
+const API_URL =
+  process.env.E2E_API_URL ?? `${APP_BASE_URL.protocol}//${API_BASE_HOST}:4000/graphql`;
 
 const waitForLoginScreen = async (page: Page) => {
   await expect(page.getByRole("heading", { name: "Fazer login" })).toBeVisible({
@@ -20,7 +21,10 @@ const waitForAuthenticatedDashboard = async (page: Page) => {
   });
 };
 
-const createTransientUser = async (page: Page, user: { name: string; email: string; password: string }) => {
+const createTransientUser = async (
+  page: Page,
+  user: { name: string; email: string; password: string },
+) => {
   const registerResponse = await page.request.post(`${API_URL}`, {
     data: {
       query: `
