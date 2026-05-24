@@ -9,4 +9,3 @@ export const categoryQueries = {
     return service(ctx).listByUser(ctx);
   },
 };
-

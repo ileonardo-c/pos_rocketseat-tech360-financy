@@ -8,4 +8,3 @@ export const authQueries = {
     return service.me(ctx);
   },
 };
-

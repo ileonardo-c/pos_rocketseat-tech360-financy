@@ -21,4 +21,3 @@ export const categoryMutations = {
     return service(ctx).delete(ctx, args.id);
   },
 };
-

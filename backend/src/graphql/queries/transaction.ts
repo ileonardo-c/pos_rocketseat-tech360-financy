@@ -48,4 +48,3 @@ export const transactionQueries = {
     return service(ctx).timelineByUser(ctx, args.filter, args.interval);
   },
 };
-

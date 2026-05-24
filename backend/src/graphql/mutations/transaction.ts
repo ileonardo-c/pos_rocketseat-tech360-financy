@@ -60,4 +60,3 @@ export const transactionMutations = {
     return service(ctx).delete(ctx, args.id);
   },
 };
-

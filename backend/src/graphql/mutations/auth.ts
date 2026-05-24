@@ -28,4 +28,3 @@ export const authMutations = {
     return service.updateProfile(ctx, args.input);
   },
 };
-
