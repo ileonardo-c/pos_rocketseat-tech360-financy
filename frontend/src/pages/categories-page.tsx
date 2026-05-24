@@ -371,7 +371,11 @@ export const CategoriesPage = () => {
                 <button data-testid="categories-create-confirm" disabled={creating} type="submit">
                   <span className="t-text-swap">{creating ? "Criando..." : "Criar"}</span>
                 </button>
-                <button data-testid="categories-create-cancel" type="button" onClick={closeCreateDialog}>
+                <button
+                  data-testid="categories-create-cancel"
+                  type="button"
+                  onClick={closeCreateDialog}
+                >
                   Cancelar
                 </button>
               </div>
@@ -430,7 +434,11 @@ export const CategoriesPage = () => {
                 <button data-testid="categories-edit-confirm" disabled={updating} type="submit">
                   <span className="t-text-swap">{updating ? "Salvando..." : "Salvar"}</span>
                 </button>
-                <button data-testid="categories-edit-cancel" type="button" onClick={closeEditDialog}>
+                <button
+                  data-testid="categories-edit-cancel"
+                  type="button"
+                  onClick={closeEditDialog}
+                >
                   Cancelar
                 </button>
               </div>

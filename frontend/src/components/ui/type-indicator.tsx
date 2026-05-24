@@ -26,7 +26,11 @@ export const TypeIndicator = ({
 }: TypeIndicatorProps) => {
   return (
     <span
-      className={cx("inline-flex items-center gap-2 text-sm font-medium", classes[variant], className)}
+      className={cx(
+        "inline-flex items-center gap-2 text-sm font-medium",
+        classes[variant],
+        className,
+      )}
       {...typeProps}
     >
       {variant === "income" ? (

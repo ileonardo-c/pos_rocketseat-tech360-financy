@@ -46,12 +46,12 @@
   --color-financy-surface-elevated: #ffffff;
 
   /* Component-level tokens — Figma field, button and text specs */
-  --color-financy-field-text: #111827;        /* input value text */
-  --color-financy-field-border: #d1d5db;      /* default input / icon-button border */
-  --color-financy-field-error: #ef4444;       /* Figma input error border & ring */
+  --color-financy-field-text: #111827; /* input value text */
+  --color-financy-field-border: #d1d5db; /* default input / icon-button border */
+  --color-financy-field-error: #ef4444; /* Figma input error border & ring */
   --color-financy-field-placeholder: #9ca3af; /* input icon & placeholder colour */
-  --color-financy-surface-hover: #e5e7eb;     /* button / icon-button hover bg */
-  --color-financy-text-secondary: #374151;    /* label default, icon-button text */
+  --color-financy-surface-hover: #e5e7eb; /* button / icon-button hover bg */
+  --color-financy-text-secondary: #374151; /* label default, icon-button text */
 
   /* Tag palette — Figma exact tokens */
   --color-financy-tag-gray-bg: #e5e7eb;
@@ -219,10 +219,8 @@
     transform: scaleY(0.98);
     opacity: 0;
     pointer-events: none;
-    transition:
-      transform var(--resize-dur) var(--resize-ease),
-      opacity var(--resize-dur) var(--resize-ease),
-      visibility 0ms linear var(--resize-dur);
+    transition: transform var(--resize-dur) var(--resize-ease), opacity var(--resize-dur)
+      var(--resize-ease), visibility 0ms linear var(--resize-dur);
     visibility: hidden;
     will-change: transform, opacity;
   }
@@ -232,10 +230,8 @@
     opacity: 1;
     pointer-events: auto;
     visibility: visible;
-    transition:
-      transform var(--resize-dur) var(--resize-ease),
-      opacity var(--resize-dur) var(--resize-ease),
-      visibility 0ms linear 0ms;
+    transition: transform var(--resize-dur) var(--resize-ease), opacity var(--resize-dur)
+      var(--resize-ease), visibility 0ms linear 0ms;
   }
 
   .t-dropdown.is-closing {
@@ -243,9 +239,8 @@
     opacity: 0;
     pointer-events: none;
     visibility: visible;
-    transition:
-      transform var(--dropdown-close-dur, 150ms) ease-in,
-      opacity var(--dropdown-close-dur, 150ms) ease-in;
+    transition: transform var(--dropdown-close-dur, 150ms) ease-in, opacity
+      var(--dropdown-close-dur, 150ms) ease-in;
   }
 
   @media (prefers-reduced-motion: reduce) {

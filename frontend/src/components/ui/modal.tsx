@@ -51,7 +51,7 @@ export const Modal = ({ isOpen, title, children, onClose }: ModalProps) => {
         }
       }, getCloseDurationMs());
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Cancel any pending close timer on unmount

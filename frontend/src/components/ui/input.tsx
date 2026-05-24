@@ -57,11 +57,7 @@ export const Input = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {label && (
-        <span className={cx("text-sm font-medium leading-5", labelColor)}>
-          {label}
-        </span>
-      )}
+      {label && <span className={cx("text-sm font-medium leading-5", labelColor)}>{label}</span>}
       <div className="relative">
         {startIcon && (
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-financy-field-placeholder">
