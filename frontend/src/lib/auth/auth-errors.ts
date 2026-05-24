@@ -140,16 +140,8 @@ export const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
 
 export const isAuthenticationGraphQLError = (error: unknown) => {
   const code = pickAuthErrorCode(error);
-  if (
-    code &&
-    [
-      "AUTH_UNAUTHENTICATED",
-      "UNAUTHENTICATED",
-      "AUTH_TOKEN_EXPIRED",
-      "AUTH_USER_NOT_FOUND",
-      "AUTH_NOT_FOUND",
-    ].includes(code)
-  ) {
+  const sessionErrorCodes = ["AUTH_UNAUTHENTICATED", "UNAUTHENTICATED", "AUTH_TOKEN_EXPIRED"];
+  if (code && sessionErrorCodes.includes(code)) {
     return true;
   }
 
