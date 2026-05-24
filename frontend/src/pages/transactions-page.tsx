@@ -956,70 +956,72 @@ export const TransactionsPage = () => {
                   <ul>
                     {group.transactions.map((transaction) => {
                       return (
-                        <li key={transaction.id} className="transactions-item">
-                          <article data-testid={`transaction-item-${transaction.id}`}>
-                            <div className="transactions-item-main">
-                              <strong>{transaction.title}</strong>
+                        <li
+                          key={transaction.id}
+                          className="transactions-item"
+                          data-testid={`transaction-item-${transaction.id}`}
+                        >
+                          <div className="transactions-item-main">
+                            <strong>{transaction.title}</strong>
+                            <p>
+                              {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
+                              {currencyFormatter.format(transaction.amount)} ·{" "}
+                              {transaction.category?.name ?? "Sem categoria"} ·{" "}
+                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                            </p>
+                            {transaction.description ? <p>{transaction.description}</p> : null}
+                            {transaction.receiptUrl ? (
                               <p>
-                                {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
-                                {currencyFormatter.format(transaction.amount)} ·{" "}
-                                {transaction.category?.name ?? "Sem categoria"} ·{" "}
-                                {new Date(transaction.date).toLocaleDateString("pt-BR")}
+                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
+                                  Comprovante
+                                </a>
                               </p>
-                              {transaction.description ? <p>{transaction.description}</p> : null}
-                              {transaction.receiptUrl ? (
-                                <p>
-                                  <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                                    Comprovante
-                                  </a>
-                                </p>
-                              ) : null}
-                            </div>
-                            <div className="transactions-item-actions">
-                              <button
-                                data-testid={`transaction-edit-${transaction.id}`}
-                                type="button"
-                                onClick={() => openEditDialog(transaction)}
-                              >
-                                Editar
-                              </button>
-                              <button
-                                data-testid={`transaction-delete-${transaction.id}`}
-                                disabled={deleting}
-                                type="button"
-                                onClick={async () => {
-                                  const confirmed = window.confirm(
-                                    "Deseja realmente excluir esta transação?",
-                                  );
-                                  if (!confirmed) {
-                                    return;
-                                  }
+                            ) : null}
+                          </div>
+                          <div className="transactions-item-actions">
+                            <button
+                              data-testid={`transaction-edit-${transaction.id}`}
+                              type="button"
+                              onClick={() => openEditDialog(transaction)}
+                            >
+                              Editar
+                            </button>
+                            <button
+                              data-testid={`transaction-delete-${transaction.id}`}
+                              disabled={deleting}
+                              type="button"
+                              onClick={async () => {
+                                const confirmed = window.confirm(
+                                  "Deseja realmente excluir esta transação?",
+                                );
+                                if (!confirmed) {
+                                  return;
+                                }
 
-                                  try {
-                                    setActionError(null);
-                                    setActionSuccess(null);
-                                    const response = await deleteTransaction({
-                                      variables: { id: transaction.id },
-                                    });
-                                    if (response.data?.deleteTransaction) {
-                                      setActionSuccess("Transação excluída com sucesso.");
-                                    } else {
-                                      setActionError("Transação não encontrada para exclusão.");
-                                    }
-                                  } catch (mutationError) {
-                                    setActionError(
-                                      getTransactionActionErrorMessage(
-                                        mutationError,
-                                        "Não foi possível excluir a transação.",
-                                      ),
-                                    );
+                                try {
+                                  setActionError(null);
+                                  setActionSuccess(null);
+                                  const response = await deleteTransaction({
+                                    variables: { id: transaction.id },
+                                  });
+                                  if (response.data?.deleteTransaction) {
+                                    setActionSuccess("Transação excluída com sucesso.");
+                                  } else {
+                                    setActionError("Transação não encontrada para exclusão.");
                                   }
-                                }}
-                              >
-                                Excluir
-                              </button>
-                            </div>
-                          </article>
+                                } catch (mutationError) {
+                                  setActionError(
+                                    getTransactionActionErrorMessage(
+                                      mutationError,
+                                      "Não foi possível excluir a transação.",
+                                    ),
+                                  );
+                                }
+                              }}
+                            >
+                              Excluir
+                            </button>
+                          </div>
                         </li>
                       );
                     })}
