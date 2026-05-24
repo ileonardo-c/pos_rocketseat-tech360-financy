@@ -143,7 +143,9 @@ test("@style-guide Select closes with Escape key", async ({ page }) => {
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
-test("@style-guide Select selects an option via click and updates trigger label", async ({ page }) => {
+test("@style-guide Select selects an option via click and updates trigger label", async ({
+  page,
+}) => {
   await gotoStyleGuide(page);
   const trigger = page.getByTestId("select-demo");
   await trigger.click();
@@ -189,7 +191,9 @@ test("@style-guide Button Md Disabled — buttons have disabled attribute", asyn
 
 test("@style-guide Button Sm Default — two small buttons visible", async ({ page }) => {
   await gotoStyleGuide(page);
-  await expect(page.getByTestId("btn-sm-default").getByRole("button", { name: "Label" })).toHaveCount(2);
+  await expect(
+    page.getByTestId("btn-sm-default").getByRole("button", { name: "Label" }),
+  ).toHaveCount(2);
 });
 
 test("@style-guide Button Sm Disabled — buttons have disabled attribute", async ({ page }) => {
@@ -260,7 +264,16 @@ test("@style-guide PaginationButton Disabled — not interactive", async ({ page
 
 /* ─── 8. Tag ──────────────────────────────────────────────────────────────── */
 
-const TAG_CATEGORIES = ["gray", "blue", "purple", "pink", "red", "orange", "yellow", "green"] as const;
+const TAG_CATEGORIES = [
+  "gray",
+  "blue",
+  "purple",
+  "pink",
+  "red",
+  "orange",
+  "yellow",
+  "green",
+] as const;
 
 for (const cat of TAG_CATEGORIES) {
   test(`@style-guide Tag ${cat} — visible and contains text`, async ({ page }) => {

@@ -9,10 +9,10 @@
 import type { ReactNode } from "react";
 
 import {
+  IconCheck,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
-  IconCheck,
   IconCircleArrowDown,
   IconCircleArrowUp,
   IconMail,
@@ -40,7 +40,10 @@ function ComponentSection({
   children: ReactNode;
 }) {
   return (
-    <div className="flex w-full flex-col gap-6" data-testid={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+    <div
+      className="flex w-full flex-col gap-6"
+      data-testid={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
+    >
       {/* Figma: Plus Jakarta Sans Light 24px #121214 */}
       <p className="shrink-0 font-jakarta text-2xl font-light leading-snug text-[#121214]">
         {title}
@@ -98,9 +101,7 @@ function DetailRow({
 
 /** Célula de linha (alinha verticalmente com o label correspondente) */
 function Cell({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex flex-1 flex-col justify-center">{children}</div>
-  );
+  return <div className="flex flex-1 flex-col justify-center">{children}</div>;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */
@@ -226,38 +227,62 @@ export const StyleGuidePage = () => {
         >
           <Cell>
             <div className="flex gap-2" data-testid="btn-md-default">
-              <Button size="md" variant="primary">Label</Button>
-              <Button size="md" variant="outline">Label</Button>
+              <Button size="md" variant="primary">
+                Label
+              </Button>
+              <Button size="md" variant="outline">
+                Label
+              </Button>
             </div>
           </Cell>
           <Cell>
             <div className="flex gap-2" data-testid="btn-md-hover">
-              <Button size="md" variant="primary" state="hover">Label</Button>
-              <Button size="md" variant="outline" state="hover">Label</Button>
+              <Button size="md" variant="primary" state="hover">
+                Label
+              </Button>
+              <Button size="md" variant="outline" state="hover">
+                Label
+              </Button>
             </div>
           </Cell>
           <Cell>
             <div className="flex gap-2" data-testid="btn-md-disabled">
-              <Button size="md" variant="primary" state="disabled">Label</Button>
-              <Button size="md" variant="outline" state="disabled">Label</Button>
+              <Button size="md" variant="primary" state="disabled">
+                Label
+              </Button>
+              <Button size="md" variant="outline" state="disabled">
+                Label
+              </Button>
             </div>
           </Cell>
           <Cell>
             <div className="flex gap-2" data-testid="btn-sm-default">
-              <Button size="sm" variant="primary">Label</Button>
-              <Button size="sm" variant="outline">Label</Button>
+              <Button size="sm" variant="primary">
+                Label
+              </Button>
+              <Button size="sm" variant="outline">
+                Label
+              </Button>
             </div>
           </Cell>
           <Cell>
             <div className="flex gap-2" data-testid="btn-sm-hover">
-              <Button size="sm" variant="primary" state="hover">Label</Button>
-              <Button size="sm" variant="outline" state="hover">Label</Button>
+              <Button size="sm" variant="primary" state="hover">
+                Label
+              </Button>
+              <Button size="sm" variant="outline" state="hover">
+                Label
+              </Button>
             </div>
           </Cell>
           <Cell>
             <div className="flex gap-2" data-testid="btn-sm-disabled">
-              <Button size="sm" variant="primary" state="disabled">Label</Button>
-              <Button size="sm" variant="outline" state="disabled">Label</Button>
+              <Button size="sm" variant="primary" state="disabled">
+                Label
+              </Button>
+              <Button size="sm" variant="outline" state="disabled">
+                Label
+              </Button>
             </div>
           </Cell>
         </DetailRow>
@@ -334,13 +359,23 @@ export const StyleGuidePage = () => {
       <ComponentSection title="Pagination Button">
         <DetailRow labels={["Default", "Hover", "Active", "Disabled"]}>
           <div className="flex flex-1 items-center">
-            <PaginationButton data-testid="pag-default" label="1" state="default" onClick={() => {}} />
+            <PaginationButton
+              data-testid="pag-default"
+              label="1"
+              state="default"
+              onClick={() => {}}
+            />
           </div>
           <div className="flex flex-1 items-center">
             <PaginationButton data-testid="pag-hover" label="1" state="hover" />
           </div>
           <div className="flex flex-1 items-center">
-            <PaginationButton data-testid="pag-active" label="1" state="active" onClick={() => {}} />
+            <PaginationButton
+              data-testid="pag-active"
+              label="1"
+              state="active"
+              onClick={() => {}}
+            />
           </div>
           <div className="flex flex-1 items-center">
             <PaginationButton data-testid="pag-disabled" label="1" state="disabled" />
@@ -376,17 +411,33 @@ export const StyleGuidePage = () => {
           <div className="flex flex-1 flex-col gap-4 py-[64px]" data-testid="tag-section">
             {/* Row 1: Gray Blue Purple Pink */}
             <div className="flex flex-wrap gap-2">
-              <Tag data-testid="tag-gray" category="gray" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-blue" category="blue" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-purple" category="purple" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-pink" category="pink" onClick={() => {}}>Label</Tag>
+              <Tag data-testid="tag-gray" category="gray" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-blue" category="blue" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-purple" category="purple" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-pink" category="pink" onClick={() => {}}>
+                Label
+              </Tag>
             </div>
             {/* Row 2: Red Orange Yellow Green */}
             <div className="flex flex-wrap gap-2">
-              <Tag data-testid="tag-red" category="red" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-orange" category="orange" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-yellow" category="yellow" onClick={() => {}}>Label</Tag>
-              <Tag data-testid="tag-green" category="green" onClick={() => {}}>Label</Tag>
+              <Tag data-testid="tag-red" category="red" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-orange" category="orange" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-yellow" category="yellow" onClick={() => {}}>
+                Label
+              </Tag>
+              <Tag data-testid="tag-green" category="green" onClick={() => {}}>
+                Label
+              </Tag>
             </div>
           </div>
         </div>
@@ -400,12 +451,18 @@ export const StyleGuidePage = () => {
           <div className="w-[200px] shrink-0" />
           <div className="flex flex-1 flex-col gap-4 py-[64px]" data-testid="type-section">
             {/* Entrada */}
-            <span data-testid="type-income" className="inline-flex items-center gap-2 text-sm font-medium text-[#15803d]">
+            <span
+              data-testid="type-income"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#15803d]"
+            >
               <IconCircleArrowUp className="h-4 w-4 text-[#16a34a]" />
               Entrada
             </span>
             {/* Saída */}
-            <span data-testid="type-expense" className="inline-flex items-center gap-2 text-sm font-medium text-[#b91c1c]">
+            <span
+              data-testid="type-expense"
+              className="inline-flex items-center gap-2 text-sm font-medium text-[#b91c1c]"
+            >
               <IconCircleArrowDown className="h-4 w-4 text-[#dc2626]" />
               Saída
             </span>

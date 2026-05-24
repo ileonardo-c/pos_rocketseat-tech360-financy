@@ -73,8 +73,9 @@ export const Select = ({
 
   const options = useMemo<SelectOption[]>(() => {
     return Array.from(children as Iterable<ReactNode>)
-      .filter((child): child is React.ReactElement<HTMLOptionElement> =>
-        isValidElement(child) && child.type === "option"
+      .filter(
+        (child): child is React.ReactElement<HTMLOptionElement> =>
+          isValidElement(child) && child.type === "option",
       )
       .map((child) => {
         const rawValue = child.props.value ?? child.props.children;
@@ -90,7 +91,7 @@ export const Select = ({
 
   const isControlled = value !== undefined;
   const [uncontrolledValue, setUncontrolledValue] = useState(
-    defaultValue === undefined ? options[0]?.value ?? "" : `${defaultValue}`,
+    defaultValue === undefined ? (options[0]?.value ?? "") : `${defaultValue}`,
   );
   const [dropdownState, setDropdownState] = useState<DropdownState>("closed");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -199,12 +200,7 @@ export const Select = ({
   useEffect(() => {
     const handleOutside = (event: MouseEvent) => {
       const target = event.target as Node | null;
-      if (
-        target &&
-        isExpanded &&
-        rootRef.current &&
-        !rootRef.current.contains(target)
-      ) {
+      if (target && isExpanded && rootRef.current && !rootRef.current.contains(target)) {
         closeMenu();
       }
     };
@@ -349,8 +345,6 @@ export const Select = ({
 
       {dropdownState !== "closed" ? (
         <ul
-          role="listbox"
-          aria-labelledby={id ?? triggerId}
           data-open={isOpen}
           className={cx(
             "t-dropdown absolute left-0 top-full z-50 mt-2 w-full rounded-lg border border-financy-border bg-financy-surface p-1 shadow-lg shadow-black/15",
@@ -366,7 +360,7 @@ export const Select = ({
             const isHighlighted = index === highlightedIndex;
 
             return (
-              <li key={`${option.value}-${option.label}`} role="option" aria-selected={isSelected}>
+              <li key={`${option.value}-${option.label}`}>
                 <button
                   type="button"
                   ref={(node) => {
@@ -374,14 +368,13 @@ export const Select = ({
                   }}
                   className={cx(
                     "flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm text-financy-text transition-colors",
-                    option.disabled
-                      ? "cursor-not-allowed opacity-50"
-                      : "cursor-pointer",
+                    option.disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                     isHighlighted
                       ? "bg-financy-surface-soft text-financy-text"
                       : "hover:bg-financy-surface-soft/60",
                     isSelected ? "font-semibold" : "",
                   )}
+                  aria-current={isSelected ? "true" : undefined}
                   disabled={option.disabled}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onMouseMove={() => setHighlightedIndex(index)}
@@ -403,7 +396,14 @@ export const Select = ({
         </ul>
       ) : null}
 
-      <input type="hidden" name={name} value={selectedValue} readOnly disabled={disabled} required={required} />
+      <input
+        type="hidden"
+        name={name}
+        value={selectedValue}
+        readOnly
+        disabled={disabled}
+        required={required}
+      />
     </div>
   );
 };

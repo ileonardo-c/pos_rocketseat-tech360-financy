@@ -54,9 +54,7 @@ export function App() {
           </RequireAuth>
         }
       />
-      {import.meta.env.DEV ? (
-        <Route path="/style-guide" element={<StyleGuidePage />} />
-      ) : null}
+      {import.meta.env.DEV ? <Route path="/style-guide" element={<StyleGuidePage />} /> : null}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

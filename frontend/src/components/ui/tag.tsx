@@ -2,15 +2,7 @@ import type { HTMLAttributes, ReactNode } from "react";
 
 import { cx } from "@/lib/utils";
 
-type TagCategory =
-  | "gray"
-  | "blue"
-  | "purple"
-  | "pink"
-  | "red"
-  | "orange"
-  | "yellow"
-  | "green";
+type TagCategory = "gray" | "blue" | "purple" | "pink" | "red" | "orange" | "yellow" | "green";
 
 type TagProps = HTMLAttributes<HTMLSpanElement> & {
   category?: TagCategory;
@@ -21,23 +13,17 @@ type TagProps = HTMLAttributes<HTMLSpanElement> & {
 
 // Uses @theme tokens from index.css — bg-financy-tag-{cat}-{bg|text}
 const categoryClasses: Record<TagCategory, string> = {
-  gray:   "bg-financy-tag-gray-bg   text-financy-tag-gray-text",
-  blue:   "bg-financy-tag-blue-bg   text-financy-tag-blue-text",
+  gray: "bg-financy-tag-gray-bg   text-financy-tag-gray-text",
+  blue: "bg-financy-tag-blue-bg   text-financy-tag-blue-text",
   purple: "bg-financy-tag-purple-bg text-financy-tag-purple-text",
-  pink:   "bg-financy-tag-pink-bg   text-financy-tag-pink-text",
-  red:    "bg-financy-tag-red-bg    text-financy-tag-red-text",
+  pink: "bg-financy-tag-pink-bg   text-financy-tag-pink-text",
+  red: "bg-financy-tag-red-bg    text-financy-tag-red-text",
   orange: "bg-financy-tag-orange-bg text-financy-tag-orange-text",
   yellow: "bg-financy-tag-yellow-bg text-financy-tag-yellow-text",
-  green:  "bg-financy-tag-green-bg  text-financy-tag-green-text",
+  green: "bg-financy-tag-green-bg  text-financy-tag-green-text",
 };
 
-export const Tag = ({
-  className,
-  category = "gray",
-  onClick,
-  children,
-  ...tagProps
-}: TagProps) => {
+export const Tag = ({ className, category = "gray", onClick, children, ...tagProps }: TagProps) => {
   return (
     <span
       className={cx(

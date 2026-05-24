@@ -1,6 +1,6 @@
-import { Prisma } from "@prisma/client";
 import type { GraphQLContext } from "@/context";
 import { AppError } from "@/lib/errors";
+import { Prisma } from "@prisma/client";
 import type { CategoryRepository } from "./category-repository";
 
 export class CategoryService {
@@ -84,4 +84,3 @@ export class CategoryService {
     }
   }
 }
-

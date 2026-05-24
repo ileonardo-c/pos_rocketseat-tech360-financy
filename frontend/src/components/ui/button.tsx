@@ -25,16 +25,15 @@ const variants: Record<ButtonVariant, string> = {
   // Figma: Outline — bg surface border field-border, hover bg surface-hover
   outline:
     "bg-financy-surface text-financy-text-secondary border border-financy-field-border hover:bg-financy-surface-hover",
-  danger:
-    "bg-financy-danger text-white hover:opacity-90 active:opacity-80",
+  danger: "bg-financy-danger text-white hover:opacity-90 active:opacity-80",
   ghost:
     "bg-transparent text-financy-primary hover:text-financy-primary-hover hover:bg-financy-surface-soft",
 };
 
 // Figma: Md = h-48px px-16px text-16px, Sm = h-36px px-12px text-14px
 const sizes: Record<ButtonSize, string> = {
-  sm: "h-9 px-3 text-sm",      // 36px / 14px
-  md: "h-12 px-4 text-base",   // 48px / 16px
+  sm: "h-9 px-3 text-sm", // 36px / 14px
+  md: "h-12 px-4 text-base", // 48px / 16px
   lg: "h-14 px-6 text-base",
 };
 
@@ -72,15 +71,11 @@ export const Button = ({
       {...buttonProps}
     >
       {startIcon && (
-        <span className="inline-flex shrink-0 items-center justify-center">
-          {startIcon}
-        </span>
+        <span className="inline-flex shrink-0 items-center justify-center">{startIcon}</span>
       )}
       {children}
       {endIcon && (
-        <span className="inline-flex shrink-0 items-center justify-center">
-          {endIcon}
-        </span>
+        <span className="inline-flex shrink-0 items-center justify-center">{endIcon}</span>
       )}
     </button>
   );

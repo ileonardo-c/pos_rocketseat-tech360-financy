@@ -30,4 +30,3 @@ export const buildExpiredToken = () => {
 
   return `${data}.${signature}`;
 };
-
