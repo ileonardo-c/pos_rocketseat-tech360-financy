@@ -55,7 +55,8 @@ const createTransientUser = async (
 
 const clearClientState = async (page: Page) => {
   await page.context().clearCookies();
-  await page.addInitScript(() => localStorage.clear());
+  await page.goto(`${APP_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.evaluate(() => localStorage.clear());
 };
 
 test("@smoke-login fluxo de login funcional com usuário transitório", async ({ page }) => {

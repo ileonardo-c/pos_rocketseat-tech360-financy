@@ -375,7 +375,6 @@ export const Select = ({
                       : "hover:bg-financy-surface-soft/60",
                     isSelected ? "font-semibold" : "",
                   )}
-                  aria-current={isSelected ? "true" : undefined}
                   disabled={option.disabled}
                   onMouseEnter={() => setHighlightedIndex(index)}
                   onMouseMove={() => setHighlightedIndex(index)}

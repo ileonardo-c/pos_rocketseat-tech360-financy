@@ -108,6 +108,7 @@ test("@style-guide Input Select row — shows 'Option 1' value", async ({ page }
 test("@style-guide Select opens on click and closes on second click", async ({ page }) => {
   await gotoStyleGuide(page);
   const trigger = page.getByTestId("select-demo");
+  const dropdown = page.locator("ul.t-dropdown");
   await expect(trigger).toBeVisible();
 
   // Initially closed
@@ -116,30 +117,32 @@ test("@style-guide Select opens on click and closes on second click", async ({ p
   // Open
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("listbox")).toBeVisible();
+  await expect(dropdown).toBeVisible();
 
   // Close by clicking trigger again — wait for listbox to disappear (150ms close animation)
   await trigger.click();
-  await expect(page.getByRole("listbox")).not.toBeVisible({ timeout: 2000 });
+  await expect(dropdown).not.toBeVisible({ timeout: 2000 });
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
 test("@style-guide Select opens with ArrowDown and highlights next option", async ({ page }) => {
   await gotoStyleGuide(page);
   const trigger = page.getByTestId("select-demo");
+  const dropdown = page.locator("ul.t-dropdown");
   await trigger.focus();
   await page.keyboard.press("ArrowDown");
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("listbox")).toBeVisible();
+  await expect(dropdown).toBeVisible();
 });
 
 test("@style-guide Select closes with Escape key", async ({ page }) => {
   await gotoStyleGuide(page);
   const trigger = page.getByTestId("select-demo");
+  const dropdown = page.locator("ul.t-dropdown");
   await trigger.click();
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("listbox")).not.toBeVisible({ timeout: 2000 });
+  await expect(dropdown).not.toBeVisible({ timeout: 2000 });
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
@@ -148,10 +151,11 @@ test("@style-guide Select selects an option via click and updates trigger label"
 }) => {
   await gotoStyleGuide(page);
   const trigger = page.getByTestId("select-demo");
+  const dropdown = page.locator("ul.t-dropdown");
   await trigger.click();
-  await page.getByRole("option", { name: "Option 2" }).getByRole("button").click();
+  await dropdown.getByRole("button", { name: "Option 2" }).click();
   await expect(trigger).toContainText("Option 2");
-  await expect(page.getByRole("listbox")).not.toBeVisible({ timeout: 2000 });
+  await expect(dropdown).not.toBeVisible({ timeout: 2000 });
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
