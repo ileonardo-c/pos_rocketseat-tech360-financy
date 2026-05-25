@@ -94,3 +94,4 @@ jobs:
       - name: Tear down compose stack
         if: always()
         run: docker compose -f docker-compose.development.yml down -v
+

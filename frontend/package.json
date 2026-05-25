@@ -10,7 +10,7 @@
     "lint": "biome check src",
     "check": "biome check src",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test --grep @smoke-login",
+    "test:e2e:smoke": "playwright test --grep \"@smoke-login|@smoke-dashboard\"",
     "test:e2e:smoke:dashboard": "playwright test --grep @smoke-dashboard",
     "test:e2e:visual": "playwright test --grep @visual"
   },
@@ -36,3 +36,5 @@
     "vite": "^5.4.8"
   }
 }
+
+

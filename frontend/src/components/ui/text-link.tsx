@@ -1,67 +1,53 @@
 import type { AnchorHTMLAttributes, ReactElement, ReactNode } from "react";
-import { Children, cloneElement, isValidElement } from "react";
+import { cloneElement, isValidElement } from "react";
 
 import { cx } from "@/lib/utils";
 
 type TextLinkState = "default" | "hover";
 
-type TextLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+type TextLinkBaseProps = {
+  className?: string;
   state?: TextLinkState;
   asChild?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
-  children: ReactNode;
 };
 
+type TextLinkAsChildProps = TextLinkBaseProps & {
+  asChild: true;
+  children: ReactElement<{ className?: string; children?: ReactNode }>;
+};
+
+type TextLinkAnchorProps = TextLinkBaseProps &
+  AnchorHTMLAttributes<HTMLAnchorElement> & {
+    asChild?: false;
+    children: ReactNode;
+  };
+
+type TextLinkProps = TextLinkAsChildProps | TextLinkAnchorProps;
+
 export const TextLink = ({
-  className,
   asChild = false,
+  className,
   state = "default",
   leftIcon,
   rightIcon,
   children,
   ...anchorProps
 }: TextLinkProps) => {
+  const textLinkChildren = asChild && isValidElement(children) ? children.props.children : children;
   const mergedClassName = cx(
     "inline-flex items-center gap-1 text-sm font-medium text-[#1f6f43] transition-colors duration-150 hover:border-b hover:border-[#1f6f43]",
     state === "hover" ? "border-b border-[#1f6f43]" : "",
     className,
   );
 
-  if (asChild) {
-    const child = Children.only(children) as ReactElement<AnchorHTMLAttributes<HTMLAnchorElement>>;
-    if (!isValidElement(child)) {
-      return null;
-    }
-    const content = (
-      <>
-        {leftIcon && (
-          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-            {leftIcon}
-          </span>
-        )}
-        <span>{child.props.children}</span>
-        {rightIcon && (
-          <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
-            {rightIcon}
-          </span>
-        )}
-      </>
-    );
-
-    return cloneElement(child, {
-      ...anchorProps,
-      className: cx(mergedClassName, child.props.className),
-      children: content,
-    });
-  }
-
   const content = (
     <>
       {leftIcon && (
         <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">{leftIcon}</span>
       )}
-      <span>{children}</span>
+      <span>{textLinkChildren}</span>
       {rightIcon && (
         <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center">
           {rightIcon}
@@ -69,6 +55,20 @@ export const TextLink = ({
       )}
     </>
   );
+
+  if (asChild) {
+    if (!isValidElement(children)) {
+      return null;
+    }
+
+    const child = children as ReactElement<{ className?: string }>;
+
+    return cloneElement(child, {
+      ...anchorProps,
+      className: cx(mergedClassName, children.props.className),
+      children: content,
+    });
+  }
 
   return (
     <a className={mergedClassName} {...anchorProps}>

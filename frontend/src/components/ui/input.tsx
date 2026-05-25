@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import { type InputHTMLAttributes, type ReactNode, useId } from "react";
 
 import { cx } from "@/lib/utils";
 
@@ -27,12 +27,14 @@ export const Input = ({
   helper,
   helperError,
   disabled,
+  id,
   ...inputProps
 }: InputProps) => {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const isDisabled = disabled || state === "disabled";
   const hasError = state === "error";
   const isActive = state === "active";
-  const inputId = inputProps.id;
 
   // Figma label colours: active → primary, error → field-error, default → text-secondary
   const labelColor = hasError
@@ -70,6 +72,7 @@ export const Input = ({
           </span>
         )}
         <input
+          id={inputId}
           className={fieldClass}
           type={type}
           disabled={isDisabled}
