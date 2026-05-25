@@ -61,7 +61,7 @@ export const TextLink = ({
       return null;
     }
 
-    const child = children as ReactElement<{ className?: string }>;
+    const child = children as ReactElement<{ className?: string; children?: ReactNode }>;
 
     return cloneElement(child, {
       ...anchorProps,
