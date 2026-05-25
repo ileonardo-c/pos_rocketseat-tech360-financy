@@ -25,7 +25,12 @@ export const Checkbox = ({
   ...inputProps
 }: CheckboxProps) => {
   const isDisabled = disabled || state === "disabled";
-  const isChecked = checked || state === "checked";
+  const checkedProps =
+    typeof checked === "boolean"
+      ? { checked }
+      : state === "checked"
+        ? { defaultChecked: true }
+        : {};
 
   return (
     <label
@@ -36,12 +41,11 @@ export const Checkbox = ({
       )}
     >
       <input
-        aria-checked={isChecked}
-        checked={checked}
         disabled={isDisabled}
         type="checkbox"
         onChange={onChange}
         {...inputProps}
+        {...checkedProps}
         className={cx(
           "size-4 rounded-sm border border-financy-field-border bg-financy-surface text-financy-primary accent-financy-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-financy-primary/25",
           isDisabled && "cursor-not-allowed",
