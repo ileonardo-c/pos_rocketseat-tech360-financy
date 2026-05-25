@@ -32,7 +32,7 @@ jobs:
               exit 0
             fi
             echo "Backend not ready yet (attempt ${attempt}/3)"
-            sleep 5
+            sleep 15
           done
           echo "Backend did not respond at /health/ready after 3 attempts"
           exit 1
@@ -45,7 +45,7 @@ jobs:
               exit 0
             fi
             echo "Frontend not ready yet (attempt ${attempt}/3)"
-            sleep 5
+            sleep 15
           done
           echo "Frontend did not respond after 3 attempts"
           exit 1
