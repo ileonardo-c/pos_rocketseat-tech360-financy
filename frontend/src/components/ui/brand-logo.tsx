@@ -1,7 +1,6 @@
 import { cx } from "@/lib/utils";
-
-const logoMarkUrl = "https://www.figma.com/api/mcp/asset/50350e79-1018-479b-b37d-d3f26f124bf2";
-const logoWordmarkUrl = "https://www.figma.com/api/mcp/asset/b6d01693-db8a-4e96-9039-257db390812a";
+import logoMarkUrl from "@/assets/brand/logo-mark.svg";
+import logoWordmarkUrl from "@/assets/brand/logo-wordmark.svg";
 
 type BrandLogoProps = {
   className?: string;
