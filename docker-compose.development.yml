@@ -93,7 +93,7 @@ services:
     working_dir: /app
     environment:
       PNPM_STORE_DIR: /pnpm/store
-    command: sh -lc "pnpm install --frozen-lockfile"
+    command: sh -lc "CI=1 pnpm install --frozen-lockfile"
     volumes:
       - .:/app:rw
       - pnpm_store_dev:/pnpm/store
