@@ -267,10 +267,7 @@ export const SigninPage = () => {
             <Button
               className="mt-0 text-base font-medium"
               disabled={
-                isBusy ||
-                !email.trim() ||
-                !password.trim() ||
-                Boolean(emailError || passwordError)
+                isBusy || !email.trim() || !password.trim() || Boolean(emailError || passwordError)
               }
               type="submit"
             >

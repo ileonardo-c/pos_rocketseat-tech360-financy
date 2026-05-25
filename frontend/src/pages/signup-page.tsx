@@ -318,9 +318,7 @@ export const SignupPage = () => {
                     className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white transition-opacity duration-200 ease-out"
                   />
                 )}
-                <span className="t-text-swap">
-                  {isBusy ? "Cadastrando..." : "Criar conta"}
-                </span>
+                <span className="t-text-swap">{isBusy ? "Cadastrando..." : "Criar conta"}</span>
               </span>
             </Button>
           </form>
