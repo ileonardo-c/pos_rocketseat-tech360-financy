@@ -47,6 +47,8 @@ services:
       dockerfile: backend/Dockerfile
     working_dir: /app
     depends_on:
+      frontend-deps:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       minio-init:
