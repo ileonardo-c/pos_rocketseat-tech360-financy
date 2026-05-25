@@ -9,7 +9,6 @@
 import type { ReactNode } from "react";
 
 import {
-  IconCheck,
   IconChevronDown,
   IconChevronLeft,
   IconChevronRight,
@@ -20,6 +19,7 @@ import {
   IconUserRoundPlus,
 } from "@/assets/icons";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { PaginationButton } from "@/components/ui/pagination-button";
@@ -206,6 +206,40 @@ export const StyleGuidePage = () => {
               startIcon={<IconMail className="h-4 w-4" />}
               endIcon={<IconChevronDown className="h-4 w-4 cursor-pointer" />}
               readOnly
+            />
+          </Cell>
+        </DetailRow>
+      </ComponentSection>
+
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      {/* Checkbox */}
+      {/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
+      <ComponentSection title="Checkbox">
+        <DetailRow labels={["Default", "Checked", "Disabled"]}>
+          <Cell>
+            <Checkbox
+              data-testid="checkbox-default"
+              label="Lembrar-me"
+              onChange={() => {}}
+              state="default"
+            />
+          </Cell>
+          <Cell>
+            <Checkbox
+              data-testid="checkbox-checked"
+              checked
+              label="Lembrar-me"
+              onChange={() => {}}
+              state="checked"
+            />
+          </Cell>
+          <Cell>
+            <Checkbox
+              data-testid="checkbox-disabled"
+              disabled
+              label="Lembrar-me"
+              onChange={() => {}}
+              state="disabled"
             />
           </Cell>
         </DetailRow>

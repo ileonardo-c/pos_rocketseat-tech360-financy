@@ -1,10 +1,5 @@
-import {
-  type AnchorHTMLAttributes,
-  type ReactElement,
-  type ReactNode,
-  cloneElement,
-  isValidElement,
-} from "react";
+import type { AnchorHTMLAttributes, ReactElement, ReactNode } from "react";
+import { cloneElement, isValidElement } from "react";
 
 import { cx } from "@/lib/utils";
 
@@ -13,6 +8,7 @@ type TextLinkState = "default" | "hover";
 type TextLinkBaseProps = {
   className?: string;
   state?: TextLinkState;
+  asChild?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
 };
@@ -31,7 +27,7 @@ type TextLinkAnchorProps = TextLinkBaseProps &
 type TextLinkProps = TextLinkAsChildProps | TextLinkAnchorProps;
 
 export const TextLink = ({
-  asChild,
+  asChild = false,
   className,
   state = "default",
   leftIcon,
@@ -40,6 +36,11 @@ export const TextLink = ({
   ...anchorProps
 }: TextLinkProps) => {
   const textLinkChildren = asChild && isValidElement(children) ? children.props.children : children;
+  const mergedClassName = cx(
+    "inline-flex items-center gap-1 text-sm font-medium text-[#1f6f43] transition-colors duration-150 hover:border-b hover:border-[#1f6f43]",
+    state === "hover" ? "border-b border-[#1f6f43]" : "",
+    className,
+  );
 
   const content = (
     <>
@@ -55,19 +56,15 @@ export const TextLink = ({
     </>
   );
 
-  const mergedClassName = cx(
-    // Figma: text #1F6F43 Medium 14px, gap-4px
-    "inline-flex items-center gap-1 text-sm font-medium text-[#1f6f43] transition-colors duration-150 hover:border-b hover:border-[#1f6f43]",
-    state === "hover" ? "border-b border-[#1f6f43]" : "",
-    className,
-  );
-
   if (asChild) {
     if (!isValidElement(children)) {
       return null;
     }
 
-    return cloneElement(children, {
+    const child = children as ReactElement<{ className?: string; children?: ReactNode }>;
+
+    return cloneElement(child, {
+      ...anchorProps,
       className: cx(mergedClassName, children.props.className),
       children: content,
     });

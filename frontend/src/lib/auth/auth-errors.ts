@@ -2,7 +2,6 @@ export const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente
 
 export type AuthErrorRule = {
   codes: string[];
-  messages: string[];
   toUserMessage: string;
 };
 
@@ -15,14 +14,6 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
       "AUTH_USER_NOT_FOUND",
       "AUTH_NOT_FOUND",
     ],
-    messages: [
-      "unauthenticated",
-      "not authenticated",
-      "session expired",
-      "expired token",
-      "user not found",
-      "não autenticado",
-    ],
     toUserMessage: sessionExpiredMessage,
   },
   {
@@ -32,29 +23,26 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
       "AUTH_INVALID_PASSWORD",
       "AUTH_INVALID_PROFILE_UPDATE",
     ],
-    messages: ["invalid name", "invalid email", "invalid password", "no profile updates provided"],
     toUserMessage: "Há informações inválidas no formulário.",
   },
   {
     codes: ["AUTH_INVALID_CREDENTIALS"],
-    messages: ["invalid credentials"],
     toUserMessage: "E-mail ou senha inválidos.",
   },
   {
     codes: ["AUTH_EMAIL_ALREADY_REGISTERED"],
-    messages: ["already exists", "already registered", "conflict", "duplicate", "já cadastrado"],
-    toUserMessage: "Este e-mail já está em uso.",
+    toUserMessage: "Esta conta já está cadastrada.",
   },
   {
     codes: ["UNPROCESSABLE_ENTITY", "BAD_REQUEST", "VALIDATION_ERROR"],
-    messages: ["invalid name", "invalid email", "invalid password", "no profile updates provided"],
     toUserMessage: "Há informações inválidas no formulário.",
   },
 ];
 
 export const AUTH_FALLBACK_MESSAGES = {
   defaultSession: "Não foi possível validar sua sessão agora. Tente novamente em instantes.",
-  defaultAuth: "Não foi possível concluir a autenticação. Tente novamente.",
+  defaultAuth:
+    "Não foi possível concluir a autenticação agora. Verifique os dados e tente novamente.",
 };
 
 const toLowerCaseString = (value: unknown): string =>
@@ -129,13 +117,10 @@ export const normalizeAuthErrorMessage = (error: unknown) => {
 };
 
 export const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
-  const message = pickAuthErrorMessage(error);
   const code = pickAuthErrorCode(error);
 
   const foundRule = AUTH_ERROR_RULES.find((rule) => {
-    const hasCodeMatch = rule.codes.some((value) => value === code);
-    const hasMessageMatch = rule.messages.some((value) => message.includes(value));
-    return hasCodeMatch || hasMessageMatch;
+    return rule.codes.some((value) => value === code);
   });
 
   if (!foundRule) {

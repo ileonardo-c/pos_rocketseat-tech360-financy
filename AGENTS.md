@@ -6,12 +6,39 @@ Monorepo estruturado em etapas com entregas separadas em PRs sequenciais — um 
 
 Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 
+------
+
+## Ambiente de Execução — Docker
+
+O projeto opera exclusivamente via Docker Compose. **Nunca execute serviços diretamente no host.**
+
+Dois arquivos Compose coexistem — use o correto para cada contexto:
+
+| Arquivo                          | Contexto                                                     | Script raiz            |
+| -------------------------------- | ------------------------------------------------------------ | ---------------------- |
+| `docker-compose.development.yml` | Desenvolvimento — hot reload, volumes montados, perfil `e2e` | `pnpm compose:up`      |
+| `docker-compose.yml`             | Produção — imagens compiladas, sem volumes de código         | `pnpm compose:up:prod` |
+
+Todos os comandos de ciclo de vida, testes e smoke estão definidos em `package.json` (raiz). Consulte os scripts disponíveis antes de invocar `docker compose` diretamente.
+
+### Regra de falha rápida — obrigatória
+
+Todo script de setup ou CI deve iniciar com:
+
+```bash
+set -euo pipefail
+```
+
+Nunca use `|| true` para suprimir falhas de containers ou serviços. Qualquer saída não-zero interrompe a execução imediatamente.
+
 ## Diretrizes Gerais do Repositório e GitHub
 
 - **Referências de Arquivos:** Em respostas no chat, as referências a arquivos devem ser estritamente relativas à raiz do repositório (exemplo: `frontend/src/components/Button.tsx:80`); nunca use caminhos absolutos ou `~/...`.
 - **Links Automáticos:** Não envolva referências de Issues/PRs em crases nem em hyperlinks manuais (`[#123](url)`) quando desejar o auto-link do GitHub. Use apenas `#123` — o GitHub resolve automaticamente.
 - **Resolução de Threads:** Se um bot ou agente deixar comentários de revisão no seu PR, aplique as correções e resolva as conversas você mesmo. Não deixe a limpeza de conversas de bots para os mantenedores.
 - **Commits em PRs:** Ao postar comentários de conclusão de PR, sempre torne os SHAs dos commits clicáveis com links completos.
+
+------
 
 ## Estrutura do Projeto e Convenções de Código
 
@@ -20,22 +47,24 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 - **Estilo TypeScript:** Prefira tipagem estrita. Evite o uso de `any`. Nunca adicione `@ts-nocheck` e não desabilite `no-explicit-any`; corrija a causa raiz e mantenha a tipagem segura.
 - **Boas Práticas de Classes:** Nunca compartilhe comportamento de classe via mutação de protótipo (`Object.defineProperty` em `.prototype`). Use herança ou composição explícitas para que o TypeScript possa validar os tipos.
 
+------
+
 ## Padrões de Idioma e Qualidade de Entrega
 
 A separação de idiomas não é preferência estilística — é prevenção de bug. Português sem diacríticos em código (`nao`, `excecao`, `autenticacao`) é simultaneamente português incorreto e inglês inválido, e deve ser tratado como **P1**.
 
 ### Regra central: onde cada idioma se aplica
 
-| Contexto | Idioma obrigatório |
-|---|---|
-| Respostas no chat, comentários de PR, documentação `.md` | Português do Brasil (UTF-8 completo) |
-| `name:` de steps em GitHub Actions / `echo` / mensagens de `run` | Inglês |
-| `throw new Error / AppError / HttpException` | Inglês |
-| `console.error / warn / log` e qualquer `logger.*` | Inglês |
-| Comentários técnicos em `.ts`, `.py`, `.sh` | Inglês |
-| Comentários em `.yml` de CI/CD | Inglês |
+| Contexto                                                     | Idioma obrigatório                   |
+| ------------------------------------------------------------ | ------------------------------------ |
+| Respostas no chat, comentários de PR, documentação `.md`     | Português do Brasil (UTF-8 completo) |
+| `name:` de steps em GitHub Actions / `echo` / mensagens de `run` | Inglês                               |
+| `throw new Error / AppError / HttpException`                 | Inglês                               |
+| `console.error / warn / log` e qualquer `logger.*`           | Inglês                               |
+| Comentários técnicos em `.ts`, `.py`, `.sh`                  | Inglês                               |
+| Comentários em `.yml` de CI/CD                               | Inglês                               |
 
----
+------
 
 ### 1. Comunicação e Documentação — Português do Brasil
 
@@ -57,7 +86,7 @@ Correcao   Validacao   Configuracao   Autenticacao   Excecao   Solucao
 
 Seja direto e completo. Aborde apenas o que foi perguntado ou identificado. Sem enrolação, sem repetições, sem ofertas de acompanhamento. Encerre imediatamente após o conteúdo essencial.
 
----
+------
 
 ### 2. Código de Aplicação — Inglês
 
@@ -66,8 +95,8 @@ Toda string literal que possa aparecer em logs, respostas de API, stack traces o
 **Proibido:**
 
 ```typescript
-throw new AppError("Nao autenticado", 401);     // português truncado
-throw new AppError("Não autenticado", 401);     // português correto, mas fora do padrão
+throw new AppError("Nao autenticado", 401);
+throw new AppError("Não autenticado", 401);
 console.error("Falha na conexão com o banco");
 ```
 
@@ -80,7 +109,7 @@ console.error("Database connection failed");
 
 **Motivação:** mensagens de erro circulam por terminais, ferramentas de APM, alertas e buscas em log. Inglês garante rastreabilidade universal e elimina a classe inteira de erros de encoding.
 
----
+------
 
 ### 3. CI/CD e Shell — Inglês
 
@@ -100,22 +129,21 @@ Nomes de steps (`name:`), mensagens de `echo`, saídas de `exit` e comentários 
   run: echo "Backend did not respond at /health after 120s"
 ```
 
-**Motivação:** runners de CI não garantem locale UTF-8. A IA frequentemente produz português sem diacríticos ao gerar strings nesses contextos — o que torna o problema estrutural, não pontual. A única solução confiável é fixar inglês como idioma exclusivo.
-
----
+------
 
 ### 4. Verificação antes do commit
 
-Antes de qualquer commit ou abertura de PR, a IA deve executar a busca abaixo e corrigir toda ocorrência encontrada:
+Antes de qualquer commit ou abertura de PR, execute a busca abaixo e corrija toda ocorrência encontrada:
 
 ```bash
-# Palavras em português sem diacrítico em strings de código
 grep -rn --include="*.ts" --include="*.py" --include="*.yml" --include="*.sh" \
   -E '"[^"]*\b(nao|excecao|autenticacao|configuracao|validacao|solucao|conexao)[^"]*"' \
   .
 ```
 
 Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
+
+------
 
 ## Prioridades de Revisão
 
@@ -127,27 +155,30 @@ Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
 
 ### Níveis de Severidade
 
-| **Nível** | **Significado** | **Exemplos** |
-|---|---|---|
-| `P0` | Bloqueia a entrega — deve ser corrigido antes do merge | perda de dados, falha na autenticação, crash na inicialização, credenciais expostas |
-| `P1` | Quebra funcionalidade ou segurança — corrija neste PR | texto sem diacrítico no código (ex: `nao`), regra de negócio incorreta, regressão, falta de *guard* |
-| `P2` | Melhoria importante — corrija ou documente | falta de índice no banco, edge case não tratado, mensagem de erro ambígua |
-| `P3` | Sugestões de estilo/legibilidade | TS em modo estrito, preferência por `unknown` em vez de `any`, `'use client'` apenas onde necessário, imports via alias `@/` |
+| **Nível** | **Significado**                                        | **Exemplos**                                                 |
+| --------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| `P0`      | Bloqueia a entrega — deve ser corrigido antes do merge | perda de dados, falha na autenticação, crash na inicialização, credenciais expostas |
+| `P1`      | Quebra funcionalidade ou segurança — corrija neste PR  | texto sem diacrítico no código (ex: `nao`), regra de negócio incorreta, regressão, falta de *guard* |
+| `P2`      | Melhoria importante — corrija ou documente             | falta de índice no banco, edge case não tratado, mensagem de erro ambígua |
+| `P3`      | Sugestões de estilo/legibilidade                       | TS em modo estrito, preferência por `unknown` em vez de `any`, `'use client'` apenas onde necessário, imports via alias `@/` |
 
 > Não aponte preferências de estilo, escolhas menores de nomenclatura ou preocupações futuras especulativas como problemas de revisão.
+
+------
 
 ## Formato de Comentário no PR
 
 ### Quando usar cada formato
 
-| **Situação** | **Formato** |
-|---|---|
+| **Situação**                                     | **Formato**                |
+| ------------------------------------------------ | -------------------------- |
 | Abrindo ou atualizando um PR (novo tópico geral) | Comentário Principal do PR |
-| Respondendo a um comentário de revisão existente | Resposta na Thread |
+| Respondendo a um comentário de revisão existente | Resposta na Thread         |
 
 > **Regra principal:** se existe uma thread de revisão aberta (Codex, Copilot ou humano), a resposta deve ser feita *dentro* dessa thread via `gh api` — nunca como um novo `gh pr comment` separado.
 
 ### Corpo do PR (descrição ao abrir o PR)
+
 A estrutura do corpo do PR obedece a uma hierarquia de precedência:
 
 1. **Se existir um template no repositório** (ex: `.github/pull_request_template.md`): O corpo do PR deve seguir estritamente o formato, as seções e o estilo definidos no arquivo. Se o template utilizar emojis em cabeçalhos (ex: 📝, 🔨), eles **devem** ser mantidos.
@@ -213,13 +244,15 @@ gh api graphql -f query='
 '
 ```
 
+------
+
 ## Reações em Comentários de Revisão
 
 Após processar cada apontamento de revisão (Codex ou Copilot), **duas ações são obrigatórias e inseparáveis** — a reação sem a resposta na thread é considerada incompleta:
 
-| **Resultado** | **Ação obrigatória** |
-|---|---|
-| Correção aplicada / apontamento procedente | 1. Reagir 👍 no comentário original. 2. Responder na thread (prosa curta, sem headers). |
+| **Resultado**                                       | **Ação obrigatória**                                         |
+| --------------------------------------------------- | ------------------------------------------------------------ |
+| Correção aplicada / apontamento procedente          | 1. Reagir 👍 no comentário original. 2. Responder na thread (prosa curta, sem headers). |
 | Apontamento rejeitado com justificativa documentada | 1. Reagir 👎 no comentário original. 2. Responder na thread explicando a recusa. |
 
 Comandos de referência:
@@ -243,6 +276,8 @@ gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions \
 3. Responder dentro da thread (prosa curta, sem headers).
 4. Postar um único Comentário Principal no PR referenciando todas as threads tratadas no ciclo.
 
+------
+
 ## Validação antes de postar qualquer comentário ou corpo de PR
 
 Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaixo:
@@ -254,6 +289,8 @@ Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaix
 - Nenhuma instrução de template ou meta-comentário remanescente (ex: "Use nomes de paths em crase", "Não use `\n` literal").
 - Bullets de Validação usam texto puro — sem emoji.
 
+------
+
 ## Padrões da CLI `gh`
 
 - **Prevenção de Erros (Footgun):** Ao usar `gh issue/pr comment` com conteúdo que contém crases, variáveis ou múltiplos parágrafos, nunca use `-b "..."`. Use sempre strings literais multilinha com *heredoc* (`-F - <<'EOF'`) para evitar corrupção por substituição de shell e *escaping*.
@@ -263,6 +300,8 @@ Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaix
   - `Refs #<n>` — se fizer referência sem fechar.
   - Nunca deixe ambos os marcadores; escolha um e remova o outro.
 
+------
+
 ## Gatilhos de Revisão Automatizada
 
 - **Acionamento:** Mencione `@copilot` e `@codex review` em um comentário para solicitar uma nova análise automatizada.
@@ -271,4 +310,3 @@ Antes de enviar qualquer comentário ou abrir PR, verifique todos os itens abaix
   1. Valide a referência remota: `git ls-remote origin refs/pull/<n>/*`
   2. Atualize o estado do PR via um novo push ou comentário.
   3. Acione a revisão novamente.
-  

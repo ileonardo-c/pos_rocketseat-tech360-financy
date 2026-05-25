@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
+import { type InputHTMLAttributes, type ReactNode, useId } from "react";
 
 import { cx } from "@/lib/utils";
 
@@ -27,8 +27,11 @@ export const Input = ({
   helper,
   helperError,
   disabled,
+  id,
   ...inputProps
 }: InputProps) => {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const isDisabled = disabled || state === "disabled";
   const hasError = state === "error";
   const isActive = state === "active";
@@ -57,7 +60,11 @@ export const Input = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {label && <span className={cx("text-sm font-medium leading-5", labelColor)}>{label}</span>}
+      {label && (
+        <label htmlFor={inputId} className={cx("text-sm font-medium leading-5", labelColor)}>
+          {label}
+        </label>
+      )}
       <div className="relative">
         {startIcon && (
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-financy-field-placeholder">
@@ -65,6 +72,7 @@ export const Input = ({
           </span>
         )}
         <input
+          id={inputId}
           className={fieldClass}
           type={type}
           disabled={isDisabled}

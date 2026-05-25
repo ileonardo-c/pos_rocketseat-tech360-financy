@@ -13,8 +13,15 @@ type ApolloProviderProps = {
   children: React.ReactNode;
 };
 
+const apiBaseUrl =
+  typeof import.meta.env.VITE_BACKEND_URL === "string"
+    ? import.meta.env.VITE_BACKEND_URL.trim().replace(/\/$/, "")
+    : "";
+
+const graphqlUri = import.meta.env.PROD && apiBaseUrl ? `${apiBaseUrl}/graphql` : "/graphql";
+
 const httpLink = createHttpLink({
-  uri: `${import.meta.env.VITE_BACKEND_URL || "http://localhost:4000"}/graphql`,
+  uri: graphqlUri,
 });
 
 const AUTH_TOKEN_STORAGE_KEY = "financy.token";

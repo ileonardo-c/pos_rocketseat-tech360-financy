@@ -238,7 +238,7 @@ const emptyTransactionForm: TransactionForm = {
   categoryId: "",
 };
 
-export const ProtectedPage = () => {
+export const DashboardPage = () => {
   const { user, signout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamsString = searchParams.toString();

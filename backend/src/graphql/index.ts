@@ -19,6 +19,11 @@ export const typeDefs = `
     user: User!
   }
 
+  type RegisterPayload {
+    created: Boolean!
+    user: User!
+  }
+
   type Category {
     id: ID!
     name: String!
@@ -158,7 +163,7 @@ export const typeDefs = `
   }
 
   type Mutation {
-    register(input: RegisterInput!): AuthPayload!
+    register(input: RegisterInput!): RegisterPayload!
     login(input: LoginInput!): AuthPayload!
     updateProfile(input: UpdateProfileInput!): User!
     createCategory(input: CreateCategoryInput!): Category!

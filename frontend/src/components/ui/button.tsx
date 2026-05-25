@@ -52,6 +52,7 @@ export const Button = ({
   startIcon,
   endIcon,
   disabled,
+  type = "button",
   children,
   ...buttonProps
 }: ButtonProps) => {
@@ -66,7 +67,7 @@ export const Button = ({
   return (
     <button
       className={cx(base, variants[variant], sizes[size], stateClass, className)}
-      type="button"
+      type={type}
       disabled={isDisabled}
       {...buttonProps}
     >

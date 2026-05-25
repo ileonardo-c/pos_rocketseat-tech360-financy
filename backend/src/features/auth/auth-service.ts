@@ -51,12 +51,7 @@ export class AuthService {
       }
       throw error;
     }
-    const signOptions: SignOptions = { expiresIn: JWT_EXPIRES_IN as SignOptions["expiresIn"] };
-    const token = jwt.sign({ sub: user.id }, getRequiredEnv("JWT_SECRET"), {
-      ...signOptions,
-    });
-
-    return { token, user: { id: user.id, name: user.name, email: user.email } };
+    return { created: true, user: { id: user.id, name: user.name, email: user.email } };
   }
 
   async login(email: string, password: string) {

@@ -118,7 +118,7 @@ const runGraphQLProbe = () => request("query HealthProbe { __typename }");
 const registerMutation = `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
-      token
+      created
       user { id email }
     }
   }
@@ -190,7 +190,7 @@ const run = async () => {
   await runGraphQLProbe();
 
   const registerData = await request(registerMutation, undefined, { input: userInput });
-  ensure(registerData?.register?.token, "Missing token from register");
+  ensure(registerData?.register?.created === true, "Register should return created=true");
   ensure(registerData.register.user.email === userInput.email, "Registered user email mismatch");
 
   const loginData = await request(loginMutation, undefined, {
@@ -252,7 +252,10 @@ const run = async () => {
   );
 
   const secondRegisterData = await request(registerMutation, undefined, { input: secondUserInput });
-  ensure(secondRegisterData?.register?.token, "Missing token from second user register");
+  ensure(
+    secondRegisterData?.register?.created === true,
+    "Second user register should return created=true",
+  );
 
   const secondLoginData = await request(loginMutation, undefined, {
     input: { email: secondUserInput.email, password: secondUserInput.password },
