@@ -3,7 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { CategoriesPage } from "@/pages/categories-page";
 import { ProfilePage } from "@/pages/profile-page";
-import { ProtectedPage } from "@/pages/protected-page";
+import { DashboardPage } from "@/pages/dashboard-page";
 import { SigninPage } from "@/pages/signin-page";
 import { SignupPage } from "@/pages/signup-page";
 import { StyleGuidePage } from "@/pages/style-guide-page";
@@ -28,7 +28,7 @@ export function App() {
 
   return (
     <Routes>
-      <Route path="/" element={user ? <ProtectedPage /> : <SigninPage />} />
+      <Route path="/" element={user ? <DashboardPage /> : <SigninPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route
         path="/categories"

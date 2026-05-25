@@ -238,7 +238,7 @@ const emptyTransactionForm: TransactionForm = {
   categoryId: "",
 };
 
-export const ProtectedPage = () => {
+export const DashboardPage = () => {
   const { user, signout } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamsString = searchParams.toString();
@@ -882,134 +882,131 @@ export const ProtectedPage = () => {
                   <strong className="text-sm text-financy-text">
                     {currencyFormatter.format(transaction.amount)}
                   </strong>
-                    <TextLink asChild>
-                      <Link
-                        className="inline-flex sm:col-span-3"
-                        to={buildTransactionsPath({
-                          categoryId: transaction.category?.id,
-                          from: toDateInput(new Date(transaction.date)),
-                          to: toDateInput(new Date(transaction.date)),
-                        })}
-                      >
-                        Ver no extrato
-                      </Link>
-                    </TextLink>
-                  </li>
+                  <TextLink asChild>
+                    <Link
+                      className="inline-flex sm:col-span-3"
+                      to={buildTransactionsPath({
+                        categoryId: transaction.category?.id,
+                        from: toDateInput(new Date(transaction.date)),
+                        to: toDateInput(new Date(transaction.date)),
+                      })}
+                    >
+                      Ver no extrato
+                    </Link>
+                  </TextLink>
+                </li>
               ))}
             </ul>
           )}
         </Card>
 
         <Modal isOpen={isCreateDialogOpen} onClose={closeCreateDialog} title="Nova transação">
-            <form
-              className="mt-4 space-y-3"
-              onSubmit={async (event) => {
-                event.preventDefault();
-                if (isCreateDisabled) {
-                  return;
-                }
+          <form
+            className="mt-4 space-y-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (isCreateDisabled) {
+                return;
+              }
 
-                try {
-                  setActionError(null);
-                  setActionSuccess(null);
-                  await createTransaction({
-                    variables: {
-                      input: {
-                        title: form.title.trim(),
-                        amount: Number(form.amount),
-                        type: form.type,
-                        date: new Date(`${form.date}T00:00:00`).toISOString(),
-                        categoryId: form.categoryId,
-                        description: null,
-                      },
+              try {
+                setActionError(null);
+                setActionSuccess(null);
+                await createTransaction({
+                  variables: {
+                    input: {
+                      title: form.title.trim(),
+                      amount: Number(form.amount),
+                      type: form.type,
+                      date: new Date(`${form.date}T00:00:00`).toISOString(),
+                      categoryId: form.categoryId,
+                      description: null,
                     },
-                  });
-                  closeCreateDialog();
-                  setActionSuccess("Transação criada com sucesso.");
-                } catch {
-                  setActionError("Não foi possível criar a transação.");
-                }
-              }}
+                  },
+                });
+                closeCreateDialog();
+                setActionSuccess("Transação criada com sucesso.");
+              } catch {
+                setActionError("Não foi possível criar a transação.");
+              }
+            }}
+          >
+            <Input
+              autoComplete="off"
+              label="Título"
+              required
+              type="text"
+              value={form.title}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, title: event.target.value }))
+              }
+            />
+            <Input
+              label="Valor"
+              min="0"
+              required
+              step="0.01"
+              type="number"
+              value={form.amount}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, amount: event.target.value }))
+              }
+            />
+            <label className="text-sm font-medium text-financy-text" htmlFor="transaction-type">
+              Tipo
+            </label>
+            <Select
+              id="transaction-type"
+              value={form.type}
+              onChange={(event) =>
+                setForm((previous) => ({
+                  ...previous,
+                  type: event.target.value as TransactionForm["type"],
+                }))
+              }
             >
-              <Input
-                autoComplete="off"
-                label="Título"
-                required
-                type="text"
-                value={form.title}
-                onChange={(event) =>
-                  setForm((previous) => ({ ...previous, title: event.target.value }))
-                }
-              />
-              <Input
-                label="Valor"
-                min="0"
-                required
-                step="0.01"
-                type="number"
-                value={form.amount}
-                onChange={(event) =>
-                  setForm((previous) => ({ ...previous, amount: event.target.value }))
-                }
-              />
-              <label className="text-sm font-medium text-financy-text" htmlFor="transaction-type">
-                Tipo
-              </label>
-              <Select
-                id="transaction-type"
-                value={form.type}
-                onChange={(event) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    type: event.target.value as TransactionForm["type"],
-                  }))
-                }
-              >
-                <option value="EXPENSE">Despesa</option>
-                <option value="INCOME">Receita</option>
-              </Select>
-              <Input
-                label="Data"
-                required
-                type="date"
-                value={form.date}
-                onChange={(event) =>
-                  setForm((previous) => ({ ...previous, date: event.target.value }))
-                }
-              />
-              <label
-                className="text-sm font-medium text-financy-text"
-                htmlFor="transaction-category"
-              >
-                Categoria
-              </label>
-              <Select
-                id="transaction-category"
-                required
-                value={form.categoryId}
-                onChange={(event) =>
-                  setForm((previous) => ({ ...previous, categoryId: event.target.value }))
-                }
-              >
-                <option value="">Selecione</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </Select>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button disabled={isCreateDisabled} type="submit">
-                  <span className="t-text-swap">
-                    {creatingTransaction ? "Criando..." : "Criar transação"}
-                  </span>
-                </Button>
-                <Button type="button" variant="outline" onClick={closeCreateDialog}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </Modal>
+              <option value="EXPENSE">Despesa</option>
+              <option value="INCOME">Receita</option>
+            </Select>
+            <Input
+              label="Data"
+              required
+              type="date"
+              value={form.date}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, date: event.target.value }))
+              }
+            />
+            <label className="text-sm font-medium text-financy-text" htmlFor="transaction-category">
+              Categoria
+            </label>
+            <Select
+              id="transaction-category"
+              required
+              value={form.categoryId}
+              onChange={(event) =>
+                setForm((previous) => ({ ...previous, categoryId: event.target.value }))
+              }
+            >
+              <option value="">Selecione</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button disabled={isCreateDisabled} type="submit">
+                <span className="t-text-swap">
+                  {creatingTransaction ? "Criando..." : "Criar transação"}
+                </span>
+              </Button>
+              <Button type="button" variant="outline" onClick={closeCreateDialog}>
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </main>
   );

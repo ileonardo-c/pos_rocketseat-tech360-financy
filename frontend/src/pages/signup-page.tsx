@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
+import { IconMail } from "@/assets/icons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
+import { TextLink } from "@/components/ui/text-link";
 import { useAuth } from "@/lib/auth/auth-provider";
 
 export const SignupPage = () => {
@@ -13,10 +15,7 @@ export const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [touched, setTouched] = useState({ name: false, email: false, password: false });
-  const [shakeName, setShakeName] = useState(false);
-  const [shakeEmail, setShakeEmail] = useState(false);
-  const [shakePassword, setShakePassword] = useState(false);
-  const [shakeNonce, setShakeNonce] = useState({ name: 0, email: 0, password: 0 });
+  const [focused, setFocused] = useState({ name: false, email: false, password: false });
 
   const getNameError = (value: string) =>
     value.trim().length >= 2 ? "" : "Informe seu nome com pelo menos 2 caracteres.";
@@ -55,42 +54,55 @@ export const SignupPage = () => {
     return getPasswordError(password);
   }, [password, touched.password]);
 
-  useEffect(() => {
-    if (!nameError) {
-      setShakeName(false);
-      return;
-    }
-    setShakeName(true);
-    const timeout = window.setTimeout(() => setShakeName(false), 320);
-    return () => window.clearTimeout(timeout);
-  }, [nameError, shakeNonce.name]);
+  const nameState = nameError
+    ? "error"
+    : focused.name
+      ? "active"
+      : name
+        ? "filled"
+        : touched.name
+          ? "active"
+          : "empty";
+  const emailState = emailError
+    ? "error"
+    : focused.email
+      ? "active"
+      : email
+        ? "filled"
+        : touched.email
+          ? "active"
+          : "empty";
+  const passwordState = passwordError
+    ? "error"
+    : focused.password
+      ? "active"
+      : password
+        ? "filled"
+        : touched.password
+          ? "active"
+          : "empty";
 
-  useEffect(() => {
-    if (!emailError) {
-      setShakeEmail(false);
-      return;
-    }
-    setShakeEmail(true);
-    const timeout = window.setTimeout(() => setShakeEmail(false), 320);
-    return () => window.clearTimeout(timeout);
-  }, [emailError, shakeNonce.email]);
-
-  useEffect(() => {
-    if (!passwordError) {
-      setShakePassword(false);
-      return;
-    }
-    setShakePassword(true);
-    const timeout = window.setTimeout(() => setShakePassword(false), 320);
-    return () => window.clearTimeout(timeout);
-  }, [passwordError, shakeNonce.password]);
+  const passwordVisibilityIcon = (
+    <span className="text-financy-field-placeholder">
+      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" className="h-4 w-4">
+        <path
+          d="M8 10V8a4 4 0 1 1 8 0v2"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.5"
+        />
+        <rect height="10" rx="2" stroke="currentColor" strokeWidth="1.5" width="14" x="5" y="10" />
+      </svg>
+    </span>
+  );
 
   if (user) {
     return <Navigate to="/" replace />;
   }
 
   return (
-    <main className="auth-layout min-h-screen bg-[#f3f4f6] px-4 py-8 text-slate-700 sm:py-12">
+    <main className="min-h-screen bg-financy-page px-4 py-8 text-financy-text-secondary sm:py-12">
       <div className="mx-auto w-full max-w-[448px]">
         <header className="mb-6 flex items-center justify-center gap-3 text-[#24784A] sm:mb-8">
           <svg
@@ -109,11 +121,11 @@ export const SignupPage = () => {
           </span>
         </header>
 
-        <Card className="border border-slate-300/85 bg-white px-5 py-6 shadow-none transition-all duration-300 ease-out sm:px-8 sm:py-9">
-          <h1 className="text-center text-3xl font-bold leading-[1.15] text-slate-900 sm:text-[40px]">
+        <Card className="border-financy-border bg-financy-surface p-6 shadow-none transition-all duration-300 ease-out sm:p-9">
+          <h1 className="text-center text-3xl font-bold leading-[1.15] text-financy-text sm:text-[40px]">
             Criar conta
           </h1>
-          <p className="mt-2 text-center text-base leading-[1.35] text-slate-600 sm:mt-3 sm:text-[34px] sm:leading-[1.15]">
+          <p className="mt-2 text-center text-base leading-[1.35] text-financy-muted sm:mt-3 sm:text-[34px] sm:leading-[1.15]">
             Registre-se para começar a usar o Financy
           </p>
           <form
@@ -126,164 +138,91 @@ export const SignupPage = () => {
               const submitEmailError = getEmailError(email);
               const submitPasswordError = getPasswordError(password);
               if (submitNameError || submitEmailError || submitPasswordError) {
-                setShakeNonce((prev) => ({
-                  name: submitNameError ? prev.name + 1 : prev.name,
-                  email: submitEmailError ? prev.email + 1 : prev.email,
-                  password: submitPasswordError ? prev.password + 1 : prev.password,
-                }));
                 return;
               }
 
               await signup({ name: name.trim(), email: email.trim(), password });
             }}
           >
-            <label
-              className="space-y-2 text-base font-semibold text-slate-700 sm:text-xl"
-              htmlFor="signup-name"
-            >
-              Nome
-              <div className={`t-input-wrap relative ${nameError ? "is-error" : ""}`}>
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M12 13a4.5 4.5 0 1 0-4.5-4.5A4.5 4.5 0 0 0 12 13zm0 0c-3.3 0-6 2.01-6 4.5V19h12v-1.5c0-2.49-2.7-4.5-6-4.5z"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                  />
-                </svg>
-                <Input
-                  id="signup-name"
-                  autoComplete="name"
-                  className={`t-input h-12 rounded-xl border-slate-300 bg-white pl-12 text-base text-slate-500 placeholder:text-slate-400 focus:border-[#24784A] focus:ring-[#24784A]/15 sm:h-14 sm:text-2xl ${shakeName ? "is-shaking" : ""}`}
-                  placeholder="Seu nome completo"
-                  required
-                  type="text"
-                  value={name}
-                  onBlur={() => setTouched((prev) => ({ ...prev, name: true }))}
-                  onChange={(event) => {
-                    clearAuthError();
-                    setName(event.target.value);
-                  }}
-                />
-              </div>
-              {nameError ? (
-                <span className="t-error-msg mt-1 block text-sm text-red-600 sm:text-base">
-                  {nameError}
-                </span>
-              ) : null}
-            </label>
-            <label
-              className="space-y-2 text-base font-semibold text-slate-700 sm:text-xl"
-              htmlFor="signup-email"
-            >
-              Email
-              <div className={`t-input-wrap relative ${emailError ? "is-error" : ""}`}>
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M4 7.5C4 6.67 4.67 6 5.5 6h13c.83 0 1.5.67 1.5 1.5v9c0 .83-.67 1.5-1.5 1.5h-13A1.5 1.5 0 0 1 4 16.5v-9z"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  />
-                  <path
-                    d="m5 8 7 5 7-5"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                  />
-                </svg>
-                <Input
-                  id="signup-email"
-                  autoComplete="email"
-                  className={`t-input h-12 rounded-xl border-slate-300 bg-white pl-12 text-base text-slate-500 placeholder:text-slate-400 focus:border-[#24784A] focus:ring-[#24784A]/15 sm:h-14 sm:text-2xl ${shakeEmail ? "is-shaking" : ""}`}
-                  placeholder="mail@exemplo.com"
-                  required
-                  type="email"
-                  value={email}
-                  onBlur={() => setTouched((prev) => ({ ...prev, email: true }))}
-                  onChange={(event) => {
-                    clearAuthError();
-                    setEmail(event.target.value);
-                  }}
-                />
-              </div>
-              {emailError ? (
-                <span className="t-error-msg mt-1 block text-sm text-red-600 sm:text-base">
-                  {emailError}
-                </span>
-              ) : null}
-            </label>
-            <label
-              className="space-y-2 text-base font-semibold text-slate-700 sm:text-xl"
-              htmlFor="signup-password"
-            >
-              Senha
-              <div className={`t-input-wrap relative ${passwordError ? "is-error" : ""}`}>
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M8 10V8a4 4 0 1 1 8 0v2"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                  />
-                  <rect
-                    height="10"
-                    rx="2"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    width="14"
-                    x="5"
-                    y="10"
-                  />
-                </svg>
-                <Input
-                  id="signup-password"
-                  autoComplete="new-password"
-                  className={`t-input h-12 rounded-xl border-slate-300 bg-white px-12 text-base text-slate-500 placeholder:text-slate-400 focus:border-[#24784A] focus:ring-[#24784A]/15 sm:h-14 sm:text-2xl ${shakePassword ? "is-shaking" : ""}`}
-                  placeholder="Crie uma senha segura"
-                  required
-                  type="password"
-                  value={password}
-                  onBlur={() => setTouched((prev) => ({ ...prev, password: true }))}
-                  onChange={(event) => {
-                    clearAuthError();
-                    setPassword(event.target.value);
-                  }}
-                />
-              </div>
-              {passwordError ? (
-                <span className="t-error-msg mt-1 block text-sm text-red-600 sm:text-base">
-                  {passwordError}
-                </span>
-              ) : null}
-            </label>
+            <Input
+              id="signup-name"
+              autoComplete="name"
+              label="Nome"
+              placeholder="Seu nome completo"
+              required
+              state={nameState}
+              startIcon={<IconMail className="h-4 w-4" />}
+              helper={nameError || undefined}
+              helperError={Boolean(nameError)}
+              value={name}
+              onFocus={() => setFocused((previous) => ({ ...previous, name: true }))}
+              onBlur={() => {
+                setFocused((previous) => ({ ...previous, name: false }));
+                setTouched((previous) => ({ ...previous, name: true }));
+              }}
+              onChange={(event) => {
+                clearAuthError();
+                setName(event.target.value);
+              }}
+            />
+
+            <Input
+              id="signup-email"
+              autoComplete="email"
+              label="Email"
+              placeholder="mail@exemplo.com"
+              required
+              state={emailState}
+              startIcon={<IconMail className="h-4 w-4" />}
+              helper={emailError || undefined}
+              helperError={Boolean(emailError)}
+              value={email}
+              onFocus={() => setFocused((previous) => ({ ...previous, email: true }))}
+              onBlur={() => {
+                setFocused((previous) => ({ ...previous, email: false }));
+                setTouched((previous) => ({ ...previous, email: true }));
+              }}
+              onChange={(event) => {
+                clearAuthError();
+                setEmail(event.target.value);
+              }}
+            />
+
+            <Input
+              id="signup-password"
+              autoComplete="new-password"
+              label="Senha"
+              placeholder="Crie uma senha segura"
+              required
+              state={passwordState}
+              startIcon={passwordVisibilityIcon}
+              helper={passwordError || undefined}
+              helperError={Boolean(passwordError)}
+              type="password"
+              value={password}
+              onFocus={() => setFocused((previous) => ({ ...previous, password: true }))}
+              onBlur={() => {
+                setFocused((previous) => ({ ...previous, password: false }));
+                setTouched((previous) => ({ ...previous, password: true }));
+              }}
+              onChange={(event) => {
+                clearAuthError();
+                setPassword(event.target.value);
+              }}
+            />
 
             <ErrorBanner message={authError} />
 
             <Button
-              className="mt-1 h-12 rounded-xl bg-[#24784A] text-lg font-bold transition-colors duration-200 hover:bg-[#1f6941] sm:h-14 sm:text-2xl"
+              className="mt-1 text-lg font-bold sm:h-14 sm:text-2xl"
               disabled={
-                loading || Boolean(nameError) || Boolean(emailError) || Boolean(passwordError)
+                loading ||
+                !name.trim() ||
+                !email.trim() ||
+                !password.trim() ||
+                Boolean(nameError) ||
+                Boolean(emailError) ||
+                Boolean(passwordError)
               }
               type="submit"
             >
@@ -297,15 +236,17 @@ export const SignupPage = () => {
               <span>Ou</span>
               <span className="h-px flex-1 bg-slate-300" />
             </div>
-            <p className="mt-6 text-center text-base text-slate-600 sm:mt-7 sm:text-[31px]">
+            <p className="mt-6 text-center text-base text-financy-muted sm:mt-7 sm:text-[31px]">
               Já possui conta?
             </p>
-            <Link
-              className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-slate-300 text-lg font-semibold text-slate-700 transition duration-200 hover:bg-slate-50 sm:h-14 sm:text-3xl"
-              to="/"
+            <TextLink
+              asChild
+              className="mt-4 h-12 w-full items-center justify-center gap-2 rounded-xl border border-financy-field-border text-lg font-semibold text-financy-text transition duration-200 hover:bg-financy-surface-hover"
             >
-              Entrar
-            </Link>
+              <Link className="inline-flex" to="/">
+                Entrar
+              </Link>
+            </TextLink>
           </div>
         </Card>
       </div>

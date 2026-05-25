@@ -32,6 +32,7 @@ export const Input = ({
   const isDisabled = disabled || state === "disabled";
   const hasError = state === "error";
   const isActive = state === "active";
+  const inputId = inputProps.id;
 
   // Figma label colours: active → primary, error → field-error, default → text-secondary
   const labelColor = hasError
@@ -57,7 +58,11 @@ export const Input = ({
 
   return (
     <div className="flex flex-col gap-2">
-      {label && <span className={cx("text-sm font-medium leading-5", labelColor)}>{label}</span>}
+      {label && (
+        <label htmlFor={inputId} className={cx("text-sm font-medium leading-5", labelColor)}>
+          {label}
+        </label>
+      )}
       <div className="relative">
         {startIcon && (
           <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-financy-field-placeholder">
