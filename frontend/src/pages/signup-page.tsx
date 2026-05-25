@@ -19,7 +19,8 @@ export const SignupPage = () => {
   const [submitFeedback, setSubmitFeedback] = useState<string | null>(null);
   const [touched, setTouched] = useState({ name: false, email: false, password: false });
   const [focused, setFocused] = useState({ name: false, email: false, password: false });
-  const sanitizeNameInput = (value: string) => value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g, "");
+  const nameAllowedCharactersRegex = /^[\p{L}\p{M}' -]+$/u;
+  const sanitizeNameInput = (value: string) => value.replace(/[^\p{L}\p{M}' -]/gu, "");
 
   const getNameError = (value: string) => {
     const normalized = value.trim();
@@ -32,7 +33,7 @@ export const SignupPage = () => {
       return "Informe um nome válido.";
     }
 
-    const hasValidCharacters = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]+$/.test(normalized);
+    const hasValidCharacters = nameAllowedCharactersRegex.test(normalized);
     if (!hasValidCharacters) {
       return "Use apenas letras no nome.";
     }
