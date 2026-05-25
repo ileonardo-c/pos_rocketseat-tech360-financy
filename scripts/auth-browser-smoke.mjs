@@ -4,6 +4,7 @@ const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const frontendUrlObject = new URL(frontendUrl);
 const API_HOST = process.env.E2E_API_HOST ?? frontendUrlObject.hostname;
 const API_URL = process.env.E2E_API_URL ?? `${frontendUrlObject.protocol}//${API_HOST}:4000`;
+const GRAPHQL_URL = API_URL.endsWith("/graphql") ? API_URL : `${API_URL}/graphql`;
 
 const password = "SmokePass123!";
 const hydrationWindowTimeoutMs = 4000;
@@ -48,7 +49,7 @@ const readStoredAuthToken = async (page) => {
 };
 
 const executeRegisterRequest = async (page, user) => {
-  const response = await page.request.post(`${API_URL}/graphql`, {
+  const response = await page.request.post(GRAPHQL_URL, {
     data: {
       query: registerMutation,
       variables: {

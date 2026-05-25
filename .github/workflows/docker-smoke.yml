@@ -25,7 +25,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and start CI compose stack
-        run: docker compose -p financy-ci -f docker-compose.ci.yml up -d --build --wait --wait-timeout 45
+        run: docker compose -p financy-ci -f docker-compose.ci.yml up -d --build --wait --wait-timeout 120
 
       - name: Wait for backend readiness
         run: |
