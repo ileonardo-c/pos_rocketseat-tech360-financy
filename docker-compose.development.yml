@@ -53,6 +53,7 @@ services:
         condition: service_completed_successfully
     environment:
       NODE_ENV: development
+      PNPM_STORE_DIR: /pnpm/store
       DATABASE_URL: postgresql://${POSTGRES_USER:-financy_user}:${POSTGRES_PASSWORD:-financy_password}@postgres:5432/${POSTGRES_DB:-financy}
       JWT_SECRET: ${JWT_SECRET:-change_me}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
@@ -68,6 +69,7 @@ services:
     command: sh -lc "CI=1 pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
     volumes:
       - .:/app:rw
+      - pnpm_store_dev:/pnpm/store
       - root_node_modules:/app/node_modules
       - backend_node_modules:/app/backend/node_modules
     healthcheck:
@@ -91,14 +93,20 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
+      PNPM_STORE_DIR: /pnpm/store
       VITE_INTERNAL_BACKEND_URL: http://backend:4000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     ports:
       - "5173:5173"
-    command: sh -lc "pnpm install --frozen-lockfile && pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
+    command: >
+      sh -lc "if [ ! -f /app/frontend/node_modules/vite/bin/vite.js ]; then
+      pnpm install --frozen-lockfile --filter @financy/frontend...;
+      fi &&
+      pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
     volumes:
       - .:/app:rw
+      - pnpm_store_dev:/pnpm/store
       - root_node_modules:/app/node_modules
       - frontend_node_modules:/app/frontend/node_modules
     healthcheck:
@@ -124,13 +132,19 @@ services:
       frontend:
         condition: service_healthy
     environment:
+      PNPM_STORE_DIR: /pnpm/store
       E2E_APP_URL: http://localhost:5173
       E2E_API_URL: http://backend:4000/graphql
       E2E_API_HOST: backend
       CI: "true"
-    command: sh -lc "pnpm install --frozen-lockfile && pnpm --filter @financy/frontend test:e2e:smoke"
+    command: >
+      sh -lc "if [ ! -f /app/frontend/node_modules/@playwright/test/package.json ]; then
+      pnpm install --frozen-lockfile --filter @financy/frontend...;
+      fi &&
+      pnpm --filter @financy/frontend test:e2e:smoke"
     volumes:
       - .:/app:rw
+      - pnpm_store_dev:/pnpm/store
       - root_node_modules:/app/node_modules
       - frontend_node_modules:/app/frontend/node_modules
     network_mode: service:frontend
@@ -138,6 +152,7 @@ services:
 volumes:
   postgres_data_dev:
   minio_data_dev:
+  pnpm_store_dev:
   root_node_modules:
   backend_node_modules:
   frontend_node_modules:

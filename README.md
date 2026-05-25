@@ -106,6 +106,20 @@ cp .env.example .env
 pnpm compose:up
 ```
 
+Política de dependências (Docker-first):
+- `node_modules` Linux roda apenas em volumes Docker nomeados.
+- `node_modules` do host Windows não é compartilhado com os containers.
+- `pnpm-lock.yaml` permanece como lockfile único entre host e Docker.
+
+Fallback offline no host (instalação apenas):
+
+```bash
+pnpm install:host:offline
+```
+
+Esse comando usa store separado em `.pnpm-store/host` e não altera o estado
+de volumes do Docker.
+
 | Serviço | URL |
 |---|---|
 | Frontend | http://localhost:5173 |
@@ -144,6 +158,7 @@ Configuração de exposição em produção:
 
 Observação de infraestrutura:
 - os comandos usam projetos Docker separados (`financy-dev` e `financy-prod`) para evitar conflito entre stacks.
+- o ambiente Docker usa store dedicado via `PNPM_STORE_DIR=/pnpm/store`.
 
 ---
 

@@ -47,6 +47,7 @@ services:
         condition: service_completed_successfully
     environment:
       NODE_ENV: production
+      PNPM_STORE_DIR: /pnpm/store
       DATABASE_URL: postgresql://${POSTGRES_USER:-financy_user}:${POSTGRES_PASSWORD:-financy_password}@postgres:5432/${POSTGRES_DB:-financy}
       JWT_SECRET: ${JWT_SECRET:-change_me}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
@@ -59,6 +60,8 @@ services:
       S3_FORCE_PATH_STYLE: "true"
     ports:
       - "4000:4000"
+    volumes:
+      - pnpm_store_prod:/pnpm/store
     command: >
       /bin/sh -c "pnpm --filter @financy/backend exec prisma db push --accept-data-loss &&
       pnpm --filter @financy/backend build &&
@@ -84,9 +87,12 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      PNPM_STORE_DIR: /pnpm/store
       VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
     ports:
       - "5173:5173"
+    volumes:
+      - pnpm_store_prod:/pnpm/store
     command: >
       /bin/sh -c "pnpm --filter @financy/frontend build &&
       pnpm --filter @financy/frontend preview --host 0.0.0.0 --port 5173"
@@ -94,3 +100,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  pnpm_store_prod:

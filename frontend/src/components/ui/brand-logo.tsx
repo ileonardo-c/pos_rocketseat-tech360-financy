@@ -1,6 +1,6 @@
-import { cx } from "@/lib/utils";
 import logoMarkUrl from "@/assets/brand/logo-mark.svg";
 import logoWordmarkUrl from "@/assets/brand/logo-wordmark.svg";
+import { cx } from "@/lib/utils";
 
 type BrandLogoProps = {
   className?: string;

@@ -5,6 +5,7 @@
   "scripts": {
     "prepare": "sh -c 'if [ -f .github/hooks/pre-commit ] && [ -d .git/hooks ]; then cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit; fi'",
     "install:all": "pnpm install",
+    "install:host:offline": "pnpm install --store-dir .pnpm-store/host --prefer-offline",
     "biome": "biome check .",
     "format": "biome format .",
     "check": "biome check .",

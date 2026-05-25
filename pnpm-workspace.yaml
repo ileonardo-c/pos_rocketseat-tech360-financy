@@ -1,3 +1,10 @@
 packages:
   - backend
   - frontend
+
+onlyBuiltDependencies:
+  - "@biomejs/biome"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "esbuild"
+  - "prisma"

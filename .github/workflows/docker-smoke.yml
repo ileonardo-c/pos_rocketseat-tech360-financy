@@ -24,6 +24,12 @@ jobs:
       - name: Build and start development compose stack
         run: docker compose -p financy-dev -f docker-compose.development.yml up -d --build
 
+      - name: Validate pnpm runtime toolchain
+        run: |
+          set -euo pipefail
+          docker compose -p financy-dev -f docker-compose.development.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
+          docker compose -p financy-dev -f docker-compose.development.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null && pnpm --filter @financy/frontend exec playwright --version >/dev/null"
+
       - name: Wait for backend readiness
         run: |
           set -euo pipefail
