@@ -1,9 +1,9 @@
-import { useAuth } from "@/lib/auth/auth-provider";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { useAuth } from "@/lib/auth/auth-provider";
 import { CategoriesPage } from "@/pages/categories-page";
-import { ProfilePage } from "@/pages/profile-page";
 import { DashboardPage } from "@/pages/dashboard-page";
+import { ProfilePage } from "@/pages/profile-page";
 import { SigninPage } from "@/pages/signin-page";
 import { SignupPage } from "@/pages/signup-page";
 import { StyleGuidePage } from "@/pages/style-guide-page";

@@ -72,8 +72,6 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/backend prisma:generate && pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
     volumes:
       - .:/app:rw
-      - shared_node_modules_dev:/app/node_modules
-      - backend_node_modules_dev:/app/backend/node_modules
     healthcheck:
       test:
         [
@@ -96,7 +94,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
-      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://localhost:4000}
+      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://backend:4000}
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     ports:
@@ -104,8 +102,6 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
     volumes:
       - .:/app:rw
-      - shared_node_modules_dev:/app/node_modules
-      - frontend_node_modules_dev:/app/frontend/node_modules
     healthcheck:
       test:
         [
@@ -137,13 +133,8 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend test:e2e:smoke"
     volumes:
       - .:/app:rw
-      - shared_node_modules_dev:/app/node_modules
-      - frontend_node_modules_dev:/app/frontend/node_modules
     network_mode: service:frontend
 
 volumes:
   postgres_data_dev:
   minio_data_dev:
-  shared_node_modules_dev:
-  backend_node_modules_dev:
-  frontend_node_modules_dev:

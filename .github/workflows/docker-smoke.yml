@@ -34,14 +34,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright Chromium
-        run: pnpm --filter @financy/frontend exec playwright install --with-deps chromium
-
       - name: Copy environment file
         run: cp .env.example .env
 
-      - name: Build and start compose stack
-        run: docker compose up -d --build
+      - name: Build and start development compose stack
+        run: docker compose -f docker-compose.development.yml up -d --build
 
       - name: Wait for backend readiness
         run: |
@@ -68,10 +65,10 @@ jobs:
           exit 1
 
       - name: Sync Prisma schema
-        run: docker compose exec -T backend pnpm --filter @financy/backend exec prisma db push
+        run: docker compose -f docker-compose.development.yml exec -T backend pnpm --filter @financy/backend exec prisma db push
 
       - name: Run E2E smoke flow
-        run: pnpm test:e2e:smoke
+        run: docker compose -f docker-compose.development.yml --profile e2e run --rm e2e pnpm --filter @financy/frontend test:e2e:smoke
 
       - name: Run auth smoke flow
         run: pnpm smoke:auth
@@ -88,12 +85,12 @@ jobs:
 
       - name: Show compose status
         if: always()
-        run: docker compose ps
+        run: docker compose -f docker-compose.development.yml ps
 
       - name: Show compose logs
         if: failure()
-        run: docker compose logs --no-color
+        run: docker compose -f docker-compose.development.yml logs --no-color
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker-compose.development.yml down -v
