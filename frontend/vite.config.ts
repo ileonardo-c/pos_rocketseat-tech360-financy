@@ -11,9 +11,23 @@ export default defineConfig({
     },
   },
   server: {
+    proxy: {
+      "/graphql": {
+        target: process.env.VITE_BACKEND_URL || "http://backend:4000",
+        changeOrigin: true,
+      },
+    },
     watch: {
       usePolling: true,
       interval: 1000,
+    },
+  },
+  preview: {
+    proxy: {
+      "/graphql": {
+        target: process.env.VITE_BACKEND_URL || "http://backend:4000",
+        changeOrigin: true,
+      },
     },
   },
 });

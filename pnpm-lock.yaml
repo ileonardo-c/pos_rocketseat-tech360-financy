@@ -45,6 +45,9 @@ importers:
         specifier: ^14.0.0
         version: 14.1.0(graphql@16.14.0)
     devDependencies:
+      '@prisma/engines':
+        specifier: 5.22.0
+        version: 5.22.0
       '@types/bcryptjs':
         specifier: ^2.4.6
         version: 2.4.6

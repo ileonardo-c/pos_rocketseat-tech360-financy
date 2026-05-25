@@ -59,6 +59,10 @@
 - 🧾 Upload de comprovantes via URL assinada (AWS S3 / MinIO)
 - 🧪 Testes E2E e evidência visual automatizados com Playwright
 
+Fluxo de autenticação:
+- cadastro cria a conta e redireciona para `/login` com confirmação;
+- somente `login` emite e persiste JWT de sessão.
+
 ---
 
 ## 🏗️ Arquitetura
@@ -90,17 +94,15 @@ Monorepo gerenciado com `pnpm workspaces`:
 
 - [Node.js 20+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
 - [Docker Desktop 24+](https://www.docker.com/products/docker-desktop/)
+- Arquivo `.env` baseado em `.env.example`
 
 ### Desenvolvimento
 
 ```bash
-# 1. Instale as dependências
-pnpm install
-
-# 2. Copie as variáveis de ambiente
+# 1. Copie as variáveis de ambiente
 cp .env.example .env
 
-# 3. Suba o ambiente completo
+# 2. Suba o ambiente completo de desenvolvimento
 pnpm compose:up
 ```
 
@@ -111,21 +113,37 @@ pnpm compose:up
 | Backend / GraphQL | http://localhost:4000/graphql |
 | MinIO Console | http://localhost:9001 |
 
-> **Primeira execução** — após os containers subirem, sincronize o banco:
-> ```bash
-> pnpm --filter @financy/backend exec prisma db push
-> ```
+No ambiente de desenvolvimento, o backend executa `prisma db push` automaticamente no startup do container.
+
+Contrato de chamadas do frontend no desenvolvimento:
+- o browser usa `/graphql`;
+- o Vite faz proxy para `http://backend:4000` na rede Docker.
 
 Para encerrar: `pnpm compose:down`
 
 ### Produção
 
 ```bash
+# 1. Copie as variáveis de ambiente
+cp .env.example .env
+
+# 2. Suba o ambiente de produção
 pnpm compose:up:prod
 
 # Encerrar
 pnpm compose:down:prod
 ```
+
+Contrato de chamadas do frontend em produção:
+- o frontend usa `VITE_BACKEND_URL` explícita;
+- as chamadas seguem `${VITE_BACKEND_URL}/graphql` (sem proxy de desenvolvimento).
+
+Configuração de exposição em produção:
+- portas públicas: `5173` (frontend) e `4000` (backend);
+- `postgres` e `minio` ficam apenas na rede interna Docker (sem publicação no host).
+
+Observação de infraestrutura:
+- os comandos usam projetos Docker separados (`financy-dev` e `financy-prod`) para evitar conflito entre stacks.
 
 ---
 
@@ -144,6 +162,12 @@ pnpm test:e2e:smoke
 
 # Evidência visual automatizada
 pnpm test:e2e:visual
+```
+
+Para executar o smoke de browser no ambiente Docker:
+
+```bash
+pnpm smoke:auth:browser:docker
 ```
 
 ### Smoke tests (API GraphQL)

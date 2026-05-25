@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16.3-alpine
-    container_name: financy-postgres-dev
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-financy}
       POSTGRES_USER: ${POSTGRES_USER:-financy_user}
@@ -19,7 +18,6 @@ services:
 
   minio:
     image: minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-    container_name: financy-minio-dev
     command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -37,7 +35,6 @@ services:
 
   minio-init:
     image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    container_name: financy-minio-init-dev
     depends_on:
       minio:
         condition: service_healthy
@@ -48,7 +45,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    container_name: financy-backend-dev
     working_dir: /app
     depends_on:
       postgres:
@@ -72,6 +68,8 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/backend prisma:generate && pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
     volumes:
       - .:/app:rw
+      - root_node_modules:/app/node_modules
+      - backend_node_modules:/app/backend/node_modules
     healthcheck:
       test:
         [
@@ -88,7 +86,6 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-    container_name: financy-frontend-dev
     depends_on:
       backend:
         condition: service_healthy
@@ -102,6 +99,8 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
     volumes:
       - .:/app:rw
+      - root_node_modules:/app/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
     healthcheck:
       test:
         [
@@ -118,7 +117,6 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile.e2e
-    container_name: financy-e2e
     profiles:
       - e2e
     working_dir: /app
@@ -133,8 +131,13 @@ services:
     command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend test:e2e:smoke"
     volumes:
       - .:/app:rw
+      - root_node_modules:/app/node_modules
+      - frontend_node_modules:/app/frontend/node_modules
     network_mode: service:frontend
 
 volumes:
   postgres_data_dev:
   minio_data_dev:
+  root_node_modules:
+  backend_node_modules:
+  frontend_node_modules:

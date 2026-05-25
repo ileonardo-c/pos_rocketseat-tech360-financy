@@ -142,16 +142,67 @@ const run = async () => {
     registerData.errors.length === 0,
     `Register should not return errors: ${JSON.stringify(registerData.errors)}`,
   );
-  ensure(registerData.data?.register?.token, "Register response should include token");
-  const { token } = registerData.data.register;
+  ensure(registerData.data.register.token, "Register response should include token");
   const userId = registerData.data.register.user?.id;
   ensure(!!userId, "Register response should include user id");
+  ensure(
+    registerData.data.register.user?.email.toLowerCase() === user.email.toLowerCase(),
+    "Register response should store normalized email",
+  );
 
   const duplicateEmailResult = await request(registerMutation, undefined, { input: user });
   ensureStatus(duplicateEmailResult.httpStatus, [200, 409], "Duplicate register request");
   ensure(duplicateEmailResult.errors.length > 0, "Duplicate register must return error");
   ensureHasErrorMessage(duplicateEmailResult.errors, "already");
   ensureHasErrorCode(duplicateEmailResult.errors, "AUTH_EMAIL_ALREADY_REGISTERED");
+
+  const duplicateEmailWithWhitespaceResult = await request(registerMutation, undefined, {
+    input: {
+      name: `${user.name} Duplicate`,
+      email: `  ${user.email.toUpperCase()}  `,
+      password: "AnotherPassword123!",
+    },
+  });
+  ensureStatus(
+    duplicateEmailWithWhitespaceResult.httpStatus,
+    [200, 409],
+    "Duplicate register with normalized email input",
+  );
+  ensure(
+    duplicateEmailWithWhitespaceResult.errors.length > 0,
+    "Duplicate register with normalized email should return error",
+  );
+  ensureHasErrorMessage(duplicateEmailWithWhitespaceResult.errors, "already");
+  ensureHasErrorCode(
+    duplicateEmailWithWhitespaceResult.errors,
+    "AUTH_EMAIL_ALREADY_REGISTERED",
+  );
+  ensure(!duplicateEmailWithWhitespaceResult.data, "Duplicate registration must not return data");
+
+  const duplicateWithDifferentPassword = await request(registerMutation, undefined, {
+    input: {
+      name: `${user.name} Duplicate`,
+      email: user.email,
+      password: "AnotherPassword123!",
+    },
+  });
+  ensureStatus(duplicateWithDifferentPassword.httpStatus, [200, 409], "Duplicate register request");
+  ensure(
+    duplicateWithDifferentPassword.errors.length > 0,
+    "Duplicate register with different password must return error",
+  );
+  ensureHasErrorCode(duplicateWithDifferentPassword.errors, "AUTH_EMAIL_ALREADY_REGISTERED");
+  ensure(!duplicateWithDifferentPassword.data, "Duplicate registration must not return data");
+
+  const confirmOriginalLogin = await request(loginMutation, undefined, {
+    input: { email: user.email, password: user.password },
+  });
+  ensure(confirmOriginalLogin.httpStatus === 200, "Original credentials must still authenticate");
+  ensure(
+    confirmOriginalLogin.errors.length === 0,
+    `Original credentials authentication failed after duplicate attempt: ${JSON.stringify(confirmOriginalLogin.errors)}`,
+  );
+  ensure(confirmOriginalLogin.data?.login?.token, "Login response should include token");
 
   const invalidRegister = await request(registerMutation, undefined, {
     input: { name: "a", email: "invalid-email", password: "123" },

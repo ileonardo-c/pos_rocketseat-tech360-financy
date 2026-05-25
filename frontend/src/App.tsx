@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { useAuth } from "@/lib/auth/auth-provider";
 import { CategoriesPage } from "@/pages/categories-page";
@@ -14,48 +14,60 @@ const RequireAuth = ({
   children,
 }: { isAuthenticated: boolean; children: JSX.Element }) => {
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 };
 
 export function App() {
   const { user, loading } = useAuth();
+  const { pathname } = useLocation();
+  const isPublicRoute = pathname === "/login" || pathname === "/signup";
 
-  if (loading) {
+  if (loading && !isPublicRoute) {
     return <div>Carregando...</div>;
   }
 
   return (
-    <Routes>
-      <Route path="/" element={user ? <DashboardPage /> : <SigninPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route
-        path="/categories"
-        element={
-          <RequireAuth isAuthenticated={Boolean(user)}>
-            <CategoriesPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/transactions"
-        element={
-          <RequireAuth isAuthenticated={Boolean(user)}>
-            <TransactionsPage />
-          </RequireAuth>
-        }
-      />
-      <Route
-        path="/profile"
-        element={
-          <RequireAuth isAuthenticated={Boolean(user)}>
-            <ProfilePage />
-          </RequireAuth>
-        }
-      />
-      {import.meta.env.DEV ? <Route path="/style-guide" element={<StyleGuidePage />} /> : null}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <div className="t-route-enter" key={pathname}>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <RequireAuth isAuthenticated={Boolean(user)}>
+              <DashboardPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <SigninPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/categories"
+          element={
+            <RequireAuth isAuthenticated={Boolean(user)}>
+              <CategoriesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <RequireAuth isAuthenticated={Boolean(user)}>
+              <TransactionsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth isAuthenticated={Boolean(user)}>
+              <ProfilePage />
+            </RequireAuth>
+          }
+        />
+        {import.meta.env.DEV ? <Route path="/style-guide" element={<StyleGuidePage />} /> : null}
+        <Route path="*" element={<Navigate to={user ? "/" : "/login"} replace />} />
+      </Routes>
+    </div>
   );
 }

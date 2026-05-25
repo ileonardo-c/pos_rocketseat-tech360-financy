@@ -1,20 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 
-import { IconMail } from "@/assets/icons";
+import { IconMail, IconUserRoundPlus } from "@/assets/icons";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ErrorBanner } from "@/components/ui/feedback";
+import { ErrorBanner, SuccessBanner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
-import { TextLink } from "@/components/ui/text-link";
 import { useAuth } from "@/lib/auth/auth-provider";
 
 export const SigninPage = () => {
   const { user, signin, loading, authError, clearAuthError } = useAuth();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showRegisteredSuccess, setShowRegisteredSuccess] = useState(
+    searchParams.get("registered") === "1",
+  );
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
 
@@ -51,6 +57,8 @@ export const SigninPage = () => {
     clearAuthError();
   }, [clearAuthError]);
 
+  const isBusy = loading || isSubmitting;
+
   if (user) {
     return <Navigate to="/" replace />;
   }
@@ -75,63 +83,89 @@ export const SigninPage = () => {
           ? "active"
           : "empty";
 
-  const passwordEndIcon = (
+  const passwordStartIcon = (
     <span className="text-financy-field-placeholder">
       <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" className="h-4 w-4">
         <path
-          d="M2 14c2-4 5.33-6 10-6s8 2 10 6"
+          d="M8 10V8a4 4 0 1 1 8 0v2"
           stroke="currentColor"
           strokeLinecap="round"
+          strokeLinejoin="round"
           strokeWidth="1.6"
         />
-        <path
-          d="M9.4 15.5a3 3 0 0 0 5.2 0"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="1.6"
-        />
+        <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
       </svg>
     </span>
   );
 
+  const passwordEndIcon = (
+    <button
+      aria-label={isPasswordVisible ? "Ocultar senha" : "Mostrar senha"}
+      className="pointer-events-auto inline-flex h-4 w-4 items-center justify-center rounded text-financy-field-placeholder transition-colors duration-150 hover:text-financy-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-financy-primary/30 disabled:pointer-events-none disabled:opacity-50"
+      data-testid="signin-password-visibility-toggle"
+      disabled={isBusy}
+      type="button"
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={() => setIsPasswordVisible((previous) => !previous)}
+    >
+      {isPasswordVisible ? (
+        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4">
+          <path
+            d="M1.3 8c1.2-2.3 3.3-3.5 6.7-3.5s5.5 1.2 6.7 3.5c-1.2 2.3-3.3 3.5-6.7 3.5S2.5 10.3 1.3 8Z"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.2"
+          />
+          <circle cx="8" cy="8" r="1.9" fill="none" stroke="currentColor" strokeWidth="1.2" />
+        </svg>
+      ) : (
+        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4">
+          <path
+            d="M1.3 8c1.2-2.3 3.3-3.5 6.7-3.5s5.5 1.2 6.7 3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M6.4 10.4a2 2 0 0 0 3.2 0"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeWidth="1.2"
+          />
+        </svg>
+      )}
+    </button>
+  );
+
   return (
     <main
-      className="min-h-screen bg-financy-page px-4 py-6 text-financy-text-secondary sm:px-6 sm:py-10"
+      className="min-h-screen bg-[#f8f9fa] px-4 py-12 text-financy-text-secondary sm:px-6"
       data-testid="signin-page"
     >
-      <div className="mx-auto flex w-full max-w-[448px] flex-col items-center pt-4 sm:pt-2">
-        <header className="mb-7 flex items-center justify-center gap-3 text-[#24784A] sm:mb-8">
-          <svg
-            aria-hidden="true"
-            className="h-8 w-8"
-            fill="none"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <circle cx="8" cy="7" r="5" stroke="currentColor" strokeWidth="2.5" />
-            <circle cx="16" cy="17" r="5" stroke="currentColor" strokeWidth="2.5" />
-            <path d="M11 10L13 14" stroke="currentColor" strokeLinecap="round" strokeWidth="2.5" />
-          </svg>
-          <span className="text-3xl font-black uppercase leading-none tracking-[0.02em] sm:text-[44px]">
-            Financy
-          </span>
+      <div className="mx-auto flex w-full max-w-[448px] flex-col items-center gap-8">
+        <header>
+          <BrandLogo />
         </header>
 
         <Card
-          className="w-full border-financy-border bg-financy-surface p-6 shadow-none sm:p-8"
+          className="w-full rounded-[12px] border-[#e5e7eb] bg-financy-surface p-[33px] shadow-none"
           data-testid="signin-card"
         >
           <h1
-            className="text-center font-jakarta text-3xl font-bold leading-[1.12] text-financy-text sm:text-[46px] sm:leading-[1.08]"
+            className="text-center font-sans text-[20px] font-bold leading-[28px] text-[#111827]"
             data-testid="signin-title"
           >
             Fazer login
           </h1>
-          <p className="mt-3 text-center leading-[1.35] text-financy-muted sm:mt-2 sm:text-[18px] sm:leading-[1.35]">
+          <p className="mt-1 text-center text-[16px] leading-[24px] text-[#4b5563]">
             Entre na sua conta para continuar
           </p>
           <form
-            className="mt-8 flex flex-col gap-5 sm:mt-9"
+            className="mt-8 flex flex-col gap-6"
             data-testid="signin-form"
             onSubmit={async (event) => {
               event.preventDefault();
@@ -143,7 +177,12 @@ export const SigninPage = () => {
                 return;
               }
 
-              await signin({ email: email.trim(), password, rememberMe });
+              setIsSubmitting(true);
+              try {
+                await signin({ email: email.trim(), password, rememberMe });
+              } finally {
+                setIsSubmitting(false);
+              }
             }}
           >
             <Input
@@ -159,6 +198,7 @@ export const SigninPage = () => {
               startIcon={<IconMail className="h-4 w-4" />}
               helper={emailError || undefined}
               helperError={Boolean(emailError)}
+              disabled={isBusy}
               onFocus={() => setFocused((previous) => ({ ...previous, email: true }))}
               onBlur={() => {
                 setFocused((previous) => ({ ...previous, email: false }));
@@ -166,6 +206,7 @@ export const SigninPage = () => {
               }}
               onChange={(event) => {
                 clearAuthError();
+                setShowRegisteredSuccess(false);
                 setEmail(event.target.value);
               }}
             />
@@ -177,12 +218,14 @@ export const SigninPage = () => {
               label="Senha"
               placeholder="Digite sua senha"
               required
-              type="password"
+              type={isPasswordVisible ? "text" : "password"}
               value={password}
               state={passwordState}
+              startIcon={passwordStartIcon}
               endIcon={passwordEndIcon}
               helper={passwordError || undefined}
               helperError={Boolean(passwordError)}
+              disabled={isBusy}
               onFocus={() => setFocused((previous) => ({ ...previous, password: true }))}
               onBlur={() => {
                 setFocused((previous) => ({ ...previous, password: false }));
@@ -190,52 +233,77 @@ export const SigninPage = () => {
               }}
               onChange={(event) => {
                 clearAuthError();
+                setShowRegisteredSuccess(false);
                 setPassword(event.target.value);
               }}
             />
 
+            <SuccessBanner
+              message={
+                showRegisteredSuccess
+                  ? "Conta criada com sucesso. Faça login para continuar."
+                  : null
+              }
+            />
             <ErrorBanner message={authError} />
 
-            <div className="flex items-center justify-between text-sm text-financy-muted sm:text-[18px]">
+            <div className="flex items-center justify-between text-sm text-financy-muted">
               <Checkbox
                 aria-label="Lembrar-me"
                 checked={rememberMe}
                 data-testid="signin-remember"
+                disabled={isBusy}
                 label="Lembrar-me"
-                onChange={(event) => setRememberMe(event.target.checked)}
+                onChange={(event) => {
+                  setShowRegisteredSuccess(false);
+                  setRememberMe(event.target.checked);
+                }}
               />
-              <span className="font-semibold text-financy-primary">Recuperar senha</span>
+              <span className="text-[14px] font-medium leading-[20px] text-financy-primary">
+                Recuperar senha
+              </span>
             </div>
 
             <Button
-              className="mt-1 text-lg font-bold"
+              className="mt-0 text-base font-medium"
               disabled={
-                loading || !email.trim() || !password.trim() || Boolean(emailError || passwordError)
+                isBusy ||
+                !email.trim() ||
+                !password.trim() ||
+                Boolean(emailError || passwordError)
               }
               type="submit"
             >
-              <span className="t-text-swap">{loading ? "Entrando..." : "Entrar"}</span>
+              <span className="t-text-swap">
+                {loading || isSubmitting ? "Entrando..." : "Entrar"}
+              </span>
             </Button>
           </form>
 
-          <div className="mt-7 sm:mt-8">
-            <div className="flex items-center gap-3 text-sm text-[#6b7280] sm:text-[18px]">
+          <div className="mt-8">
+            <div className="flex items-center gap-3 text-sm text-[#6b7280]">
               <span className="h-px flex-1 bg-slate-300" />
-              <span>Ou</span>
+              <span>ou</span>
               <span className="h-px flex-1 bg-slate-300" />
             </div>
-            <p className="mt-7 text-center text-base text-financy-muted sm:text-[18px] sm:leading-[1.2]">
+            <p className="mt-6 text-center text-[14px] leading-[20px] text-[#4b5563]">
               Ainda não tem uma conta?
             </p>
-            <TextLink
-              asChild
-              className="mt-4 h-12 w-full items-center justify-center rounded-xl border border-financy-field-border text-[18px] font-semibold text-financy-text transition duration-200 hover:bg-financy-surface-hover"
+            <Link
+              to="/signup"
               data-testid="signin-create-account-link"
+              aria-disabled={isBusy}
+              tabIndex={isBusy ? -1 : undefined}
+              onClick={(event) => {
+                if (isBusy) {
+                  event.preventDefault();
+                }
+              }}
+              className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-[8px] border border-financy-field-border bg-financy-surface text-[16px] font-medium leading-[24px] text-financy-text-secondary transition duration-200 hover:bg-financy-surface-hover aria-disabled:pointer-events-none aria-disabled:opacity-60"
             >
-              <Link to="/signup" className="inline-flex w-full">
-                <span className="text-sm font-medium text-financy-primary">Criar conta</span>
-              </Link>
-            </TextLink>
+              <IconUserRoundPlus className="h-[18px] w-[18px] shrink-0 text-financy-text-secondary" />
+              <span className="whitespace-nowrap">Criar conta</span>
+            </Link>
           </div>
         </Card>
       </div>

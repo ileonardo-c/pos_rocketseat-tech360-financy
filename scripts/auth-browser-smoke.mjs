@@ -1,11 +1,23 @@
 import { chromium } from "playwright";
 
 const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
+const frontendUrlObject = new URL(frontendUrl);
+const API_HOST = process.env.E2E_API_HOST ?? frontendUrlObject.hostname;
+const API_URL = process.env.E2E_API_URL ?? `${frontendUrlObject.protocol}//${API_HOST}:4000`;
 
 const password = "SmokePass123!";
 const hydrationWindowTimeoutMs = 4000;
 const hydrationProbeIntervalMs = 50;
 const dashboardSelectors = [/^Dashboard$/];
+
+const registerMutation = `
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) {
+      created
+      user { id email }
+    }
+  }
+`;
 
 const waitForAuthenticatedScreen = async (page) => {
   await page.getByRole("button", { name: "Sair" }).waitFor({ timeout: 15_000 });
@@ -35,6 +47,24 @@ const readStoredAuthToken = async (page) => {
   }));
 };
 
+const executeRegisterRequest = async (page, user) => {
+  const response = await page.request.post(`${API_URL}/graphql`, {
+    data: {
+      query: registerMutation,
+      variables: {
+        input: {
+          name: user.name,
+          email: user.email,
+          password: user.password,
+        },
+      },
+    },
+  });
+
+  const payload = await response.json();
+  return payload;
+};
+
 const run = async () => {
   const user = buildUser();
   const browser = await chromium.launch({ headless: true });
@@ -47,13 +77,35 @@ const run = async () => {
     await page.getByLabel("Nome").fill(user.name);
     await page.getByLabel("Email").fill(user.email);
     await page.getByLabel("Senha").fill(user.password);
-    await page.getByRole("button", { name: "Cadastrar" }).click();
-    await waitForAuthenticatedScreen(page);
-
-    await page.getByRole("button", { name: "Sair" }).click();
+    await page.getByRole("button", { name: "Criar conta" }).click();
     await waitForAuthScreen(page);
+    await page.getByText(/conta criada com sucesso/i).waitFor({ timeout: 15_000 });
 
-    await page.goto(`${frontendUrl}/`, { waitUntil: "networkidle" });
+    await page.goto(`${frontendUrl}/signup`, { waitUntil: "networkidle" });
+    const duplicateResponse = await executeRegisterRequest(page, user);
+    if (!duplicateResponse.errors?.length) {
+      throw new Error("Duplicate register request returned success unexpectedly");
+    }
+    const duplicateMessage = `${JSON.stringify(duplicateResponse.errors?.[0]?.message ?? "")}`.toLowerCase();
+    if (!duplicateMessage.includes("already") && !duplicateMessage.includes("cadastrada")) {
+      throw new Error(
+        `Expected duplicate register error to mention already registered account, got ${duplicateMessage}`,
+      );
+    }
+
+    await page.getByLabel("Nome").fill(`Duplicate ${user.name}`);
+    await page.getByLabel("Email").fill(user.email);
+    await page.getByLabel("Senha").fill(user.password);
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await page.getByText(/já está cadastrada/i).waitFor({ timeout: 15_000 }).catch(() => {
+      throw new Error("Duplicate register must render user-facing feedback");
+    });
+    const duplicateSignupTokens = await readStoredAuthToken(page);
+    if (duplicateSignupTokens.local || duplicateSignupTokens.session) {
+      throw new Error("Duplicate signup must not persist authentication tokens");
+    }
+
+    await page.goto(`${frontendUrl}/login`, { waitUntil: "networkidle" });
     await page.getByLabel("E-mail").fill(user.email);
     await page.getByLabel("Senha").fill(user.password);
     await page.getByRole("button", { name: "Entrar" }).click();
@@ -80,7 +132,7 @@ const run = async () => {
       throw new Error("Login screen must be visible after transient session storage cleanup");
     }
 
-    await page.goto(`${frontendUrl}/`, { waitUntil: "networkidle" });
+    await page.goto(`${frontendUrl}/login`, { waitUntil: "networkidle" });
     await page.getByLabel("E-mail").fill(user.email);
     await page.getByLabel("Senha").fill(user.password);
     await page.getByTestId("signin-remember").check();
