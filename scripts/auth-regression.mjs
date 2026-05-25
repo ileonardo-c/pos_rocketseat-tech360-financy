@@ -97,7 +97,7 @@ const buildRandomInput = () => {
 const registerMutation = `
   mutation Register($input: RegisterInput!) {
     register(input: $input) {
-      token
+      created
       user { id email }
     }
   }
@@ -142,7 +142,7 @@ const run = async () => {
     registerData.errors.length === 0,
     `Register should not return errors: ${JSON.stringify(registerData.errors)}`,
   );
-  ensure(registerData.data.register.token, "Register response should include token");
+  ensure(registerData.data.register.created === true, "Register response should include created");
   const userId = registerData.data.register.user?.id;
   ensure(!!userId, "Register response should include user id");
   ensure(

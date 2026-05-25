@@ -37,7 +37,7 @@ const createTransientUser = async (
       query: `
         mutation Register($input: RegisterInput!) {
           register(input: $input) {
-            token
+            created
             user {
               id
               email
@@ -58,6 +58,7 @@ const createTransientUser = async (
   const payload = await response.json();
   expect(response.ok()).toBeTruthy();
   expect(payload.errors).toBeFalsy();
+  expect(payload.data?.register?.created).toBeTruthy();
 };
 
 const readStoredAuthToken = async (page: Page) => {
@@ -79,8 +80,8 @@ test.describe("@smoke-dashboard fluxo de acesso ao dashboard", () => {
     await page.goto(`${APP_URL}/`, { waitUntil: "domcontentloaded" });
     await waitForLoginScreen(page);
 
-    await page.getByLabel("E-mail").fill(user.email);
-    await page.getByLabel("Senha").fill(user.password);
+    await page.getByTestId("signin-email").fill(user.email);
+    await page.getByTestId("signin-password").fill(user.password);
     await page.getByRole("button", { name: "Entrar" }).click();
 
     await waitForDashboard(page);

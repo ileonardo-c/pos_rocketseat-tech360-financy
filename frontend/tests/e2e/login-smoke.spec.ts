@@ -72,9 +72,9 @@ const createTransientUserViaUi = async (
     timeout: 15_000,
   });
 
-  await page.getByLabel("Nome").fill(user.name);
-  await page.getByLabel("Email").fill(user.email);
-  await page.getByLabel("Senha").fill(user.password);
+  await page.getByTestId("signup-name").fill(user.name);
+  await page.getByTestId("signup-email").fill(user.email);
+  await page.getByTestId("signup-password").fill(user.password);
   await page.getByRole("button", { name: "Criar conta" }).click();
   await waitForLoginScreen(page);
   await expect(page.getByText(/conta criada com sucesso/i)).toBeVisible({ timeout: 15_000 });
@@ -107,8 +107,8 @@ test("@smoke-login @smoke-dashboard fluxo de login funcional com usuário transi
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Criar conta" })).toBeVisible();
 
-  await page.getByLabel("E-mail").fill(user.email);
-  await page.getByLabel("Senha").fill(user.password);
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await waitForAuthenticatedDashboard(page);
@@ -138,8 +138,8 @@ test("@smoke-login fluxo de cadastro funcional com usuário transitório", async
   expect(signupTokens.local).toBeNull();
   expect(signupTokens.session).toBeNull();
 
-  await page.getByLabel("E-mail").fill(user.email);
-  await page.getByLabel("Senha").fill(user.password);
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
   await page.getByRole("button", { name: "Entrar" }).click();
   await waitForAuthenticatedDashboard(page);
 });
@@ -153,9 +153,9 @@ test("@smoke-login remember-me persiste token em localStorage", async ({ page })
   await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
   await waitForLoginScreen(page);
 
-  await page.getByLabel("E-mail").fill(user.email);
-  await page.getByLabel("Senha").fill(user.password);
-  await page.getByTestId("signin-remember").check();
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
+  await page.getByTestId("signin-remember").check({ force: true });
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await waitForAuthenticatedDashboard(page);
@@ -174,9 +174,9 @@ test("@smoke-login remember-me sem persistência usa sessionStorage", async ({ p
   await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
   await waitForLoginScreen(page);
 
-  await page.getByLabel("E-mail").fill(user.email);
-  await page.getByLabel("Senha").fill(user.password);
-  await page.getByTestId("signin-remember").uncheck();
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
+  await page.getByTestId("signin-remember").uncheck({ force: true });
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await waitForAuthenticatedDashboard(page);
