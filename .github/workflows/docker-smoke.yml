@@ -60,7 +60,22 @@ jobs:
           docker compose -p financy-ci -f docker-compose.ci.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
 
       - name: Run E2E smoke flow
-        run: docker compose -p financy-ci -f docker-compose.ci.yml --profile e2e run --rm e2e
+        run: docker compose -p financy-ci -f docker-compose.ci.yml --profile e2e run --name financy-ci-e2e-smoke e2e
+
+      - name: Collect E2E artifacts from container
+        if: always()
+        run: |
+          set -euo pipefail
+          rm -rf frontend/playwright-report frontend/test-results
+          mkdir -p frontend
+          if docker ps -a --format '{{.Names}}' | grep -qx 'financy-ci-e2e-smoke'; then
+            if docker exec financy-ci-e2e-smoke test -d /app/frontend/playwright-report; then
+              docker cp financy-ci-e2e-smoke:/app/frontend/playwright-report frontend/playwright-report
+            fi
+            if docker exec financy-ci-e2e-smoke test -d /app/frontend/test-results; then
+              docker cp financy-ci-e2e-smoke:/app/frontend/test-results frontend/test-results
+            fi
+          fi
 
       - name: Run auth smoke flow
         run: docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
