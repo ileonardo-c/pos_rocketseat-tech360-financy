@@ -25,7 +25,7 @@ export const Checkbox = ({
   ...inputProps
 }: CheckboxProps) => {
   const isDisabled = disabled || state === "disabled";
-  const isChecked = Boolean(checked) || state === "checked";
+  const isChecked = checked ?? state === "checked";
 
   return (
     <label

@@ -3,8 +3,7 @@ name: docker-smoke
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: docker-smoke-${{ github.workflow }}-${{ github.ref }}
@@ -19,28 +18,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.5.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Copy environment file
         run: cp .env.example .env
 
       - name: Build and start development compose stack
-        env:
-          VITE_BACKEND_URL: http://backend:4000
-        run: docker compose -f docker-compose.development.yml up -d --build
+        run: docker compose -p financy-dev -f docker-compose.development.yml up -d --build
 
       - name: Wait for backend readiness
         run: |
@@ -66,14 +48,11 @@ jobs:
           echo "Frontend did not respond after 120s"
           exit 1
 
-      - name: Sync Prisma schema
-        run: docker compose -f docker-compose.development.yml exec -T backend pnpm --filter @financy/backend exec prisma db push
-
       - name: Run E2E smoke flow
-        run: docker compose -f docker-compose.development.yml --profile e2e run --rm e2e pnpm --filter @financy/frontend test:e2e:smoke
+        run: docker compose -p financy-dev -f docker-compose.development.yml --profile e2e run --rm e2e
 
       - name: Run auth smoke flow
-        run: pnpm smoke:auth
+        run: docker compose -p financy-dev -f docker-compose.development.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
 
       - name: Upload E2E artifacts
         if: always()
@@ -87,13 +66,13 @@ jobs:
 
       - name: Show compose status
         if: always()
-        run: docker compose -f docker-compose.development.yml ps
+        run: docker compose -p financy-dev -f docker-compose.development.yml ps
 
       - name: Show compose logs
         if: failure()
-        run: docker compose -f docker-compose.development.yml logs --no-color
+        run: docker compose -p financy-dev -f docker-compose.development.yml logs --no-color
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose -f docker-compose.development.yml down -v
+        run: docker compose -p financy-dev -f docker-compose.development.yml down -v
 

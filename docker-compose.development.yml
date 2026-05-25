@@ -65,7 +65,7 @@ services:
       S3_FORCE_PATH_STYLE: "true"
     ports:
       - "4000:4000"
-    command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/backend prisma:generate && pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
+    command: sh -lc "CI=1 pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
     volumes:
       - .:/app:rw
       - root_node_modules:/app/node_modules
@@ -91,12 +91,12 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: development
-      VITE_BACKEND_URL: ${VITE_BACKEND_URL:-http://backend:4000}
+      VITE_INTERNAL_BACKEND_URL: http://backend:4000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
     ports:
       - "5173:5173"
-    command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
+    command: sh -lc "pnpm --filter @financy/frontend dev --host 0.0.0.0 --port 5173"
     volumes:
       - .:/app:rw
       - root_node_modules:/app/node_modules
@@ -128,7 +128,7 @@ services:
       E2E_API_URL: http://backend:4000/graphql
       E2E_API_HOST: backend
       CI: "true"
-    command: sh -lc "CI=1 pnpm install && pnpm --filter @financy/frontend test:e2e:smoke"
+    command: sh -lc "pnpm --filter @financy/frontend test:e2e:smoke"
     volumes:
       - .:/app:rw
       - root_node_modules:/app/node_modules
