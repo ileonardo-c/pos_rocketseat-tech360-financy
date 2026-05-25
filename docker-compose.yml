@@ -63,7 +63,7 @@ services:
     volumes:
       - pnpm_store_prod:/pnpm/store
     command: >
-      /bin/sh -c "pnpm --filter @financy/backend exec prisma db push --accept-data-loss &&
+      /bin/sh -c "pnpm --filter @financy/backend prisma:deploy &&
       pnpm --filter @financy/backend build &&
       pnpm --filter @financy/backend start"
     healthcheck:
