@@ -68,7 +68,7 @@ services:
       S3_FORCE_PATH_STYLE: "true"
     ports:
       - "4000:4000"
-    command: sh -lc "CI=1 pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
+    command: sh -lc "CI=1 pnpm --filter @financy/backend prisma:generate && pnpm --filter @financy/backend exec prisma db push --accept-data-loss && pnpm --filter @financy/backend dev"
     volumes:
       - .:/app:rw
       - pnpm_store_dev:/pnpm/store

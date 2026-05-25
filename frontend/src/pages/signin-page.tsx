@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 
 import { IconMail, IconUserRoundPlus } from "@/assets/icons";
@@ -52,10 +52,6 @@ export const SigninPage = () => {
     }
     return getPasswordError(password);
   }, [password, touched.password]);
-
-  useEffect(() => {
-    clearAuthError();
-  }, [clearAuthError]);
 
   const isBusy = loading || isSubmitting;
 
