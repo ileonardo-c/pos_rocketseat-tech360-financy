@@ -21,8 +21,11 @@ jobs:
       - name: Copy environment file
         run: cp .env.example .env
 
-      - name: Build and start development compose stack
-        run: docker compose -p financy-dev -f docker-compose.development.yml up -d --build
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and start CI compose stack
+        run: docker compose -p financy-ci -f docker-compose.ci.yml up -d --build --wait --wait-timeout 45
 
       - name: Wait for backend readiness
         run: |
@@ -53,14 +56,14 @@ jobs:
       - name: Validate pnpm runtime toolchain
         run: |
           set -euo pipefail
-          docker compose -p financy-dev -f docker-compose.development.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
-          docker compose -p financy-dev -f docker-compose.development.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null && pnpm --filter @financy/frontend exec playwright --version >/dev/null"
+          docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
+          docker compose -p financy-ci -f docker-compose.ci.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
 
       - name: Run E2E smoke flow
-        run: docker compose -p financy-dev -f docker-compose.development.yml --profile e2e run --rm e2e
+        run: docker compose -p financy-ci -f docker-compose.ci.yml --profile e2e run --rm e2e
 
       - name: Run auth smoke flow
-        run: docker compose -p financy-dev -f docker-compose.development.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
+        run: docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
 
       - name: Upload E2E artifacts
         if: always()
@@ -74,13 +77,14 @@ jobs:
 
       - name: Show compose status
         if: always()
-        run: docker compose -p financy-dev -f docker-compose.development.yml ps
+        run: docker compose -p financy-ci -f docker-compose.ci.yml ps
 
       - name: Show compose logs
         if: failure()
-        run: docker compose -p financy-dev -f docker-compose.development.yml logs --no-color
+        run: |
+          docker compose -p financy-ci -f docker-compose.ci.yml logs --no-color backend backend-init frontend postgres minio
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose -p financy-dev -f docker-compose.development.yml down -v
+        run: docker compose -p financy-ci -f docker-compose.ci.yml down -v
 
