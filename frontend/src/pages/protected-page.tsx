@@ -256,10 +256,7 @@ export const ProtectedPage = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isCreateDialogClosing, setIsCreateDialogClosing] = useState(false);
   const [form, setForm] = useState<TransactionForm>(emptyTransactionForm);
-  const createCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const modalCloseDurationMs = 150;
   const isSyncingFromUrlRef = useRef(false);
   const hasInvalidSummaryRange = isInvalidSummaryRange(summaryFilter);
   const summaryFilterValidationError = hasInvalidSummaryRange
@@ -323,15 +320,6 @@ export const ProtectedPage = () => {
       setSearchParams(nextSearchParams, { replace: true });
     }
   }, [searchParamsString, setSearchParams, summaryFilter, timelineInterval]);
-
-  useEffect(
-    () => () => {
-      if (createCloseTimeoutRef.current) {
-        clearTimeout(createCloseTimeoutRef.current);
-      }
-    },
-    [],
-  );
 
   const {
     data: categoriesData,
@@ -453,11 +441,6 @@ export const ProtectedPage = () => {
       timelineLoading);
 
   const openCreateDialog = () => {
-    if (createCloseTimeoutRef.current) {
-      clearTimeout(createCloseTimeoutRef.current);
-      createCloseTimeoutRef.current = null;
-    }
-    setIsCreateDialogClosing(false);
     setForm((previous) => ({
       ...emptyTransactionForm,
       date: previous.date || toLocalDateInput(new Date()),
@@ -471,15 +454,7 @@ export const ProtectedPage = () => {
     if (!isCreateDialogOpen) {
       return;
     }
-    setIsCreateDialogClosing(true);
-    if (createCloseTimeoutRef.current) {
-      clearTimeout(createCloseTimeoutRef.current);
-    }
-    createCloseTimeoutRef.current = setTimeout(() => {
-      setIsCreateDialogOpen(false);
-      setIsCreateDialogClosing(false);
-      createCloseTimeoutRef.current = null;
-    }, modalCloseDurationMs);
+    setIsCreateDialogOpen(false);
   };
 
   const isCreateDisabled =
@@ -564,15 +539,21 @@ export const ProtectedPage = () => {
 
         <Card className="border-financy-border bg-financy-surface p-4">
           <nav className="grid gap-2 sm:grid-cols-3">
-            <Link className="inline-flex" to="/categories">
-              <TextLink>Gerenciar categorias</TextLink>
-            </Link>
-            <Link className="inline-flex" to="/transactions">
-              <TextLink>Gerenciar transações</TextLink>
-            </Link>
-            <Link className="inline-flex" to="/profile">
-              <TextLink>Meu perfil</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link className="inline-flex" to="/categories">
+                Gerenciar categorias
+              </Link>
+            </TextLink>
+            <TextLink asChild>
+              <Link className="inline-flex" to="/transactions">
+                Gerenciar transações
+              </Link>
+            </TextLink>
+            <TextLink asChild>
+              <Link className="inline-flex" to="/profile">
+                Meu perfil
+              </Link>
+            </TextLink>
           </nav>
         </Card>
 
@@ -596,12 +577,6 @@ export const ProtectedPage = () => {
             <Input
               label="De"
               type="date"
-              helper={
-                summaryFilterValidationError && summaryFilter.from
-                  ? summaryFilterValidationError
-                  : undefined
-              }
-              helperError={Boolean(summaryFilterValidationError && summaryFilter.from)}
               state={getSummaryFilterInputState(
                 summaryFilter.from,
                 Boolean(summaryFilterValidationError),
@@ -617,12 +592,6 @@ export const ProtectedPage = () => {
             <Input
               label="Até"
               type="date"
-              helper={
-                summaryFilterValidationError && summaryFilter.to
-                  ? summaryFilterValidationError
-                  : undefined
-              }
-              helperError={Boolean(summaryFilterValidationError && summaryFilter.to)}
               state={getSummaryFilterInputState(
                 summaryFilter.to,
                 Boolean(summaryFilterValidationError),
@@ -670,15 +639,17 @@ export const ProtectedPage = () => {
             <p className="mt-2 text-2xl font-semibold text-financy-text">
               {summary ? currencyFormatter.format(summary.balance) : "--"}
             </p>
-            <Link
-              className="mt-3 inline-flex"
-              to={buildTransactionsPath({
-                from: summaryFilter.from,
-                to: summaryFilter.to,
-              })}
-            >
-              <TextLink>Ver no extrato</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link
+                className="mt-3 inline-flex"
+                to={buildTransactionsPath({
+                  from: summaryFilter.from,
+                  to: summaryFilter.to,
+                })}
+              >
+                Ver no extrato
+              </Link>
+            </TextLink>
           </Card>
           <Card className="border-financy-border bg-financy-surface p-5">
             <h2 className="text-sm font-semibold text-financy-muted">Receitas</h2>
@@ -686,16 +657,18 @@ export const ProtectedPage = () => {
               <IconCircleArrowUp className="h-4 w-4" />
               {summary ? currencyFormatter.format(summary.incomeTotal) : "--"}
             </p>
-            <Link
-              className="mt-3 inline-flex"
-              to={buildTransactionsPath({
-                type: "INCOME",
-                from: summaryFilter.from,
-                to: summaryFilter.to,
-              })}
-            >
-              <TextLink>Ver receitas</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link
+                className="mt-3 inline-flex"
+                to={buildTransactionsPath({
+                  type: "INCOME",
+                  from: summaryFilter.from,
+                  to: summaryFilter.to,
+                })}
+              >
+                Ver receitas
+              </Link>
+            </TextLink>
           </Card>
           <Card className="border-financy-border bg-financy-surface p-5">
             <h2 className="text-sm font-semibold text-financy-muted">Despesas</h2>
@@ -703,38 +676,44 @@ export const ProtectedPage = () => {
               <IconCircleArrowDown className="h-4 w-4" />
               {summary ? currencyFormatter.format(summary.expenseTotal) : "--"}
             </p>
-            <Link
-              className="mt-3 inline-flex"
-              to={buildTransactionsPath({
-                type: "EXPENSE",
-                from: summaryFilter.from,
-                to: summaryFilter.to,
-              })}
-            >
-              <TextLink>Ver despesas</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link
+                className="mt-3 inline-flex"
+                to={buildTransactionsPath({
+                  type: "EXPENSE",
+                  from: summaryFilter.from,
+                  to: summaryFilter.to,
+                })}
+              >
+                Ver despesas
+              </Link>
+            </TextLink>
           </Card>
           <Card className="border-financy-border bg-financy-surface p-5">
             <h2 className="text-sm font-semibold text-financy-muted">Transações</h2>
             <p className="mt-2 text-2xl font-semibold text-financy-text">
               {summary?.totalCount ?? "--"}
             </p>
-            <Link
-              className="mt-3 inline-flex"
-              to={buildTransactionsPath({
-                from: summaryFilter.from,
-                to: summaryFilter.to,
-              })}
-            >
-              <TextLink>Ver todas</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link
+                className="mt-3 inline-flex"
+                to={buildTransactionsPath({
+                  from: summaryFilter.from,
+                  to: summaryFilter.to,
+                })}
+              >
+                Ver todas
+              </Link>
+            </TextLink>
           </Card>
           <Card className="border-financy-border bg-financy-surface p-5">
             <h2 className="text-sm font-semibold text-financy-muted">Categorias</h2>
             <p className="mt-2 text-2xl font-semibold text-financy-text">{categories.length}</p>
-            <Link className="mt-3 inline-flex" to="/categories">
-              <TextLink>Abrir categorias</TextLink>
-            </Link>
+            <TextLink asChild>
+              <Link className="mt-3 inline-flex" to="/categories">
+                Abrir categorias
+              </Link>
+            </TextLink>
           </Card>
         </section>
 
@@ -849,16 +828,18 @@ export const ProtectedPage = () => {
                       <span>{category.count} lançamento(s)</span>
                       <span>Saldo: {currencyFormatter.format(category.balance)}</span>
                     </div>
-                    <Link
-                      className="mt-2 inline-flex"
-                      to={buildTransactionsPath({
-                        categoryId: category.categoryId,
-                        from: summaryFilter.from,
-                        to: summaryFilter.to,
-                      })}
-                    >
-                      <TextLink>Ver transações da categoria</TextLink>
-                    </Link>
+                    <TextLink asChild>
+                      <Link
+                        className="mt-2 inline-flex"
+                        to={buildTransactionsPath({
+                          categoryId: category.categoryId,
+                          from: summaryFilter.from,
+                          to: summaryFilter.to,
+                        })}
+                      >
+                        Ver transações da categoria
+                      </Link>
+                    </TextLink>
                     <div
                       aria-hidden="true"
                       className="mt-2 h-2 rounded-full bg-financy-primary"
@@ -901,28 +882,25 @@ export const ProtectedPage = () => {
                   <strong className="text-sm text-financy-text">
                     {currencyFormatter.format(transaction.amount)}
                   </strong>
-                  <Link
-                    className="inline-flex sm:col-span-3"
-                    to={buildTransactionsPath({
-                      categoryId: transaction.category?.id,
-                      from: toDateInput(new Date(transaction.date)),
-                      to: toDateInput(new Date(transaction.date)),
-                    })}
-                  >
-                    <TextLink>Ver no extrato</TextLink>
-                  </Link>
-                </li>
+                    <TextLink asChild>
+                      <Link
+                        className="inline-flex sm:col-span-3"
+                        to={buildTransactionsPath({
+                          categoryId: transaction.category?.id,
+                          from: toDateInput(new Date(transaction.date)),
+                          to: toDateInput(new Date(transaction.date)),
+                        })}
+                      >
+                        Ver no extrato
+                      </Link>
+                    </TextLink>
+                  </li>
               ))}
             </ul>
           )}
         </Card>
 
-        {isCreateDialogOpen ? (
-          <Modal
-            isOpen={isCreateDialogOpen && !isCreateDialogClosing}
-            onClose={closeCreateDialog}
-            title="Nova transação"
-          >
+        <Modal isOpen={isCreateDialogOpen} onClose={closeCreateDialog} title="Nova transação">
             <form
               className="mt-4 space-y-3"
               onSubmit={async (event) => {
@@ -1032,7 +1010,6 @@ export const ProtectedPage = () => {
               </div>
             </form>
           </Modal>
-        ) : null}
       </div>
     </main>
   );
