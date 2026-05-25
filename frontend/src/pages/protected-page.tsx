@@ -1,3 +1,11 @@
+import { IconCircleArrowDown, IconCircleArrowUp } from "@/assets/icons";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ErrorBanner, SuccessBanner } from "@/components/ui/feedback";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { Select } from "@/components/ui/select";
+import { TextLink } from "@/components/ui/text-link";
 import { useAuth } from "@/lib/auth/auth-provider";
 import {
   CREATE_TRANSACTION_MUTATION,
@@ -207,6 +215,9 @@ const isSameSummaryFilter = (left: SummaryFilter, right: SummaryFilter) =>
 const isInvalidSummaryRange = (filter: SummaryFilter) =>
   Boolean(filter.from && filter.to && filter.from > filter.to);
 
+const getSummaryFilterInputState = (value: string, hasRangeError: boolean) =>
+  hasRangeError && value ? "error" : value ? "filled" : "empty";
+
 const toLocalDateInput = (value: string | Date) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -392,7 +403,21 @@ export const ProtectedPage = () => {
   });
 
   if (!user) {
-    return <div>Fazendo autenticação...</div>;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-financy-page px-4">
+        <Card className="w-full max-w-md border-financy-border bg-financy-surface p-6 shadow-panel">
+          <p className="font-jakarta text-sm font-semibold uppercase tracking-[0.16em] text-financy-muted">
+            Financy
+          </p>
+          <h1 className="mt-3 font-jakarta text-2xl font-semibold text-financy-text">
+            Fazendo autenticação
+          </h1>
+          <p className="mt-2 text-sm text-financy-muted">
+            Validando token de acesso para liberar o dashboard.
+          </p>
+        </Card>
+      </main>
+    );
   }
 
   const categories = categoriesData?.categories ?? [];
@@ -467,87 +492,120 @@ export const ProtectedPage = () => {
 
   if (isInitialLoading) {
     return (
-      <main className="dashboard">
-        <header className="dashboard-header">
-          <div>
-            <h1>Dashboard</h1>
-            <p>Bem-vindo, {user.name}</p>
-          </div>
-        </header>
-        <p>Carregando visão consolidada...</p>
+      <main className="min-h-screen bg-financy-page px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+          <Card className="border-financy-border bg-financy-surface p-6 shadow-panel">
+            <p className="font-jakarta text-sm font-semibold uppercase tracking-[0.16em] text-financy-muted">
+              Visão Geral
+            </p>
+            <h1 className="mt-2 font-jakarta text-3xl font-semibold text-financy-text">
+              Dashboard
+            </h1>
+            <p className="mt-1 text-sm text-financy-muted">Bem-vindo, {user.name}</p>
+          </Card>
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <p className="text-sm text-financy-muted">Carregando visão consolidada...</p>
+          </Card>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <h1>Dashboard</h1>
-          <p>Bem-vindo, {user.name}</p>
-        </div>
-        <div className="page-actions">
-          <button
-            disabled={isRefreshing}
-            type="button"
-            onClick={async () => {
-              setRefreshError(null);
-              const refreshTasks: Array<Promise<unknown>> = [
-                refetchCategories(),
-                refetchTransactions(),
-              ];
+    <main className="min-h-screen bg-financy-page px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <Card className="border-financy-border bg-financy-surface p-6 shadow-panel">
+          <p className="font-jakarta text-sm font-semibold uppercase tracking-[0.16em] text-financy-muted">
+            Visão Geral
+          </p>
+          <h1 className="mt-2 font-jakarta text-3xl font-semibold text-financy-text">Dashboard</h1>
+          <p className="mt-1 text-sm text-financy-muted">Bem-vindo, {user.name}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={isRefreshing}
+              type="button"
+              onClick={async () => {
+                setRefreshError(null);
+                const refreshTasks: Array<Promise<unknown>> = [
+                  refetchCategories(),
+                  refetchTransactions(),
+                ];
 
-              if (!hasInvalidSummaryRange) {
-                refreshTasks.push(refetchSummary(), refetchCategorySummary(), refetchTimeline());
-              }
+                if (!hasInvalidSummaryRange) {
+                  refreshTasks.push(refetchSummary(), refetchCategorySummary(), refetchTimeline());
+                }
 
-              const results = await Promise.allSettled(refreshTasks);
-              const failedCount = results.filter((result) => result.status === "rejected").length;
+                const results = await Promise.allSettled(refreshTasks);
+                const failedCount = results.filter((result) => result.status === "rejected").length;
 
-              if (failedCount === results.length) {
-                setRefreshError("Não foi possível atualizar os dados do dashboard.");
-                return;
-              }
+                if (failedCount === results.length) {
+                  setRefreshError("Não foi possível atualizar os dados do dashboard.");
+                  return;
+                }
 
-              if (failedCount > 0) {
-                setRefreshError(
-                  "Alguns dados do dashboard não foram atualizados. Tente novamente em instantes.",
-                );
-              }
-            }}
-          >
-            <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
-          </button>
-          <button onClick={signout} type="button">
-            Sair
-          </button>
-          <button disabled={categories.length === 0} type="button" onClick={openCreateDialog}>
-            Nova transação
-          </button>
-        </div>
-      </header>
+                if (failedCount > 0) {
+                  setRefreshError(
+                    "Alguns dados do dashboard não foram atualizados. Tente novamente em instantes.",
+                  );
+                }
+              }}
+            >
+              <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
+            </Button>
+            <Button onClick={signout} type="button" variant="ghost">
+              Sair
+            </Button>
+            <Button disabled={categories.length === 0} type="button" onClick={openCreateDialog}>
+              Nova transação
+            </Button>
+          </div>
+        </Card>
 
-      <nav className="dashboard-links">
-        <Link to="/categories">Gerenciar categorias</Link>
-        <Link to="/transactions">Gerenciar transações</Link>
-        <Link to="/profile">Meu perfil</Link>
-      </nav>
+        <Card className="border-financy-border bg-financy-surface p-4">
+          <nav className="grid gap-2 sm:grid-cols-3">
+            <Link className="inline-flex" to="/categories">
+              <TextLink>Gerenciar categorias</TextLink>
+            </Link>
+            <Link className="inline-flex" to="/transactions">
+              <TextLink>Gerenciar transações</TextLink>
+            </Link>
+            <Link className="inline-flex" to="/profile">
+              <TextLink>Meu perfil</TextLink>
+            </Link>
+          </nav>
+        </Card>
 
-      {categoriesError || transactionsError || hasCriticalSummaryFailure ? (
-        <p>Não foi possível carregar todas as informações do dashboard.</p>
-      ) : null}
-      {refreshError ? <p>{refreshError}</p> : null}
-      {actionError ? <p>{actionError}</p> : null}
-      {actionSuccess ? <p>{actionSuccess}</p> : null}
-      {summaryFilterValidationError ? <p>{summaryFilterValidationError}</p> : null}
+        <ErrorBanner
+          message={
+            categoriesError || transactionsError || hasCriticalSummaryFailure
+              ? "Não foi possível carregar todas as informações do dashboard."
+              : null
+          }
+        />
+        <ErrorBanner message={refreshError} />
+        <ErrorBanner message={actionError} />
+        <SuccessBanner message={actionSuccess} />
+        <ErrorBanner message={summaryFilterValidationError} />
 
-      <section className="dashboard-summary-filters t-resize">
-        <h2>Resumo por período</h2>
-        <div className="dashboard-summary-filter-grid">
-          <label>
-            De
-            <input
+        <Card className="border-financy-border bg-financy-surface p-5">
+          <h2 className="font-jakarta text-lg font-semibold text-financy-text">
+            Resumo por período
+          </h2>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Input
+              label="De"
               type="date"
+              helper={
+                summaryFilterValidationError && summaryFilter.from
+                  ? summaryFilterValidationError
+                  : undefined
+              }
+              helperError={Boolean(summaryFilterValidationError && summaryFilter.from)}
+              state={getSummaryFilterInputState(
+                summaryFilter.from,
+                Boolean(summaryFilterValidationError),
+              )}
               value={summaryFilter.from}
               onChange={(event) =>
                 setSummaryFilter((previous) => ({
@@ -556,11 +614,19 @@ export const ProtectedPage = () => {
                 }))
               }
             />
-          </label>
-          <label>
-            Até
-            <input
+            <Input
+              label="Até"
               type="date"
+              helper={
+                summaryFilterValidationError && summaryFilter.to
+                  ? summaryFilterValidationError
+                  : undefined
+              }
+              helperError={Boolean(summaryFilterValidationError && summaryFilter.to)}
+              state={getSummaryFilterInputState(
+                summaryFilter.to,
+                Boolean(summaryFilterValidationError),
+              )}
               value={summaryFilter.to}
               onChange={(event) =>
                 setSummaryFilter((previous) => ({
@@ -569,246 +635,296 @@ export const ProtectedPage = () => {
                 }))
               }
             />
-          </label>
-        </div>
-        <div className="dashboard-summary-filter-actions">
-          <button type="button" onClick={() => setSummaryFilter(getCurrentMonthFilter())}>
-            Mês atual
-          </button>
-          <button
-            type="button"
-            onClick={() => setSummaryFilter(getAllPeriodFilterFromTransactions(transactions))}
-          >
-            Todo período
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setSummaryFilter(getCurrentMonthFilter());
-              setTimelineInterval("DAY");
-            }}
-          >
-            Restaurar padrão
-          </button>
-        </div>
-      </section>
-
-      <section className="dashboard-cards">
-        <article className="dashboard-card t-resize">
-          <h2>Saldo atual</h2>
-          <p>{summary ? currencyFormatter.format(summary.balance) : "--"}</p>
-          <Link
-            className="dashboard-card-link"
-            to={buildTransactionsPath({
-              from: summaryFilter.from,
-              to: summaryFilter.to,
-            })}
-          >
-            Ver no extrato
-          </Link>
-        </article>
-        <article className="dashboard-card t-resize">
-          <h2>Receitas</h2>
-          <p>{summary ? currencyFormatter.format(summary.incomeTotal) : "--"}</p>
-          <Link
-            className="dashboard-card-link"
-            to={buildTransactionsPath({
-              type: "INCOME",
-              from: summaryFilter.from,
-              to: summaryFilter.to,
-            })}
-          >
-            Ver receitas
-          </Link>
-        </article>
-        <article className="dashboard-card t-resize">
-          <h2>Despesas</h2>
-          <p>{summary ? currencyFormatter.format(summary.expenseTotal) : "--"}</p>
-          <Link
-            className="dashboard-card-link"
-            to={buildTransactionsPath({
-              type: "EXPENSE",
-              from: summaryFilter.from,
-              to: summaryFilter.to,
-            })}
-          >
-            Ver despesas
-          </Link>
-        </article>
-        <article className="dashboard-card t-resize">
-          <h2>Transações</h2>
-          <p>{summary?.totalCount ?? "--"}</p>
-          <Link
-            className="dashboard-card-link"
-            to={buildTransactionsPath({
-              from: summaryFilter.from,
-              to: summaryFilter.to,
-            })}
-          >
-            Ver todas
-          </Link>
-        </article>
-        <article className="dashboard-card t-resize">
-          <h2>Categorias</h2>
-          <p>{categories.length}</p>
-          <Link className="dashboard-card-link" to="/categories">
-            Abrir categorias
-          </Link>
-        </article>
-      </section>
-
-      <section className="dashboard-type-breakdown t-resize">
-        <h2>Distribuição por tipo</h2>
-        <ul>
-          {(summary?.byType ?? []).map((item) => (
-            <li key={item.type}>
-              <strong>{item.type === "INCOME" ? "Receitas" : "Despesas"}</strong>
-              <span>{item.count} lançamento(s)</span>
-              <span>{currencyFormatter.format(item.total)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="dashboard-timeline t-resize">
-        <header className="dashboard-timeline-header">
-          <h2>Evolução financeira</h2>
-          <div className="dashboard-timeline-interval">
-            <button
-              className={timelineInterval === "DAY" ? "is-active" : ""}
-              type="button"
-              onClick={() => setTimelineInterval("DAY")}
-            >
-              Diário
-            </button>
-            <button
-              className={timelineInterval === "MONTH" ? "is-active" : ""}
-              type="button"
-              onClick={() => setTimelineInterval("MONTH")}
-            >
-              Mensal
-            </button>
           </div>
-        </header>
-        {!timelinePoints || timelinePoints.length === 0 ? (
-          <p>Sem dados para o período selecionado.</p>
-        ) : (
-          <div className="dashboard-timeline-table-wrap">
-            <table className="dashboard-timeline-table">
-              <thead>
-                <tr>
-                  <th>Período</th>
-                  <th>Receitas</th>
-                  <th>Despesas</th>
-                  <th>Saldo</th>
-                  <th>Saldo acumulado</th>
-                  <th>Lançamentos</th>
-                </tr>
-              </thead>
-              <tbody>
-                {timelinePoints.map((point) => (
-                  <tr key={point.period}>
-                    <td>{point.period}</td>
-                    <td>{currencyFormatter.format(point.incomeTotal)}</td>
-                    <td>{currencyFormatter.format(point.expenseTotal)}</td>
-                    <td>{currencyFormatter.format(point.balance)}</td>
-                    <td>{currencyFormatter.format(point.cumulativeBalance)}</td>
-                    <td>{point.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setSummaryFilter(getCurrentMonthFilter())}
+            >
+              Mês atual
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => setSummaryFilter(getAllPeriodFilterFromTransactions(transactions))}
+            >
+              Todo período
+            </Button>
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setSummaryFilter(getCurrentMonthFilter());
+                setTimelineInterval("DAY");
+              }}
+            >
+              Restaurar padrão
+            </Button>
           </div>
-        )}
-      </section>
+        </Card>
 
-      <section className="dashboard-category-ranking t-resize">
-        <h2>Top categorias no período</h2>
-        {!categorySummary || categorySummary.length === 0 ? (
-          <p>Sem movimentações no período selecionado.</p>
-        ) : (
-          <ul>
-            {categorySummary.map((category) => {
-              const percentage =
-                totalCategoryVolume > 0 ? (category.total / totalCategoryVolume) * 100 : 0;
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <h2 className="text-sm font-semibold text-financy-muted">Saldo atual</h2>
+            <p className="mt-2 text-2xl font-semibold text-financy-text">
+              {summary ? currencyFormatter.format(summary.balance) : "--"}
+            </p>
+            <Link
+              className="mt-3 inline-flex"
+              to={buildTransactionsPath({
+                from: summaryFilter.from,
+                to: summaryFilter.to,
+              })}
+            >
+              <TextLink>Ver no extrato</TextLink>
+            </Link>
+          </Card>
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <h2 className="text-sm font-semibold text-financy-muted">Receitas</h2>
+            <p className="mt-2 inline-flex items-center gap-2 text-2xl font-semibold text-financy-success">
+              <IconCircleArrowUp className="h-4 w-4" />
+              {summary ? currencyFormatter.format(summary.incomeTotal) : "--"}
+            </p>
+            <Link
+              className="mt-3 inline-flex"
+              to={buildTransactionsPath({
+                type: "INCOME",
+                from: summaryFilter.from,
+                to: summaryFilter.to,
+              })}
+            >
+              <TextLink>Ver receitas</TextLink>
+            </Link>
+          </Card>
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <h2 className="text-sm font-semibold text-financy-muted">Despesas</h2>
+            <p className="mt-2 inline-flex items-center gap-2 text-2xl font-semibold text-financy-danger">
+              <IconCircleArrowDown className="h-4 w-4" />
+              {summary ? currencyFormatter.format(summary.expenseTotal) : "--"}
+            </p>
+            <Link
+              className="mt-3 inline-flex"
+              to={buildTransactionsPath({
+                type: "EXPENSE",
+                from: summaryFilter.from,
+                to: summaryFilter.to,
+              })}
+            >
+              <TextLink>Ver despesas</TextLink>
+            </Link>
+          </Card>
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <h2 className="text-sm font-semibold text-financy-muted">Transações</h2>
+            <p className="mt-2 text-2xl font-semibold text-financy-text">
+              {summary?.totalCount ?? "--"}
+            </p>
+            <Link
+              className="mt-3 inline-flex"
+              to={buildTransactionsPath({
+                from: summaryFilter.from,
+                to: summaryFilter.to,
+              })}
+            >
+              <TextLink>Ver todas</TextLink>
+            </Link>
+          </Card>
+          <Card className="border-financy-border bg-financy-surface p-5">
+            <h2 className="text-sm font-semibold text-financy-muted">Categorias</h2>
+            <p className="mt-2 text-2xl font-semibold text-financy-text">{categories.length}</p>
+            <Link className="mt-3 inline-flex" to="/categories">
+              <TextLink>Abrir categorias</TextLink>
+            </Link>
+          </Card>
+        </section>
 
-              return (
-                <li key={category.categoryId}>
-                  <div className="dashboard-category-ranking-header">
-                    <strong>{category.categoryName}</strong>
-                    <span>{currencyFormatter.format(category.total)}</span>
-                  </div>
-                  <div className="dashboard-category-ranking-meta">
-                    <span>{category.count} lançamento(s)</span>
-                    <span>Saldo: {currencyFormatter.format(category.balance)}</span>
-                  </div>
-                  <Link
-                    className="dashboard-recent-link"
-                    to={buildTransactionsPath({
-                      categoryId: category.categoryId,
-                      from: summaryFilter.from,
-                      to: summaryFilter.to,
-                    })}
-                  >
-                    Ver transações da categoria
-                  </Link>
-                  <div
-                    aria-hidden="true"
-                    className="dashboard-category-ranking-bar"
-                    style={{ width: `${Math.max(percentage, 4)}%` }}
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section className="dashboard-recent t-resize">
-        <h2>Últimas transações</h2>
-        {latestTransactions.length === 0 ? (
-          <p>Nenhuma transação cadastrada até o momento.</p>
-        ) : (
-          <ul>
-            {latestTransactions.map((transaction) => (
-              <li key={transaction.id}>
-                <div>
-                  <strong>{transaction.title}</strong>
-                  <p>{transaction.category?.name ?? "Sem categoria"}</p>
-                </div>
-                <div>
-                  <p>{transaction.type === "INCOME" ? "Receita" : "Despesa"}</p>
-                  <p>{new Date(transaction.date).toLocaleDateString("pt-BR")}</p>
-                </div>
-                <strong>{currencyFormatter.format(transaction.amount)}</strong>
-                <Link
-                  className="dashboard-recent-link"
-                  to={buildTransactionsPath({
-                    categoryId: transaction.category?.id,
-                    from: toDateInput(new Date(transaction.date)),
-                    to: toDateInput(new Date(transaction.date)),
-                  })}
-                >
-                  Ver no extrato
-                </Link>
+        <Card className="border-financy-border bg-financy-surface p-5">
+          <h2 className="font-jakarta text-lg font-semibold text-financy-text">
+            Distribuição por tipo
+          </h2>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+            {(summary?.byType ?? []).map((item) => (
+              <li
+                key={item.type}
+                className="rounded-xl border border-financy-border bg-financy-surface-soft p-4"
+              >
+                <strong className="text-sm text-financy-text">
+                  {item.type === "INCOME" ? "Receitas" : "Despesas"}
+                </strong>
+                <p className="mt-1 text-xs text-financy-muted">{item.count} lançamento(s)</p>
+                <p className="mt-2 text-lg font-semibold text-financy-text">
+                  {currencyFormatter.format(item.total)}
+                </p>
               </li>
             ))}
           </ul>
-        )}
-      </section>
+        </Card>
 
-      {isCreateDialogOpen ? (
-        <div className="modal-overlay" role="presentation">
-          <dialog
-            className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
-            onCancel={(event) => {
-              event.preventDefault();
-              closeCreateDialog();
-            }}
-            open
+        <Card className="border-financy-border bg-financy-surface p-5">
+          <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-jakarta text-lg font-semibold text-financy-text">
+              Evolução financeira
+            </h2>
+            <div className="flex items-center gap-2">
+              <Button
+                className={timelineInterval === "DAY" ? "ring-2 ring-financy-primary/40" : ""}
+                size="sm"
+                type="button"
+                variant={timelineInterval === "DAY" ? "primary" : "outline"}
+                onClick={() => setTimelineInterval("DAY")}
+              >
+                Diário
+              </Button>
+              <Button
+                className={timelineInterval === "MONTH" ? "ring-2 ring-financy-primary/40" : ""}
+                size="sm"
+                type="button"
+                variant={timelineInterval === "MONTH" ? "primary" : "outline"}
+                onClick={() => setTimelineInterval("MONTH")}
+              >
+                Mensal
+              </Button>
+            </div>
+          </header>
+          {!timelinePoints || timelinePoints.length === 0 ? (
+            <p className="mt-4 text-sm text-financy-muted">Sem dados para o período selecionado.</p>
+          ) : (
+            <div className="mt-4 overflow-x-auto rounded-xl border border-financy-border">
+              <table className="min-w-full divide-y divide-financy-border text-sm">
+                <thead>
+                  <tr className="bg-financy-surface-soft text-left text-xs uppercase tracking-wide text-financy-muted">
+                    <th className="px-3 py-2">Período</th>
+                    <th className="px-3 py-2">Receitas</th>
+                    <th className="px-3 py-2">Despesas</th>
+                    <th className="px-3 py-2">Saldo</th>
+                    <th className="px-3 py-2">Saldo acumulado</th>
+                    <th className="px-3 py-2">Lançamentos</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-financy-border bg-financy-surface">
+                  {timelinePoints.map((point) => (
+                    <tr key={point.period} className="text-financy-text">
+                      <td className="px-3 py-2">{point.period}</td>
+                      <td className="px-3 py-2">{currencyFormatter.format(point.incomeTotal)}</td>
+                      <td className="px-3 py-2">{currencyFormatter.format(point.expenseTotal)}</td>
+                      <td className="px-3 py-2">{currencyFormatter.format(point.balance)}</td>
+                      <td className="px-3 py-2">
+                        {currencyFormatter.format(point.cumulativeBalance)}
+                      </td>
+                      <td className="px-3 py-2">{point.count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        <Card className="border-financy-border bg-financy-surface p-5">
+          <h2 className="font-jakarta text-lg font-semibold text-financy-text">
+            Top categorias no período
+          </h2>
+          {!categorySummary || categorySummary.length === 0 ? (
+            <p className="mt-4 text-sm text-financy-muted">
+              Sem movimentações no período selecionado.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {categorySummary.map((category) => {
+                const percentage =
+                  totalCategoryVolume > 0 ? (category.total / totalCategoryVolume) * 100 : 0;
+
+                return (
+                  <li
+                    key={category.categoryId}
+                    className="rounded-xl border border-financy-border bg-financy-surface-soft p-4"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <strong className="text-sm text-financy-text">{category.categoryName}</strong>
+                      <span className="text-sm font-semibold text-financy-text">
+                        {currencyFormatter.format(category.total)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-financy-muted">
+                      <span>{category.count} lançamento(s)</span>
+                      <span>Saldo: {currencyFormatter.format(category.balance)}</span>
+                    </div>
+                    <Link
+                      className="mt-2 inline-flex"
+                      to={buildTransactionsPath({
+                        categoryId: category.categoryId,
+                        from: summaryFilter.from,
+                        to: summaryFilter.to,
+                      })}
+                    >
+                      <TextLink>Ver transações da categoria</TextLink>
+                    </Link>
+                    <div
+                      aria-hidden="true"
+                      className="mt-2 h-2 rounded-full bg-financy-primary"
+                      style={{ width: `${Math.max(percentage, 4)}%` }}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+
+        <Card className="border-financy-border bg-financy-surface p-5">
+          <h2 className="font-jakarta text-lg font-semibold text-financy-text">
+            Últimas transações
+          </h2>
+          {latestTransactions.length === 0 ? (
+            <p className="mt-4 text-sm text-financy-muted">
+              Nenhuma transação cadastrada até o momento.
+            </p>
+          ) : (
+            <ul className="mt-4 space-y-3">
+              {latestTransactions.map((transaction) => (
+                <li
+                  key={transaction.id}
+                  className="grid gap-3 rounded-xl border border-financy-border bg-financy-surface-soft p-4 sm:grid-cols-[1fr_auto_auto]"
+                >
+                  <div className="min-w-0">
+                    <strong className="block truncate text-sm text-financy-text">
+                      {transaction.title}
+                    </strong>
+                    <p className="mt-1 text-xs text-financy-muted">
+                      {transaction.category?.name ?? "Sem categoria"}
+                    </p>
+                  </div>
+                  <div className="text-xs text-financy-muted">
+                    <p>{transaction.type === "INCOME" ? "Receita" : "Despesa"}</p>
+                    <p>{new Date(transaction.date).toLocaleDateString("pt-BR")}</p>
+                  </div>
+                  <strong className="text-sm text-financy-text">
+                    {currencyFormatter.format(transaction.amount)}
+                  </strong>
+                  <Link
+                    className="inline-flex sm:col-span-3"
+                    to={buildTransactionsPath({
+                      categoryId: transaction.category?.id,
+                      from: toDateInput(new Date(transaction.date)),
+                      to: toDateInput(new Date(transaction.date)),
+                    })}
+                  >
+                    <TextLink>Ver no extrato</TextLink>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        {isCreateDialogOpen ? (
+          <Modal
+            isOpen={isCreateDialogOpen && !isCreateDialogClosing}
+            onClose={closeCreateDialog}
+            title="Nova transação"
           >
-            <h2>Nova transação</h2>
             <form
+              className="mt-4 space-y-3"
               onSubmit={async (event) => {
                 event.preventDefault();
                 if (isCreateDisabled) {
@@ -837,88 +953,87 @@ export const ProtectedPage = () => {
                 }
               }}
             >
-              <label>
-                Título
-                <input
-                  autoComplete="off"
-                  required
-                  type="text"
-                  value={form.title}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, title: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Valor
-                <input
-                  min="0"
-                  required
-                  step="0.01"
-                  type="number"
-                  value={form.amount}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, amount: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
+              <Input
+                autoComplete="off"
+                label="Título"
+                required
+                type="text"
+                value={form.title}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, title: event.target.value }))
+                }
+              />
+              <Input
+                label="Valor"
+                min="0"
+                required
+                step="0.01"
+                type="number"
+                value={form.amount}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, amount: event.target.value }))
+                }
+              />
+              <label className="text-sm font-medium text-financy-text" htmlFor="transaction-type">
                 Tipo
-                <select
-                  value={form.type}
-                  onChange={(event) =>
-                    setForm((previous) => ({
-                      ...previous,
-                      type: event.target.value as TransactionForm["type"],
-                    }))
-                  }
-                >
-                  <option value="EXPENSE">Despesa</option>
-                  <option value="INCOME">Receita</option>
-                </select>
               </label>
-              <label>
-                Data
-                <input
-                  required
-                  type="date"
-                  value={form.date}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, date: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
+              <Select
+                id="transaction-type"
+                value={form.type}
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    type: event.target.value as TransactionForm["type"],
+                  }))
+                }
+              >
+                <option value="EXPENSE">Despesa</option>
+                <option value="INCOME">Receita</option>
+              </Select>
+              <Input
+                label="Data"
+                required
+                type="date"
+                value={form.date}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, date: event.target.value }))
+                }
+              />
+              <label
+                className="text-sm font-medium text-financy-text"
+                htmlFor="transaction-category"
+              >
                 Categoria
-                <select
-                  required
-                  value={form.categoryId}
-                  onChange={(event) =>
-                    setForm((previous) => ({ ...previous, categoryId: event.target.value }))
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
               </label>
-              <div className="modal-actions">
-                <button disabled={isCreateDisabled} type="submit">
+              <Select
+                id="transaction-category"
+                required
+                value={form.categoryId}
+                onChange={(event) =>
+                  setForm((previous) => ({ ...previous, categoryId: event.target.value }))
+                }
+              >
+                <option value="">Selecione</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button disabled={isCreateDisabled} type="submit">
                   <span className="t-text-swap">
                     {creatingTransaction ? "Criando..." : "Criar transação"}
                   </span>
-                </button>
-                <button type="button" onClick={closeCreateDialog}>
+                </Button>
+                <Button type="button" variant="outline" onClick={closeCreateDialog}>
                   Cancelar
-                </button>
+                </Button>
               </div>
             </form>
-          </dialog>
-        </div>
-      ) : null}
+          </Modal>
+        ) : null}
+      </div>
     </main>
   );
 };
