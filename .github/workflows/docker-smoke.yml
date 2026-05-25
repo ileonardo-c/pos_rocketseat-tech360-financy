@@ -27,25 +27,27 @@ jobs:
       - name: Wait for backend readiness
         run: |
           set -euo pipefail
-          for _ in {1..60}; do
+          for attempt in 1 2 3; do
             if curl --fail --silent --show-error http://127.0.0.1:4000/health/ready >/dev/null; then
               exit 0
             fi
-            sleep 2
+            echo "Backend not ready yet (attempt ${attempt}/3)"
+            sleep 5
           done
-          echo "Backend did not respond at /health/ready after 120s"
+          echo "Backend did not respond at /health/ready after 3 attempts"
           exit 1
 
       - name: Wait for frontend
         run: |
           set -euo pipefail
-          for _ in {1..60}; do
+          for attempt in 1 2 3; do
             if curl --fail --silent --show-error http://127.0.0.1:5173 >/dev/null; then
               exit 0
             fi
-            sleep 2
+            echo "Frontend not ready yet (attempt ${attempt}/3)"
+            sleep 5
           done
-          echo "Frontend did not respond after 120s"
+          echo "Frontend did not respond after 3 attempts"
           exit 1
 
       - name: Validate pnpm runtime toolchain
