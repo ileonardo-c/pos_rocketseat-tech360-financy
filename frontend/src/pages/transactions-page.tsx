@@ -399,9 +399,9 @@ export const TransactionsPage = () => {
           return prev;
         }
 
+        setPage(1);
         return { ...prev, query: searchInput };
       });
-      setPage(1);
     }, 1000);
 
     return () => {

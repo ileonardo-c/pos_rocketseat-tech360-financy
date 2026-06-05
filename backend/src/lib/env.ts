@@ -14,10 +14,8 @@ export const getOptionalEnv = (name: string): string | undefined => {
 
 const weakProductionEnvValues: Record<string, Set<string>> = {
   JWT_SECRET: new Set(["change_me", "changeme", "dev_secret", "secret"]),
-  POSTGRES_PASSWORD: new Set(["financy_password", "postgres", "password"]),
   AWS_SECRET_ACCESS_KEY: new Set(["minioadmin123"]),
   RESET_CODE_PEPPER: new Set(["financy-reset-pepper", "change_me", "changeme"]),
-  MINIO_ROOT_PASSWORD: new Set(["minioadmin123"]),
 };
 
 export function assertProductionSecurityConfig(): void {

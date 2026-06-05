@@ -335,5 +335,23 @@ test.describe("@smoke-dashboard fluxo de acesso ao dashboard", () => {
     await expect(
       page.getByText("Nenhuma transação encontrada para o período selecionado."),
     ).toHaveCount(0);
+
+    const debounceCheckStartedAt = Date.now();
+    await expect
+      .poll(
+        () => {
+          if (Date.now() - debounceCheckStartedAt < 1_200) {
+            return "waiting";
+          }
+
+          return new URL(page.url()).searchParams.get("page");
+        },
+        { timeout: 3_000 },
+      )
+      .toBe("2");
+
+    await page.getByLabel("Buscar").fill(`Transação Paginação ${marker} 01`);
+    await expect.poll(() => new URL(page.url()).searchParams.get("page")).toBe(null);
+    expect(new URL(page.url()).searchParams.get("query")).toBe(`Transação Paginação ${marker} 01`);
   });
 });

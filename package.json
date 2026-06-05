@@ -15,7 +15,7 @@
     "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
     "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
     "test:backend:auth-regression": "pnpm --filter @financy/backend test:auth-regression",
-    "test:backend": "pnpm test:backend:api-contract && pnpm test:backend:auth-regression",
+    "test:backend": "pnpm test:backend:api-contract && pnpm test:backend:auth-regression && pnpm --filter @financy/backend test:env-production",
     "dev:verify:backend": "pnpm dev:up && pnpm test:backend",
     "test:e2e:smoke-contract": "pnpm e2e:smoke && pnpm e2e:contract",
     "test:e2e:preview": "pnpm e2e:journey",
