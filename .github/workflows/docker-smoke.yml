@@ -96,19 +96,25 @@ jobs:
 
           exit "${status}"
 
-      - name: Verify backend contracts
-        id: backend_contracts
+      - name: Verify targets in parallel
+        id: parallel_verification
         continue-on-error: true
         run: |
           set -euo pipefail
           api_log="$(mktemp)"
           auth_log="$(mktemp)"
+          smoke_log="$(mktemp)"
+          journey_log="$(mktemp)"
           status=0
 
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend test:api-contract" >"${api_log}" 2>&1 &
           api_pid="$!"
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql pnpm --filter @financy/backend test:auth-regression" >"${auth_log}" 2>&1 &
           auth_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-login PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-login pnpm e2e:smoke && PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-dashboard PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-dashboard pnpm e2e:contract" >"${smoke_log}" 2>&1 &
+          smoke_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-journey-preview PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-journey-preview pnpm e2e:journey" >"${journey_log}" 2>&1 &
+          journey_pid="$!"
 
           if ! wait "${api_pid}"; then
             status=1
@@ -122,48 +128,32 @@ jobs:
           echo "Backend auth regression output"
           cat "${auth_log}"
 
+          if ! wait "${smoke_pid}"; then
+            status=1
+          fi
+          echo "E2E smoke-contract output"
+          cat "${smoke_log}"
+
+          if ! wait "${journey_pid}"; then
+            status=1
+          fi
+          echo "E2E journey-preview output"
+          cat "${journey_log}"
+
           exit "${status}"
 
-      - name: Verify e2e smoke-contract
-        id: e2e_smoke_contract
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "pnpm test:e2e:smoke-contract"
-
-      - name: Collect e2e smoke-contract artifacts
+      - name: Collect E2E artifacts
         if: always()
         run: |
           set -euo pipefail
-          mkdir -p "frontend/.artifacts/e2e-smoke-contract"
+          mkdir -p "frontend/.artifacts"
           if [ -d "frontend/playwright-report" ]; then
-            rm -rf "frontend/.artifacts/e2e-smoke-contract/playwright-report"
-            cp -R "frontend/playwright-report" "frontend/.artifacts/e2e-smoke-contract/playwright-report"
+            rm -rf "frontend/.artifacts/playwright-report"
+            cp -R "frontend/playwright-report" "frontend/.artifacts/playwright-report"
           fi
           if [ -d "frontend/test-results" ]; then
-            rm -rf "frontend/.artifacts/e2e-smoke-contract/test-results"
-            cp -R "frontend/test-results" "frontend/.artifacts/e2e-smoke-contract/test-results"
-          fi
-
-      - name: Verify e2e journey-preview
-        id: e2e_journey_preview
-        continue-on-error: true
-        run: |
-          set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "pnpm e2e:journey"
-
-      - name: Collect e2e journey-preview artifacts
-        if: always()
-        run: |
-          set -euo pipefail
-          mkdir -p "frontend/.artifacts/e2e-journey-preview"
-          if [ -d "frontend/playwright-report" ]; then
-            rm -rf "frontend/.artifacts/e2e-journey-preview/playwright-report"
-            cp -R "frontend/playwright-report" "frontend/.artifacts/e2e-journey-preview/playwright-report"
-          fi
-          if [ -d "frontend/test-results" ]; then
-            rm -rf "frontend/.artifacts/e2e-journey-preview/test-results"
-            cp -R "frontend/test-results" "frontend/.artifacts/e2e-journey-preview/test-results"
+            rm -rf "frontend/.artifacts/test-results"
+            cp -R "frontend/test-results" "frontend/.artifacts/test-results"
           fi
 
       - name: Upload E2E artifacts
@@ -178,20 +168,10 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          status=0
-          if [ "${{ steps.backend_contracts.outcome }}" != "success" ]; then
-            echo "Backend contract verification failed"
-            status=1
+          if [ "${{ steps.parallel_verification.outcome }}" != "success" ]; then
+            echo "Parallel verification failed"
+            exit 1
           fi
-          if [ "${{ steps.e2e_smoke_contract.outcome }}" != "success" ]; then
-            echo "E2E smoke-contract verification failed"
-            status=1
-          fi
-          if [ "${{ steps.e2e_journey_preview.outcome }}" != "success" ]; then
-            echo "E2E journey-preview verification failed"
-            status=1
-          fi
-          exit "${status}"
 
       - name: Show compose status
         if: always()
@@ -200,7 +180,7 @@ jobs:
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml ps
 
       - name: Show compose logs
-        if: always() && (steps.backend_contracts.outcome != 'success' || steps.e2e_smoke_contract.outcome != 'success' || steps.e2e_journey_preview.outcome != 'success')
+        if: always() && steps.parallel_verification.outcome != 'success'
         run: |
           set -euo pipefail
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml logs --no-color backend frontend postgres minio minio-init mailpit
