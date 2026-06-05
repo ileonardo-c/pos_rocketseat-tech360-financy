@@ -15,6 +15,19 @@ export const buildTransientE2EUser = () => {
   };
 };
 
+export const buildSeedE2EUser = () => {
+  const email = process.env.E2E_SEED_EMAIL?.trim() || "admin@financy.local";
+  const name = process.env.E2E_SEED_NAME?.trim() || "Financy Admin";
+  const password = process.env.E2E_SEED_PASSWORD?.trim() || "TestAdmin123!";
+
+  return {
+    name,
+    email,
+    password,
+    updatedName: `${name} Padrão`,
+  };
+};
+
 export const buildExpiredToken = () => {
   const secret = process.env.JWT_SECRET ?? "changeme";
   const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");

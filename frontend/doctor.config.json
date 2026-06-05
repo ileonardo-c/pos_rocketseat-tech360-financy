@@ -1,0 +1,24 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "rules": {
+    "react-doctor/async-parallel": "off",
+    "react-doctor/control-has-associated-label": "off",
+    "react-doctor/exhaustive-deps": "off",
+    "react-doctor/js-hoist-intl": "off",
+    "react-doctor/no-cascading-set-state": "off",
+    "react-doctor/no-chain-state-updates": "off",
+    "react-doctor/no-derived-state": "off",
+    "react-doctor/no-effect-chain": "off",
+    "react-doctor/no-event-handler": "off",
+    "react-doctor/no-giant-component": "off",
+    "react-doctor/no-noninteractive-element-interactions": "off",
+    "react-doctor/no-static-element-interactions": "off",
+    "react-doctor/no-usememo-simple-expression": "off",
+    "react-doctor/only-export-components": "off",
+    "react-doctor/prefer-module-scope-pure-function": "off",
+    "react-doctor/prefer-useReducer": "off",
+    "react-doctor/rendering-hoist-jsx": "off",
+    "react-doctor/rendering-svg-precision": "off",
+    "react-doctor/role-supports-aria-props": "off"
+  }
+}

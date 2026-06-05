@@ -1,4 +1,4 @@
-import type { PrismaClient, User } from "@prisma/client";
+import type { Prisma, PrismaClient, User } from "@prisma/client";
 
 export class AuthRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -37,10 +37,96 @@ export class AuthRepository {
     });
   }
 
-  updateUser(id: string, data: { name?: string; email?: string }): Promise<User> {
+  updateUser(
+    id: string,
+    data: { name?: string; email?: string; avatarKey?: string | null; avatarUrl?: string | null },
+  ): Promise<User> {
     return this.prisma.user.update({
       where: { id },
       data,
+    });
+  }
+
+  createPasswordResetCode(data: Prisma.PasswordResetCodeUncheckedCreateInput) {
+    return this.prisma.passwordResetCode.create({
+      data,
+    });
+  }
+
+  findActivePasswordResetCode(email: string, userId: string) {
+    return this.prisma.passwordResetCode.findFirst({
+      where: {
+        userId,
+        email,
+        usedAt: null,
+        expiresAt: {
+          gte: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  }
+
+  incrementPasswordResetAttempts(id: string) {
+    return this.prisma.passwordResetCode.update({
+      where: { id },
+      data: {
+        attempts: {
+          increment: 1,
+        },
+      },
+    });
+  }
+
+  markPasswordResetCodeAsUsed(id: string) {
+    return this.prisma.passwordResetCode.update({
+      where: { id },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+  }
+
+  markOlderPasswordResetCodesAsUsed(userId: string, before: Date) {
+    return this.prisma.passwordResetCode.updateMany({
+      where: {
+        userId,
+        OR: [{ expiresAt: { lt: before } }, { usedAt: { not: null } }],
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+  }
+
+  countPasswordResetCodesByUser(userId: string, since: Date) {
+    return this.prisma.passwordResetCode.count({
+      where: {
+        userId,
+        usedAt: null,
+        createdAt: {
+          gte: since,
+        },
+      },
+    });
+  }
+
+  clearPasswordResetCodesForUser(userId: string, withinMinutes: number) {
+    return this.prisma.passwordResetCode.deleteMany({
+      where: {
+        userId,
+        OR: [
+          { usedAt: { not: null } },
+          { expiresAt: { lt: new Date() } },
+          {
+            createdAt: {
+              lt: new Date(Date.now() - withinMinutes * 60 * 1000),
+            },
+          },
+        ],
+      },
     });
   }
 }

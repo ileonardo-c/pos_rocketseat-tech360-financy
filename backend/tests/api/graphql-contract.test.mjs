@@ -101,6 +101,55 @@ const ensure = (condition, message) => {
   }
 };
 
+const requiredDashboardQueryFields = [
+  "transactions",
+  "transactionSummary",
+  "transactionCategorySummary",
+  "dashboardRecentTransactions",
+  "categoriesList",
+  "categoriesCount",
+  "categoriesOverview",
+];
+
+const dashboardContractQuery = `
+  query DashboardContractQueryFields {
+    __type(name: "Query") {
+      fields {
+        name
+        args {
+          name
+        }
+      }
+    }
+  }
+`;
+
+const runDashboardContractCheck = async () => {
+  const data = await request(dashboardContractQuery);
+  const queryFields = data?.__type?.fields ?? [];
+  const queryFieldSet = new Set(queryFields.map((field) => field.name));
+
+  const missingFields = requiredDashboardQueryFields.filter((field) => !queryFieldSet.has(field));
+  ensure(
+    missingFields.length === 0,
+    `Dashboard contract mismatch. Missing Query fields: ${missingFields.join(", ")}`,
+  );
+
+  const recentField = queryFields.find((field) => field.name === "dashboardRecentTransactions");
+  const recentArgNames = new Set((recentField?.args ?? []).map((arg) => arg.name));
+  ensure(
+    recentArgNames.has("filter") && recentArgNames.has("limit"),
+    "Dashboard contract mismatch. dashboardRecentTransactions must expose filter and limit arguments",
+  );
+
+  const categoriesListField = queryFields.find((field) => field.name === "categoriesList");
+  const categoriesListArgNames = new Set((categoriesListField?.args ?? []).map((arg) => arg.name));
+  ensure(
+    categoriesListArgNames.has("page") && categoriesListArgNames.has("perPage"),
+    "Categories contract mismatch. categoriesList must expose page and perPage arguments",
+  );
+};
+
 const randomSuffix = Math.random().toString(36).slice(2, 10);
 const userInput = {
   name: `Smoke User ${randomSuffix}`,
@@ -151,6 +200,18 @@ const createTransactionMutation = `
   }
 `;
 
+const updateCategoryMutation = `
+  mutation UpdateCategory($id: ID!, $input: UpdateCategoryInput!) {
+    updateCategory(id: $id, input: $input) { id name userId }
+  }
+`;
+
+const updateTransactionMutation = `
+  mutation UpdateTransaction($id: ID!, $input: UpdateTransactionInput!) {
+    updateTransaction(id: $id, input: $input) { id title amount userId }
+  }
+`;
+
 const requestUploadUrlMutation = `
   mutation RequestUploadUrl($input: UploadInput!) {
     requestUploadUrl(input: $input) {
@@ -188,6 +249,7 @@ const deleteCategoryMutation = `
 
 const run = async () => {
   await runGraphQLProbe();
+  await runDashboardContractCheck();
 
   const registerData = await request(registerMutation, undefined, { input: userInput });
   ensure(registerData?.register?.created === true, "Register should return created=true");
@@ -236,10 +298,45 @@ const run = async () => {
     "Created transaction not found in list",
   );
 
+  const updateCategoryData = await request(updateCategoryMutation, token, {
+    id: categoryId,
+    input: { name: `${categoryName} Editada` },
+  });
+  ensure(
+    updateCategoryData?.updateCategory?.id === categoryId,
+    "Category update returned unexpected id",
+  );
+
+  const updatedCategoryName = updateCategoryData?.updateCategory?.name;
+  ensure(updatedCategoryName === `${categoryName} Editada`, "Updated category name mismatch");
+
+  const updateTransactionData = await request(updateTransactionMutation, token, {
+    id: transactionId,
+    input: {
+      title: `Smoke Transaction ${randomSuffix} Editada`,
+      amount: 222.99,
+      date: new Date().toISOString(),
+      categoryId,
+    },
+  });
+  ensure(
+    updateTransactionData?.updateTransaction?.id === transactionId,
+    "Transaction update returned unexpected id",
+  );
+  ensure(
+    updateTransactionData?.updateTransaction?.title === `Smoke Transaction ${randomSuffix} Editada`,
+    "Updated transaction title mismatch",
+  );
+  ensure(
+    typeof updateTransactionData?.updateTransaction?.amount === "number",
+    "Updated transaction amount should be numeric",
+  );
+
   const uploadData = await request(requestUploadUrlMutation, token, {
     input: {
-      fileName: `smoke-receipt-${randomSuffix}.txt`,
-      contentType: "text/plain",
+      fileName: `smoke-receipt-${randomSuffix}.pdf`,
+      contentType: "application/pdf",
+      sizeBytes: 1024,
     },
   });
   ensure(uploadData?.requestUploadUrl?.url, "Missing signed upload URL");
@@ -247,8 +344,34 @@ const run = async () => {
   ensure(uploadData?.requestUploadUrl?.publicUrl, "Missing upload public URL");
   ensure(uploadData?.requestUploadUrl?.expiresIn > 0, "Invalid upload URL expiration");
   ensure(
-    uploadData.requestUploadUrl.key.startsWith(`users/${userId}/`),
+    uploadData.requestUploadUrl.key.startsWith(`users/${userId}/receipts/`),
     "Upload key does not match authenticated user namespace",
+  );
+
+  const invalidUploadContentType = await requestWithGraphQLErrors(requestUploadUrlMutation, token, {
+    input: {
+      fileName: `smoke-receipt-${randomSuffix}.html`,
+      contentType: "text/html",
+      sizeBytes: 1024,
+    },
+  });
+  ensure(
+    invalidUploadContentType.errors.some(
+      (error) => error.extensions?.code === "UPLOAD_INVALID_CONTENT_TYPE",
+    ),
+    "HTML receipt upload should be rejected",
+  );
+
+  const invalidUploadSize = await requestWithGraphQLErrors(requestUploadUrlMutation, token, {
+    input: {
+      fileName: `smoke-receipt-${randomSuffix}.pdf`,
+      contentType: "application/pdf",
+      sizeBytes: 10 * 1024 * 1024 + 1,
+    },
+  });
+  ensure(
+    invalidUploadSize.errors.some((error) => error.extensions?.code === "UPLOAD_INVALID_SIZE"),
+    "Oversized receipt upload should be rejected",
   );
 
   const secondRegisterData = await request(registerMutation, undefined, { input: secondUserInput });
@@ -269,6 +392,48 @@ const run = async () => {
   ensure(
     secondMeData?.me?.email === secondUserInput.email,
     "Second user me query returned unexpected user",
+  );
+
+  const secondUserCategoriesData = await request(categoriesQuery, secondToken);
+  ensure(
+    !secondUserCategoriesData.categories.some((category) => category.id === categoryId),
+    "Second user should not list categories from another user",
+  );
+
+  const secondUserTransactionsData = await request(transactionsQuery, secondToken);
+  ensure(
+    !secondUserTransactionsData.transactions.some(
+      (transaction) => transaction.id === transactionId,
+    ),
+    "Second user should not list transactions from another user",
+  );
+
+  const crossUpdateTransaction = await requestWithGraphQLErrors(
+    updateTransactionMutation,
+    secondToken,
+    {
+      id: transactionId,
+      input: {
+        title: `Smoke Transaction ${randomSuffix} Hijacked`,
+      },
+    },
+  );
+  ensure(
+    crossUpdateTransaction.errors.length > 0 ||
+      crossUpdateTransaction.data?.updateTransaction?.id !== transactionId,
+    "Cross-user transaction update should fail",
+  );
+
+  const crossUpdateCategory = await requestWithGraphQLErrors(updateCategoryMutation, secondToken, {
+    id: categoryId,
+    input: {
+      name: `Smoke Category ${randomSuffix} Hijacked`,
+    },
+  });
+  ensure(
+    crossUpdateCategory.errors.length > 0 ||
+      crossUpdateCategory.data?.updateCategory?.id !== categoryId,
+    "Cross-user category update should fail",
   );
 
   const crossDeleteTransaction = await requestWithGraphQLErrors(
@@ -300,7 +465,7 @@ const run = async () => {
   const deleteCategoryData = await request(deleteCategoryMutation, token, { id: categoryId });
   ensure(deleteCategoryData.deleteCategory === true, "Category deletion failed");
 
-  console.log("GraphQL smoke flow passed");
+  console.log("GraphQL smoke and contract flow passed");
 };
 
 run().catch((error) => {

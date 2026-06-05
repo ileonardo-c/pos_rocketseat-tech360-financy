@@ -8,7 +8,7 @@
 
 @theme {
   --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-jakarta: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", sans-serif;
+
   --font-mono-martian: "Martian Mono Variable", "Martian Mono", ui-monospace, monospace;
 
   /* Financy surface & layout */
@@ -23,6 +23,9 @@
   --color-financy-text: #1f2937;
   --color-financy-text-inverse: #f9fafb;
   --color-financy-text-subtle: #8a94a6;
+  --color-financy-description: #4b5563; /* Figma description / subtitle text */
+  --color-financy-heading: #111827; /* Figma page titles — gray-900 */
+  --color-financy-page-subtitle: #6b7280; /* Figma gray-600 for page subtitle */
 
   /* Link */
   --color-financy-link: #4f46e5;
@@ -87,6 +90,13 @@
     --dropdown-pre-scale: 0.97;
     --dropdown-closing-scale: 0.99;
     --dropdown-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    /* Page route transition */
+    --panel-open-dur: 220ms;
+    --panel-close-dur: 160ms;
+    --panel-translate-y: 8px;
+    --panel-blur: 2px;
+    --panel-ease: cubic-bezier(0.22, 1, 0.36, 1);
+    --toast-translate-y: -12px;
     /* Modal open / close */
     --modal-open-dur: 250ms;
     --modal-close-dur: 150ms;
@@ -135,8 +145,21 @@
   @apply text-lg font-semibold text-financy-text;
 }
 
+@utility sg-page-title {
+  @apply text-2xl font-bold leading-8 text-financy-heading;
+}
+
+@utility sg-page-subtitle {
+  @apply text-base font-normal leading-6 text-financy-page-subtitle;
+}
+
 @utility sg-chip {
   @apply inline-flex rounded-full border border-financy-border px-2.5 py-1 text-xs font-semibold text-financy-muted;
+}
+
+@utility sg-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 @layer components {
@@ -206,12 +229,54 @@
     pointer-events: auto;
   }
 
-  .t-modal.is-closing {
-    transform: scale(var(--modal-scale-close));
+  .t-modal-overlay {
     opacity: 0;
+    transition: opacity var(--modal-open-dur) var(--modal-ease);
+    will-change: opacity;
+  }
+
+  .t-modal-overlay.is-open {
+    opacity: 1;
+  }
+
+  .t-toast-slot {
+    width: 100%;
+    max-height: 12rem;
+    margin-bottom: 0.5rem;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height var(--panel-close-dur) var(--panel-ease), margin-bottom
+      var(--panel-close-dur) var(--panel-ease), opacity var(--panel-close-dur) var(--panel-ease);
+    will-change: max-height, margin-bottom, opacity;
+  }
+
+  .t-toast-slot:last-child {
+    margin-bottom: 0;
+  }
+
+  .t-toast-slot[data-open="false"] {
+    max-height: 0;
+    margin-bottom: 0;
+    opacity: 0;
+  }
+
+  .t-toast {
+    transform: translateY(var(--toast-translate-y));
+    opacity: 0;
+    filter: blur(var(--panel-blur));
     pointer-events: none;
-    transition: transform var(--modal-close-dur) var(--modal-ease), opacity var(--modal-close-dur)
-      var(--modal-ease);
+    transition: transform var(--panel-close-dur) var(--panel-ease), opacity var(--panel-close-dur)
+      var(--panel-ease), filter var(--panel-close-dur) var(--panel-ease);
+    will-change: transform, opacity, filter;
+  }
+
+  .t-toast[data-open="true"] {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+    pointer-events: auto;
+    transition: transform var(--panel-open-dur) var(--panel-ease), opacity var(--panel-open-dur)
+      var(--panel-ease), filter var(--panel-open-dur) var(--panel-ease);
   }
 
   .t-dropdown {
@@ -277,9 +342,20 @@
     }
   }
 
+  .t-route {
+    transform: translateY(0);
+    opacity: 1;
+    filter: blur(0);
+    will-change: transform, opacity, filter;
+  }
+
   .t-route-enter {
     animation: t-route-enter var(--panel-open-dur) var(--panel-ease);
-    will-change: transform, opacity, filter;
+  }
+
+  .t-route-exit {
+    animation: t-route-exit var(--panel-close-dur) var(--panel-ease) both;
+    pointer-events: none;
   }
 
   @keyframes t-route-enter {
@@ -295,14 +371,31 @@
     }
   }
 
+  @keyframes t-route-exit {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+      filter: blur(0);
+    }
+    to {
+      transform: translateY(calc(var(--panel-translate-y) * -0.5));
+      opacity: 0;
+      filter: blur(var(--panel-blur));
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .t-route-enter {
+    .t-route-enter,
+    .t-route-exit {
       animation: none !important;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .t-modal {
+    .t-modal,
+    .t-modal-overlay,
+    .t-toast-slot,
+    .t-toast {
       transition: none !important;
     }
   }
@@ -359,6 +452,10 @@
 }
 
 @layer utilities {
+  .sg-scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
   .shadow-panel {
     box-shadow: 0 20px 40px -18px rgb(15 23 42 / 0.4);
   }

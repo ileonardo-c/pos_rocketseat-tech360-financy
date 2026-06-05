@@ -4,10 +4,12 @@ import { cloneElement, isValidElement } from "react";
 import { cx } from "@/lib/utils";
 
 type TextLinkState = "default" | "hover";
+type TextLinkVariant = "default" | "dashboard";
 
 type TextLinkBaseProps = {
   className?: string;
   state?: TextLinkState;
+  variant?: TextLinkVariant;
   asChild?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
@@ -30,6 +32,7 @@ export const TextLink = ({
   asChild = false,
   className,
   state = "default",
+  variant = "default",
   leftIcon,
   rightIcon,
   children,
@@ -37,8 +40,15 @@ export const TextLink = ({
 }: TextLinkProps) => {
   const textLinkChildren = asChild && isValidElement(children) ? children.props.children : children;
   const mergedClassName = cx(
-    "inline-flex items-center gap-1 text-sm font-medium text-[#1f6f43] transition-colors duration-150 hover:border-b hover:border-[#1f6f43]",
-    state === "hover" ? "border-b border-[#1f6f43]" : "",
+    "inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium leading-5 transition-[color,opacity] duration-150 ease-out",
+    variant === "dashboard"
+      ? "text-financy-primary hover:text-financy-primary-hover"
+      : "border-b border-transparent text-financy-primary hover:border-financy-primary hover:text-financy-primary-hover",
+    state === "hover"
+      ? variant === "dashboard"
+        ? "text-financy-primary-hover"
+        : "border-financy-primary text-financy-primary-hover"
+      : "",
     className,
   );
 

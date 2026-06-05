@@ -26,12 +26,13 @@ const signHs256Token = async ({ payload, secret }) => {
   return `${unsignedToken}.${signaturePart}`;
 };
 
-const request = async (query, token, variables = {}) => {
+const request = async (query, token, variables = {}, extraHeaders = {}) => {
   const response = await fetch(graphqlUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json",
       ...(token ? { authorization: `Bearer ${token}` } : {}),
+      ...extraHeaders,
     },
     body: JSON.stringify({ query, variables }),
   });
@@ -118,6 +119,50 @@ const meQuery = `
   }
 `;
 
+const categoriesListQuery = `
+  query CategoriesList($page: Int, $perPage: Int) {
+    categoriesList(page: $page, perPage: $perPage) {
+      id
+      name
+      description
+      icon
+      color
+      transactionsCount
+      userId
+    }
+  }
+`;
+
+const categoriesCountQuery = `
+  query CategoriesCount {
+    categoriesCount
+  }
+`;
+
+const categoriesOverviewQuery = `
+  query CategoriesOverview {
+    categoriesOverview {
+      totalCategories
+      totalTransactions
+      mostUsedCategory {
+        id
+        name
+        icon
+        color
+        count
+      }
+    }
+  }
+`;
+
+const createCategoryMutation = `
+  mutation CreateCategory($input: CreateCategoryInput!) {
+    createCategory(input: $input) {
+      id
+    }
+  }
+`;
+
 const run = async () => {
   const user = buildRandomInput();
   const meResultWithoutToken = await request(meQuery, undefined, {});
@@ -135,6 +180,22 @@ const run = async () => {
     "Me query with invalid token must return GraphQL error",
   );
   ensureHasErrorMessage(invalidTokenResult.errors, "unauthenticated");
+
+  const categoriesWithoutToken = await request(categoriesListQuery, undefined, {
+    page: 1,
+    perPage: 8,
+  });
+  ensureStatus(
+    categoriesWithoutToken.httpStatus,
+    [200, 401],
+    "Categories list query without token",
+  );
+  ensure(
+    categoriesWithoutToken.errors.length > 0,
+    "Categories list query without token must return GraphQL error",
+  );
+  ensureHasErrorCode(categoriesWithoutToken.errors, "CATEGORY_UNAUTHENTICATED");
+  ensureHasErrorStatus(categoriesWithoutToken.errors, 401);
 
   const registerData = await request(registerMutation, undefined, { input: user });
   ensure(registerData.httpStatus === 200, "Register request should return HTTP 200");
@@ -173,10 +234,7 @@ const run = async () => {
     "Duplicate register with normalized email should return error",
   );
   ensureHasErrorMessage(duplicateEmailWithWhitespaceResult.errors, "already");
-  ensureHasErrorCode(
-    duplicateEmailWithWhitespaceResult.errors,
-    "AUTH_EMAIL_ALREADY_REGISTERED",
-  );
+  ensureHasErrorCode(duplicateEmailWithWhitespaceResult.errors, "AUTH_EMAIL_ALREADY_REGISTERED");
   ensure(!duplicateEmailWithWhitespaceResult.data, "Duplicate registration must not return data");
 
   const duplicateWithDifferentPassword = await request(registerMutation, undefined, {
@@ -237,6 +295,32 @@ const run = async () => {
   ensureHasErrorCode(emptyPassword.errors, "AUTH_INVALID_PASSWORD");
   ensureHasErrorStatus(emptyPassword.errors, 422);
 
+  const csrfBypassedMutation = await request(
+    createCategoryMutation,
+    undefined,
+    {
+      input: {
+        name: "Tentativa bloqueada de CSRF",
+        description: "Sem token CSRF.",
+        icon: "utensils",
+        color: "blue",
+      },
+    },
+    {
+      cookie: "financy_session=invalid.token; Path=/",
+    },
+  );
+  ensureStatus(
+    csrfBypassedMutation.httpStatus,
+    [200, 403],
+    "Mutation with cookie session must enforce CSRF",
+  );
+  ensure(
+    csrfBypassedMutation.errors.length > 0,
+    "Mutation with missing CSRF token should return an error",
+  );
+  ensureHasErrorCode(csrfBypassedMutation.errors, "CSRF_TOKEN_INVALID");
+
   const loginData = await request(loginMutation, undefined, {
     input: { email: user.email, password: user.password },
   });
@@ -255,6 +339,55 @@ const run = async () => {
     `Me query with valid token must not error: ${JSON.stringify(meWithNewToken.errors)}`,
   );
   ensure(meWithNewToken.data?.me?.id === userId, "Me query should return the same user");
+
+  const categoriesListEmpty = await request(categoriesListQuery, loginData.data.login.token, {
+    page: 1,
+    perPage: 8,
+  });
+  ensure(
+    categoriesListEmpty.errors.length === 0,
+    `Categories list with empty database must not error: ${JSON.stringify(categoriesListEmpty.errors)}`,
+  );
+  ensure(
+    Array.isArray(categoriesListEmpty.data?.categoriesList),
+    "Categories list should return an array",
+  );
+  ensure(
+    categoriesListEmpty.data.categoriesList.length === 0,
+    "Categories list should be empty when user has no categories",
+  );
+
+  const categoriesCountEmpty = await request(categoriesCountQuery, loginData.data.login.token, {});
+  ensure(
+    categoriesCountEmpty.errors.length === 0,
+    `Categories count with empty database must not error: ${JSON.stringify(categoriesCountEmpty.errors)}`,
+  );
+  ensure(
+    categoriesCountEmpty.data?.categoriesCount === 0,
+    `Categories count should be 0 for a new user, got ${categoriesCountEmpty.data?.categoriesCount}`,
+  );
+
+  const categoriesOverviewEmpty = await request(
+    categoriesOverviewQuery,
+    loginData.data.login.token,
+    {},
+  );
+  ensure(
+    categoriesOverviewEmpty.errors.length === 0,
+    `Categories overview with empty database must not error: ${JSON.stringify(categoriesOverviewEmpty.errors)}`,
+  );
+  ensure(
+    categoriesOverviewEmpty.data?.categoriesOverview?.totalCategories === 0,
+    `Categories overview totalCategories should be 0, got ${categoriesOverviewEmpty.data?.categoriesOverview?.totalCategories}`,
+  );
+  ensure(
+    categoriesOverviewEmpty.data?.categoriesOverview?.totalTransactions === 0,
+    `Categories overview totalTransactions should be 0, got ${categoriesOverviewEmpty.data?.categoriesOverview?.totalTransactions}`,
+  );
+  ensure(
+    categoriesOverviewEmpty.data?.categoriesOverview?.mostUsedCategory === null,
+    "Categories overview mostUsedCategory should be null when there are no transactions",
+  );
 
   const jwtSecret = process.env.AUTH_SCRIPT_JWT_SECRET;
   if (jwtSecret) {

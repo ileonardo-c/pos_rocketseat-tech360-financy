@@ -32,17 +32,16 @@ Padronizar contribuição por domínio, reduzir ruído em revisão e manter rast
   - `pnpm check`
   - `pnpm build:backend`
   - `pnpm build:frontend`
-  - `pnpm smoke:auth`
   - `pnpm smoke:graphql`
+  - `pnpm smoke:auth:api`
 - Validar stack local:
-  - `pnpm compose:up`
+  - `pnpm dev:check`
+  - `pnpm dev`
   - Frontend: `http://localhost:5173`
   - Backend GraphQL: `http://localhost:4000/graphql`
   - Liveness: `http://localhost:4000/health/live`
   - Readiness: `http://localhost:4000/health/ready`
-- Rodar validação local de arquivos de ambiente:
-  - Copie/atualize `backend/.env.example` e `frontend/.env.example` antes de alterar configuração.
-- Atualizar `.env.example` quando variáveis novas forem introduzidas.
+- Atualizar `.env.example` da raiz quando variáveis novas forem introduzidas.
 
 ## Idioma e documentação técnica
 

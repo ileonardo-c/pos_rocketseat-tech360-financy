@@ -46,7 +46,7 @@ export const Input = ({
   // Figma input box: border field-border, active → primary, error → field-error ring
   const fieldClass = cx(
     // base — Figma: px-13 py-15 rounded-8px bg-white border
-    "flex w-full items-center gap-3 rounded-lg border bg-financy-surface px-3.5 py-[15px] text-base text-financy-field-text transition-[border-color,box-shadow] duration-150 outline-none",
+    "flex w-full items-center gap-3 rounded-lg border bg-financy-surface px-3.5 py-[15px] text-base leading-[18px] text-financy-field-text transition-[border-color,box-shadow] duration-150 outline-none",
     startIcon ? "pl-10" : "",
     endIcon ? "pr-10" : "",
     hasError
@@ -67,7 +67,7 @@ export const Input = ({
       )}
       <div className="relative">
         {startIcon && (
-          <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-financy-field-placeholder">
+          <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 -translate-y-1/2 text-financy-field-placeholder">
             {startIcon}
           </span>
         )}
@@ -80,7 +80,7 @@ export const Input = ({
           {...inputProps}
         />
         {endIcon && (
-          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-financy-text-secondary">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 z-10 -translate-y-1/2 text-financy-text-secondary">
             {endIcon}
           </span>
         )}

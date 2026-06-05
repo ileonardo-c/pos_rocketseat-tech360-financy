@@ -18,7 +18,14 @@ test-results/
 .agents/
 backend/.agents/
 frontend/.agents/
+.tmp-run/
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example

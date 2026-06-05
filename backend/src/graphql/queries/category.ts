@@ -8,4 +8,17 @@ export const categoryQueries = {
   categories: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
     return service(ctx).listByUser(ctx);
   },
+  categoriesList: async (
+    _: unknown,
+    args: { page?: number | null; perPage?: number | null },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).listByPage(ctx, args.page, args.perPage);
+  },
+  categoriesCount: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+    return service(ctx).countByUser(ctx);
+  },
+  categoriesOverview: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+    return service(ctx).overviewByUser(ctx);
+  },
 };

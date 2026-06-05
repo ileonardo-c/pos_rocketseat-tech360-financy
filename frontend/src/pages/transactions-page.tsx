@@ -1,19 +1,43 @@
 import { useMutation, useQuery } from "@apollo/client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import {
+  IconChevronLeft,
+  IconChevronRight,
+  IconPlus,
+  IconSearch,
+  IconSquarePen,
+  IconTrash,
+} from "@/assets/icons";
+import { CreateTransactionModal } from "@/components/create-transaction-modal";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CategoryIcon } from "@/components/ui/category-icon";
+import { DashboardNav } from "@/components/ui/dashboard-nav";
+import { ErrorBanner, SuccessBanner } from "@/components/ui/feedback";
+import { IconButton } from "@/components/ui/icon-button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeading } from "@/components/ui/page-heading";
+import { PaginationButton } from "@/components/ui/pagination-button";
+import { PeriodSelector } from "@/components/ui/period-selector";
+import type { PeriodValue } from "@/components/ui/period-selector";
+import { Select } from "@/components/ui/select";
+import { TransactionRow } from "@/components/ui/transaction-row";
+import {
   CATEGORIES_QUERY,
-  CREATE_TRANSACTION_MUTATION,
   DELETE_TRANSACTION_MUTATION,
-  REQUEST_UPLOAD_URL_MUTATION,
+  TRANSACTIONS_COUNT_QUERY,
+  TRANSACTIONS_INITIAL_PERIOD_QUERY,
   TRANSACTIONS_QUERY,
-  UPDATE_TRANSACTION_MUTATION,
 } from "@/lib/graphql/operations";
 
 type Category = {
   id: string;
   name: string;
+  icon: string;
+  color: string;
 };
 
 type Transaction = {
@@ -23,8 +47,6 @@ type Transaction = {
   amount: number;
   type: "INCOME" | "EXPENSE";
   date: string;
-  receiptKey: string | null;
-  receiptUrl: string | null;
   categoryId: string;
   category: Category | null;
 };
@@ -37,148 +59,94 @@ type TransactionsNode = {
   transactions: Transaction[];
 };
 
-type TransactionForm = {
-  title: string;
-  description: string;
-  amount: string;
-  type: "INCOME" | "EXPENSE";
-  date: string;
-  categoryId: string;
-  receiptKey: string;
-  receiptUrl: string;
+type TransactionsCountNode = {
+  transactionsCount: number;
 };
 
-type TransactionFilter = {
+type TransactionsInitialPeriodNode = {
+  transactionsInitialPeriod: {
+    from: string;
+    to: string;
+    source: "LATEST_TRANSACTION" | "CURRENT_MONTH";
+  };
+};
+
+type TransactionFilterType = "ALL" | "INCOME" | "EXPENSE";
+
+type TransactionFilterState = {
   query: string;
-  type: "ALL" | "INCOME" | "EXPENSE";
+  type: TransactionFilterType;
   categoryId: string;
-  from: string;
-  to: string;
-};
-type SortField = "date" | "amount" | "title";
-type SortDirection = "asc" | "desc";
-
-type UploadMutationResult = {
-  requestUploadUrl: {
-    url: string;
-    key: string;
-    publicUrl: string;
-    expiresIn: number;
-  };
 };
 
-type DeleteTransactionMutationResult = {
-  deleteTransaction: boolean;
-};
+const itemsPerPage = 10;
 
-type TransactionFilterType = TransactionFilter["type"];
-
-const emptyForm: TransactionForm = {
-  title: "",
-  description: "",
-  amount: "",
-  type: "EXPENSE",
-  date: "",
-  categoryId: "",
-  receiptKey: "",
-  receiptUrl: "",
-};
-
-const emptyFilter: TransactionFilter = {
-  query: "",
-  type: "ALL",
-  categoryId: "",
-  from: "",
-  to: "",
-};
-
-const parseFilterFromSearchParams = (searchParams: URLSearchParams): TransactionFilter => {
-  const typeValue = searchParams.get("type");
-  const parsedType: TransactionFilterType =
-    typeValue === "INCOME" || typeValue === "EXPENSE" ? typeValue : "ALL";
-
-  return {
-    query: searchParams.get("query") ?? "",
-    type: parsedType,
-    categoryId: searchParams.get("categoryId") ?? "",
-    from: searchParams.get("from") ?? "",
-    to: searchParams.get("to") ?? "",
-  };
-};
-
-const buildSearchParamsFromFilter = (filter: TransactionFilter) => {
-  const searchParams = new URLSearchParams();
-
-  if (filter.query) {
-    searchParams.set("query", filter.query);
-  }
-  if (filter.type !== "ALL") {
-    searchParams.set("type", filter.type);
-  }
-  if (filter.categoryId) {
-    searchParams.set("categoryId", filter.categoryId);
-  }
-  if (filter.from) {
-    searchParams.set("from", filter.from);
-  }
-  if (filter.to) {
-    searchParams.set("to", filter.to);
+const parseISODate = (value: string | null) => {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
   }
 
-  return searchParams;
-};
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(year, month - 1, day);
 
-const filterFieldMap: Record<keyof TransactionFilter, true> = {
-  query: true,
-  type: true,
-  categoryId: true,
-  from: true,
-  to: true,
-};
-
-const isSameFilter = (left: TransactionFilter, right: TransactionFilter) =>
-  (Object.keys(filterFieldMap) as Array<keyof TransactionFilter>).every(
-    (field) => left[field] === right[field],
-  );
-
-const toLocalDateInput = (value: string | Date) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
   }
 
+  return parsed;
+};
+
+const toISODate = (date: Date) => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
-const getCurrentMonthRange = () => {
-  const today = new Date();
-  const from = new Date(today.getFullYear(), today.getMonth(), 1);
+const buildRangeFromPeriod = (period: PeriodValue) => {
+  const normalizedMonth = Math.min(12, Math.max(1, period.month));
+  const from = new Date(period.year, normalizedMonth - 1, 1);
+  const to = new Date(period.year, normalizedMonth, 0);
+
   return {
-    from: toLocalDateInput(from),
-    to: toLocalDateInput(today),
+    from: toISODate(from),
+    to: toISODate(to),
   };
 };
 
-const getCurrentYearRange = () => {
-  const today = new Date();
-  const from = new Date(today.getFullYear(), 0, 1);
-  return {
-    from: toLocalDateInput(from),
-    to: toLocalDateInput(today),
-  };
+const parsePeriodRangeFromSearch = (searchParams: URLSearchParams) => {
+  const from = parseISODate(searchParams.get("from"));
+  const to = parseISODate(searchParams.get("to"));
+  if (!from || !to) {
+    return null;
+  }
+
+  if (from.getTime() > to.getTime()) {
+    return null;
+  }
+
+  return { from, to };
 };
 
-const getLastDaysRange = (days: number) => {
-  const today = new Date();
-  const from = new Date(today);
-  from.setDate(today.getDate() - (days - 1));
-  return {
-    from: toLocalDateInput(from),
-    to: toLocalDateInput(today),
-  };
+const parseFilterType = (value: string | null): TransactionFilterType => {
+  if (value === "INCOME" || value === "EXPENSE") {
+    return value;
+  }
+
+  return "ALL";
+};
+
+const parsePage = (value: string | null) => {
+  const parsed = Number.parseInt(value ?? "", 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+
+  return parsed;
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -186,28 +154,212 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
 });
 
-const buildTransactionPayload = (form: TransactionForm) => ({
-  title: form.title.trim(),
-  description: form.description.trim() || null,
-  amount: Number(form.amount),
-  type: form.type,
-  date: new Date(`${form.date}T00:00:00`).toISOString(),
-  categoryId: form.categoryId,
-  receiptKey: form.receiptKey.trim() || null,
-  receiptUrl: form.receiptUrl.trim() || null,
-});
+type CategoryVariant = "gray" | "blue" | "purple" | "pink" | "red" | "orange" | "yellow" | "green";
 
-const modalCloseDurationMs = 150;
+const normalizeText = (value: string) =>
+  value.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+const getCategoryVariantByName = (name: string): CategoryVariant => {
+  const normalized = normalizeText(name);
+
+  if (normalized.includes("aliment")) return "blue";
+  if (normalized.includes("transporte")) return "purple";
+  if (normalized.includes("mercado")) return "orange";
+  if (normalized.includes("entreten")) return "pink";
+  if (normalized.includes("utilidade")) return "yellow";
+  if (normalized.includes("invest")) return "green";
+  if (normalized.includes("salario") || normalized.includes("receita")) return "green";
+  return "gray";
+};
+
+const getCategoryVariant = (category: Category | null): CategoryVariant => {
+  const color = category?.color?.toLowerCase();
+
+  if (
+    color === "gray" ||
+    color === "blue" ||
+    color === "purple" ||
+    color === "pink" ||
+    color === "red" ||
+    color === "orange" ||
+    color === "yellow" ||
+    color === "green"
+  ) {
+    return color;
+  }
+
+  return getCategoryVariantByName(category?.name ?? "Sem categoria");
+};
+
+const getCategoryIconClasses = (
+  variant: CategoryVariant,
+): { bgClassName: string; iconClassName: string } => {
+  if (variant === "blue") {
+    return {
+      bgClassName: "bg-financy-tag-blue-bg",
+      iconClassName: "text-financy-tag-blue-text",
+    };
+  }
+  if (variant === "purple") {
+    return {
+      bgClassName: "bg-financy-tag-purple-bg",
+      iconClassName: "text-financy-tag-purple-text",
+    };
+  }
+  if (variant === "pink") {
+    return {
+      bgClassName: "bg-financy-tag-pink-bg",
+      iconClassName: "text-financy-tag-pink-text",
+    };
+  }
+  if (variant === "red") {
+    return {
+      bgClassName: "bg-financy-tag-red-bg",
+      iconClassName: "text-financy-tag-red-text",
+    };
+  }
+  if (variant === "orange") {
+    return {
+      bgClassName: "bg-financy-tag-orange-bg",
+      iconClassName: "text-financy-tag-orange-text",
+    };
+  }
+  if (variant === "yellow") {
+    return {
+      bgClassName: "bg-financy-tag-yellow-bg",
+      iconClassName: "text-financy-tag-yellow-text",
+    };
+  }
+  if (variant === "green") {
+    return {
+      bgClassName: "bg-financy-tag-green-bg",
+      iconClassName: "text-financy-tag-green-text",
+    };
+  }
+
+  return {
+    bgClassName: "bg-financy-tag-gray-bg",
+    iconClassName: "text-financy-tag-gray-text",
+  };
+};
 
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const parsedPeriodRange = parsePeriodRangeFromSearch(searchParams);
+  const hasValidSearchPeriod = Boolean(parsedPeriodRange);
+
+  const [filter, setFilter] = useState<TransactionFilterState>(() => ({
+    query: searchParams.get("query") ?? "",
+    type: parseFilterType(searchParams.get("type")),
+    categoryId: searchParams.get("categoryId") ?? "",
+  }));
+  const [searchInput, setSearchInput] = useState<string>(() => searchParams.get("query") ?? "");
+  const [period, setPeriod] = useState<PeriodValue | null>(() => {
+    if (!parsedPeriodRange) {
+      return null;
+    }
+
+    return {
+      month: parsedPeriodRange.from.getMonth() + 1,
+      year: parsedPeriodRange.from.getFullYear(),
+    };
+  });
+  const [page, setPage] = useState<number>(() => parsePage(searchParams.get("page")));
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [deletingTransaction, setDeletingTransaction] = useState<Transaction | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  const {
+    data: initialPeriodData,
+    loading: initialPeriodLoading,
+    error: initialPeriodError,
+    refetch: refetchInitialPeriod,
+  } = useQuery<TransactionsInitialPeriodNode>(TRANSACTIONS_INITIAL_PERIOD_QUERY, {
+    skip: hasValidSearchPeriod,
+    fetchPolicy: "network-only",
+  });
+
+  useEffect(() => {
+    if (hasValidSearchPeriod || period) {
+      return;
+    }
+
+    const from = parseISODate(initialPeriodData?.transactionsInitialPeriod?.from ?? null);
+    if (from) {
+      setPeriod({
+        month: from.getMonth() + 1,
+        year: from.getFullYear(),
+      });
+    }
+  }, [hasValidSearchPeriod, initialPeriodData, period]);
+
+  const periodRange = useMemo(() => (period ? buildRangeFromPeriod(period) : null), [period]);
+  const isPeriodReady = Boolean(periodRange);
+
+  const filterInput = useMemo(
+    () => ({
+      query: filter.query.trim() || undefined,
+      type: filter.type === "ALL" ? undefined : filter.type,
+      categoryId: filter.categoryId || undefined,
+      from: periodRange?.from,
+      to: periodRange?.to,
+    }),
+    [filter.categoryId, filter.query, filter.type, periodRange?.from, periodRange?.to],
+  );
+
+  const queryVariables = useMemo(
+    () => ({
+      filter: filterInput,
+      sort: {
+        field: "DATE",
+        direction: "DESC",
+      },
+      page,
+      perPage: itemsPerPage,
+    }),
+    [filterInput, page],
+  );
+
   const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    if (!periodRange) {
+      return;
+    }
+
+    const next = new URLSearchParams();
+
+    if (filter.query.trim()) {
+      next.set("query", filter.query.trim());
+    }
+
+    if (filter.type !== "ALL") {
+      next.set("type", filter.type);
+    }
+
+    if (filter.categoryId) {
+      next.set("categoryId", filter.categoryId);
+    }
+
+    next.set("from", periodRange.from);
+    next.set("to", periodRange.to);
+
+    if (page > 1) {
+      next.set("page", String(page));
+    }
+
+    if (next.toString() !== searchParamsString) {
+      setSearchParams(next, { replace: true });
+    }
+  }, [filter, page, periodRange?.from, periodRange?.to, searchParamsString, setSearchParams]);
+
   const {
     data: categoriesData,
     loading: categoriesLoading,
     error: categoriesError,
-    refetch: refetchCategories,
-    networkStatus: categoriesNetworkStatus,
   } = useQuery<CategoriesNode>(CATEGORIES_QUERY, {
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -218,1239 +370,430 @@ export const TransactionsPage = () => {
     loading: transactionsLoading,
     error: transactionsError,
     refetch: refetchTransactions,
-    networkStatus: transactionsNetworkStatus,
   } = useQuery<TransactionsNode>(TRANSACTIONS_QUERY, {
+    variables: queryVariables,
+    skip: !isPeriodReady,
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
   });
 
-  const [form, setForm] = useState<TransactionForm>(emptyForm);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingForm, setEditingForm] = useState<TransactionForm>(emptyForm);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isCreateDialogClosing, setIsCreateDialogClosing] = useState(false);
-  const [isEditDialogClosing, setIsEditDialogClosing] = useState(false);
-  const [filter, setFilter] = useState<TransactionFilter>(() =>
-    parseFilterFromSearchParams(searchParams),
-  );
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-  const [uploadingCreateReceipt, setUploadingCreateReceipt] = useState(false);
-  const [uploadingEditReceipt, setUploadingEditReceipt] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [page, setPage] = useState(1);
-  const editingIdRef = useRef<string | null>(null);
-  const createDialogCycleRef = useRef(0);
-  const createCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const editCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const itemsPerPage = 10;
-
-  const [createTransaction, { loading: creating }] = useMutation(CREATE_TRANSACTION_MUTATION, {
-    refetchQueries: [{ query: TRANSACTIONS_QUERY }],
-    awaitRefetchQueries: true,
-  });
-  const [updateTransaction, { loading: updating }] = useMutation(UPDATE_TRANSACTION_MUTATION, {
-    refetchQueries: [{ query: TRANSACTIONS_QUERY }],
-    awaitRefetchQueries: true,
-  });
-  const [deleteTransaction, { loading: deleting }] = useMutation<DeleteTransactionMutationResult>(
-    DELETE_TRANSACTION_MUTATION,
-    {
-      refetchQueries: [{ query: TRANSACTIONS_QUERY }],
-      awaitRefetchQueries: true,
-    },
-  );
-  const [requestUploadUrl] = useMutation<UploadMutationResult>(REQUEST_UPLOAD_URL_MUTATION);
-
-  useEffect(() => {
-    editingIdRef.current = editingId;
-  }, [editingId]);
-
-  useEffect(
-    () => () => {
-      if (createCloseTimeoutRef.current) {
-        clearTimeout(createCloseTimeoutRef.current);
-      }
-      if (editCloseTimeoutRef.current) {
-        clearTimeout(editCloseTimeoutRef.current);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    const parsedFilter = parseFilterFromSearchParams(searchParams);
-
-    setFilter((currentFilter) =>
-      isSameFilter(currentFilter, parsedFilter) ? currentFilter : parsedFilter,
-    );
-  }, [searchParams]);
-
-  useEffect(() => {
-    const nextSearchParams = buildSearchParamsFromFilter(filter);
-    const current = searchParamsString;
-    const next = nextSearchParams.toString();
-
-    if (current !== next) {
-      setSearchParams(nextSearchParams, { replace: true });
-    }
-  }, [filter, searchParamsString, setSearchParams]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [filter, sortDirection, sortField]);
-
-  const categories = useMemo(() => categoriesData?.categories ?? [], [categoriesData?.categories]);
-  const transactions = useMemo(
-    () => transactionsData?.transactions ?? [],
-    [transactionsData?.transactions],
-  );
-
-  const isInitialLoading =
-    (categoriesLoading || transactionsLoading) &&
-    categories.length === 0 &&
-    transactions.length === 0;
-  const isRefreshing = categoriesNetworkStatus === 4 || transactionsNetworkStatus === 4;
-
-  const filteredTransactions = useMemo(() => {
-    const normalizedQuery = filter.query.trim().toLowerCase();
-    return transactions.filter((transaction) => {
-      if (filter.type !== "ALL" && transaction.type !== filter.type) {
-        return false;
-      }
-      if (filter.categoryId && transaction.categoryId !== filter.categoryId) {
-        return false;
-      }
-
-      const transactionDate = toLocalDateInput(transaction.date);
-      if (filter.from && transactionDate < filter.from) {
-        return false;
-      }
-      if (filter.to && transactionDate > filter.to) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const haystack = [
-        transaction.title,
-        transaction.description ?? "",
-        transaction.category?.name ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(normalizedQuery);
+  const { data: transactionsCountData, refetch: refetchTransactionsCount } =
+    useQuery<TransactionsCountNode>(TRANSACTIONS_COUNT_QUERY, {
+      variables: { filter: filterInput },
+      skip: !isPeriodReady,
+      fetchPolicy: "cache-and-network",
+      notifyOnNetworkStatusChange: true,
     });
-  }, [transactions, filter]);
 
-  const sortedTransactions = useMemo(() => {
-    const copy = [...filteredTransactions];
-    copy.sort((left, right) => {
-      let compare = 0;
-      if (sortField === "date") {
-        compare = new Date(left.date).getTime() - new Date(right.date).getTime();
-      } else if (sortField === "amount") {
-        compare = left.amount - right.amount;
-      } else {
-        compare = left.title.localeCompare(right.title, "pt-BR");
-      }
+  const [deleteTransaction, { loading: deleting }] = useMutation(DELETE_TRANSACTION_MUTATION);
 
-      return sortDirection === "asc" ? compare : -compare;
-    });
-    return copy;
-  }, [filteredTransactions, sortDirection, sortField]);
+  const categories = categoriesData?.categories ?? [];
+  const transactions = transactionsData?.transactions ?? [];
+  const totalResults = transactionsCountData?.transactionsCount ?? transactions.length;
+  const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
 
-  const totalPages = Math.max(1, Math.ceil(sortedTransactions.length / itemsPerPage));
   useEffect(() => {
-    setPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-  const currentPage = Math.min(page, totalPages);
-  const pagedTransactions = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return sortedTransactions.slice(start, start + itemsPerPage);
-  }, [currentPage, sortedTransactions]);
-
-  const { incomeTotal, expenseTotal, balance } = useMemo(() => {
-    const totals = filteredTransactions.reduce(
-      (accumulator, transaction) => {
-        if (transaction.type === "INCOME") {
-          accumulator.income += transaction.amount;
-        } else {
-          accumulator.expense += transaction.amount;
+    const timeoutId = window.setTimeout(() => {
+      setFilter((prev) => {
+        if (prev.query === searchInput) {
+          return prev;
         }
-        return accumulator;
-      },
-      { income: 0, expense: 0 },
-    );
 
-    return {
-      incomeTotal: totals.income,
-      expenseTotal: totals.expense,
-      balance: totals.income - totals.expense,
-    };
-  }, [filteredTransactions]);
-
-  const activeFilterChips = useMemo(() => {
-    const chips: Array<{ key: keyof TransactionFilter; label: string }> = [];
-
-    if (filter.query) {
-      chips.push({ key: "query", label: `Busca: ${filter.query}` });
-    }
-    if (filter.type !== "ALL") {
-      chips.push({
-        key: "type",
-        label: filter.type === "INCOME" ? "Tipo: Receita" : "Tipo: Despesa",
+        return { ...prev, query: searchInput };
       });
-    }
-    if (filter.categoryId) {
-      const categoryName = categories.find((category) => category.id === filter.categoryId)?.name;
-      chips.push({
-        key: "categoryId",
-        label: `Categoria: ${categoryName ?? "Selecionada"}`,
-      });
-    }
-    if (filter.from) {
-      chips.push({ key: "from", label: `De: ${filter.from}` });
-    }
-    if (filter.to) {
-      chips.push({ key: "to", label: `Até: ${filter.to}` });
-    }
+      setPage(1);
+    }, 1000);
 
-    return chips;
-  }, [categories, filter]);
-
-  const groupedTransactions = useMemo(() => {
-    const groups: Array<{
-      dateKey: string;
-      dateLabel: string;
-      transactions: Transaction[];
-      income: number;
-      expense: number;
-    }> = [];
-
-    for (const transaction of pagedTransactions) {
-      const dateKey = toLocalDateInput(transaction.date);
-      const lastGroup = groups[groups.length - 1];
-      const shouldCreateGroup = !lastGroup || lastGroup.dateKey !== dateKey;
-
-      if (shouldCreateGroup) {
-        groups.push({
-          dateKey,
-          dateLabel: new Date(transaction.date).toLocaleDateString("pt-BR", {
-            weekday: "short",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          }),
-          transactions: [transaction],
-          income: transaction.type === "INCOME" ? transaction.amount : 0,
-          expense: transaction.type === "EXPENSE" ? transaction.amount : 0,
-        });
-        continue;
-      }
-
-      lastGroup.transactions.push(transaction);
-      if (transaction.type === "INCOME") {
-        lastGroup.income += transaction.amount;
-      } else {
-        lastGroup.expense += transaction.amount;
-      }
-    }
-
-    return groups.map((group) => ({
-      dateKey: group.dateKey,
-      dateLabel: group.dateLabel,
-      transactions: group.transactions,
-      income: group.income,
-      expense: group.expense,
-      balance: group.income - group.expense,
-    }));
-  }, [pagedTransactions]);
-
-  const handleExportCsv = () => {
-    if (sortedTransactions.length === 0) {
-      setActionError("Não há transações para exportar com os filtros atuais.");
-      return;
-    }
-
-    const header = ["data", "titulo", "descricao", "tipo", "categoria", "valor", "comprovante_url"];
-
-    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
-    const rows = sortedTransactions.map((transaction) =>
-      [
-        toLocalDateInput(transaction.date),
-        transaction.title,
-        transaction.description ?? "",
-        transaction.type === "INCOME" ? "RECEITA" : "DESPESA",
-        transaction.category?.name ?? "",
-        transaction.amount.toFixed(2).replace(".", ","),
-        transaction.receiptUrl ?? "",
-      ]
-        .map((value) => escapeCsv(value))
-        .join(";"),
-    );
-
-    const csvContent = [header.join(";"), ...rows].join("\n");
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-
-    const dateSuffix = toLocalDateInput(new Date());
-    const fileName = `financy-transacoes-${dateSuffix}.csv`;
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.style.display = "none";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const uploadReceipt = async (file: File) => {
-    const uploadResponse = await requestUploadUrl({
-      variables: {
-        input: {
-          fileName: file.name,
-          contentType: file.type || "application/octet-stream",
-        },
-      },
-    });
-
-    const payload = uploadResponse.data?.requestUploadUrl;
-    if (!payload) {
-      throw new Error("Falha ao gerar URL de upload.");
-    }
-
-    const putResponse = await fetch(payload.url, {
-      method: "PUT",
-      headers: {
-        "Content-Type": file.type || "application/octet-stream",
-      },
-      body: file,
-    });
-
-    if (!putResponse.ok) {
-      throw new Error("Falha ao enviar comprovante.");
-    }
-
-    return {
-      receiptKey: payload.key,
-      receiptUrl: payload.publicUrl,
+    return () => {
+      window.clearTimeout(timeoutId);
     };
-  };
+  }, [searchInput]);
 
-  const handleEditReceiptUpload = async (transactionId: string, file: File) => {
-    try {
-      setActionError(null);
-      setUploadingEditReceipt(true);
-      const uploaded = await uploadReceipt(file);
-
-      if (editingIdRef.current !== transactionId) {
-        return;
-      }
-
-      setEditingForm((prev) => ({
-        ...prev,
-        receiptKey: uploaded.receiptKey,
-        receiptUrl: uploaded.receiptUrl,
-      }));
-    } catch {
-      setActionError("Não foi possível enviar o comprovante.");
-    } finally {
-      setUploadingEditReceipt(false);
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
     }
-  };
+  }, [page, totalPages]);
 
-  const isCreateDisabled =
-    creating ||
-    uploadingCreateReceipt ||
-    !form.title.trim() ||
-    !form.amount ||
-    !form.date ||
-    !form.categoryId ||
-    categories.length === 0;
-
-  const isUpdateDisabled =
-    updating ||
-    uploadingEditReceipt ||
-    !editingForm.title.trim() ||
-    !editingForm.amount ||
-    !editingForm.date ||
-    !editingForm.categoryId;
-
-  const getTransactionActionErrorMessage = (error: unknown, fallback: string) => {
-    if (error && typeof error === "object" && "message" in error) {
-      const message = String(error.message).toLowerCase();
-
-      if (message.includes("category not found")) {
-        return "Categoria inválida para esta transação.";
-      }
-      if (message.includes("invalid amount")) {
-        return "Valor inválido. Informe um número válido.";
-      }
-      if (message.includes("invalid date")) {
-        return "Data inválida.";
-      }
-      if (message.includes("transaction title is required")) {
-        return "Título da transação é obrigatório.";
-      }
-      if (message.includes("transaction not found")) {
-        return "Transação não encontrada.";
-      }
-      if (message.includes("invalid receipt for this user")) {
-        return "Comprovante inválido para este usuário.";
-      }
-    }
-
-    return fallback;
-  };
-
-  const openCreateDialog = () => {
-    if (createCloseTimeoutRef.current) {
-      clearTimeout(createCloseTimeoutRef.current);
-      createCloseTimeoutRef.current = null;
-    }
-    setIsCreateDialogClosing(false);
-    setIsCreateDialogOpen(true);
-  };
-
-  const closeCreateDialog = () => {
-    if (!isCreateDialogOpen) {
-      return;
-    }
-    setIsCreateDialogClosing(true);
-    if (createCloseTimeoutRef.current) {
-      clearTimeout(createCloseTimeoutRef.current);
-    }
-    createCloseTimeoutRef.current = setTimeout(() => {
-      setIsCreateDialogOpen(false);
-      setIsCreateDialogClosing(false);
-      createCloseTimeoutRef.current = null;
-    }, modalCloseDurationMs);
-  };
+  const isBootstrapLoading = !hasValidSearchPeriod && !isPeriodReady && initialPeriodLoading;
+  const isBootstrapError = !hasValidSearchPeriod && !isPeriodReady && Boolean(initialPeriodError);
+  const isInitialLoading = isBootstrapLoading || (categoriesLoading && transactionsLoading);
 
   const openEditDialog = (transaction: Transaction) => {
-    if (editCloseTimeoutRef.current) {
-      clearTimeout(editCloseTimeoutRef.current);
-      editCloseTimeoutRef.current = null;
-    }
-    setIsEditDialogClosing(false);
     setActionError(null);
-    setEditingId(transaction.id);
-    setEditingForm({
-      title: transaction.title,
-      description: transaction.description ?? "",
-      amount: String(transaction.amount),
-      type: transaction.type,
-      date: toLocalDateInput(transaction.date),
-      categoryId: transaction.categoryId,
-      receiptKey: transaction.receiptKey ?? "",
-      receiptUrl: transaction.receiptUrl ?? "",
-    });
+    setActionSuccess(null);
+    setEditingTransaction(transaction);
   };
 
   const closeEditDialog = () => {
-    if (!editingId) {
-      return;
-    }
-    setIsEditDialogClosing(true);
-    if (editCloseTimeoutRef.current) {
-      clearTimeout(editCloseTimeoutRef.current);
-    }
-    editCloseTimeoutRef.current = setTimeout(() => {
-      setEditingId(null);
-      setEditingForm(emptyForm);
-      setIsEditDialogClosing(false);
-      editCloseTimeoutRef.current = null;
-    }, modalCloseDurationMs);
+    setEditingTransaction(null);
   };
 
+  const closeDeleteDialog = () => {
+    if (deleting) {
+      return;
+    }
+    setDeletingTransaction(null);
+  };
+
+  const handleConfirmDeleteTransaction = async () => {
+    if (!deletingTransaction) {
+      return;
+    }
+
+    try {
+      setActionError(null);
+      setActionSuccess(null);
+      await deleteTransaction({ variables: { id: deletingTransaction.id } });
+      await refetchTransactions();
+      await refetchTransactionsCount();
+      setActionSuccess("Transação excluída com sucesso.");
+      setDeletingTransaction(null);
+    } catch {
+      setActionError("Não foi possível excluir a transação.");
+    }
+  };
+
+  const tableRowsFrom = totalResults === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+  const tableRowsTo = Math.min(page * itemsPerPage, totalResults);
+
+  if (isInitialLoading && categories.length === 0 && transactions.length === 0) {
+    return (
+      <main className="min-h-screen bg-financy-page">
+        <DashboardNav />
+        <section className="mx-auto w-full max-w-[1184px] px-4 py-8 sm:px-6">
+          <Card className="border-financy-border p-5">
+            <p className="text-sm text-financy-muted">Carregando transações...</p>
+          </Card>
+        </section>
+      </main>
+    );
+  }
+
   return (
-    <main className="transactions-layout">
-      <p>
-        <Link to="/">Voltar</Link>
-      </p>
-      <h1>Transações</h1>
+    <main className="min-h-screen bg-financy-page pb-12">
+      <DashboardNav />
 
-      {categoriesError ? <p>Erro ao carregar categorias.</p> : null}
-      {transactionsError ? <p>Erro ao carregar transações.</p> : null}
-      {actionError ? <p>{actionError}</p> : null}
-      {actionSuccess ? <p>{actionSuccess}</p> : null}
+      <section className="mx-auto w-full max-w-[1184px] px-4 py-8 sm:px-6">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <PageHeading
+            className="flex flex-col gap-0.5"
+            title="Transações"
+            description="Gerencie todas as suas transações financeiras"
+          />
 
-      {isInitialLoading ? <p>Carregando transações...</p> : null}
-      {!isInitialLoading && categories.length === 0 ? (
-        <p>Crie uma categoria antes de cadastrar transações.</p>
-      ) : null}
-
-      <section className="transactions-filters">
-        <h2>Filtros</h2>
-        <div className="transactions-toolbar">
-          <div className="transactions-sort-controls">
-            <label>
-              Ordenar por
-              <select
-                data-testid="transactions-sort-field"
-                value={sortField}
-                onChange={(event) => setSortField(event.target.value as SortField)}
-              >
-                <option value="date">Data</option>
-                <option value="amount">Valor</option>
-                <option value="title">Título</option>
-              </select>
-            </label>
-            <label>
-              Direção
-              <select
-                data-testid="transactions-sort-direction"
-                value={sortDirection}
-                onChange={(event) => setSortDirection(event.target.value as SortDirection)}
-              >
-                <option value="desc">Decrescente</option>
-                <option value="asc">Crescente</option>
-              </select>
-            </label>
-          </div>
-          <div className="transactions-toolbar-actions">
-            <button
-              data-testid="transactions-refresh"
-              disabled={isRefreshing}
-              type="button"
-              onClick={async () => {
-                setActionError(null);
-                setActionSuccess(null);
-                const results = await Promise.allSettled([
-                  refetchCategories(),
-                  refetchTransactions(),
-                ]);
-                const failedCount = results.filter((result) => result.status === "rejected").length;
-
-                if (failedCount === results.length) {
-                  setActionError("Não foi possível atualizar as transações.");
-                  return;
-                }
-
-                if (failedCount > 0) {
-                  setActionError(
-                    "Alguns dados da tela de transações não foram atualizados. Tente novamente em instantes.",
-                  );
-                }
-              }}
-            >
-              <span className="t-text-swap">{isRefreshing ? "Atualizando..." : "Atualizar"}</span>
-            </button>
-            <button type="button" onClick={handleExportCsv}>
-              Exportar CSV filtrado
-            </button>
-            <button
-              data-testid="transactions-open-create-modal"
-              disabled={categories.length === 0}
-              type="button"
-              onClick={() => {
-                setActionError(null);
-                setActionSuccess(null);
-                setForm(emptyForm);
-                createDialogCycleRef.current += 1;
-                openCreateDialog();
-              }}
-            >
-              Nova transação
-            </button>
-          </div>
-        </div>
-        <div className="transactions-presets">
-          <button
-            type="button"
+          <Button
+            size="sm"
+            variant="primary"
+            startIcon={<IconPlus className="h-4 w-4" />}
+            disabled={!isPeriodReady}
             onClick={() => {
-              const range = getLastDaysRange(7);
-              setFilter((prev) => ({ ...prev, ...range }));
+              setActionError(null);
+              setActionSuccess(null);
+              setIsCreateDialogOpen(true);
             }}
           >
-            Últimos 7 dias
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const range = getLastDaysRange(30);
-              setFilter((prev) => ({ ...prev, ...range }));
-            }}
-          >
-            Últimos 30 dias
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const range = getCurrentMonthRange();
-              setFilter((prev) => ({ ...prev, ...range }));
-            }}
-          >
-            Mês atual
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const range = getCurrentYearRange();
-              setFilter((prev) => ({ ...prev, ...range }));
-            }}
-          >
-            Ano atual
-          </button>
-        </div>
-        <div className="transactions-filter-grid">
-          <label>
-            Busca
-            <input
-              data-testid="transactions-search"
-              placeholder="Título, descrição ou categoria"
-              type="text"
-              value={filter.query}
-              onChange={(event) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  query: event.target.value,
-                }))
-              }
-            />
-          </label>
+            Nova transação
+          </Button>
+        </header>
 
-          <label>
-            Tipo
-            <select
-              data-testid="transactions-type-filter"
-              value={filter.type}
-              onChange={(event) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  type: event.target.value as TransactionFilter["type"],
-                }))
-              }
-            >
-              <option value="ALL">Todos</option>
-              <option value="INCOME">Receita</option>
-              <option value="EXPENSE">Despesa</option>
-            </select>
-          </label>
-
-          <label>
-            Categoria
-            <select
-              data-testid="transactions-category-filter"
-              value={filter.categoryId}
-              onChange={(event) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  categoryId: event.target.value,
-                }))
-              }
-            >
-              <option value="">Todas</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            De
-            <input
-              data-testid="transactions-filter-from"
-              type="date"
-              value={filter.from}
-              onChange={(event) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  from: event.target.value,
-                }))
-              }
-            />
-          </label>
-
-          <label>
-            Até
-            <input
-              data-testid="transactions-filter-to"
-              type="date"
-              value={filter.to}
-              onChange={(event) =>
-                setFilter((prev) => ({
-                  ...prev,
-                  to: event.target.value,
-                }))
-              }
-            />
-          </label>
-        </div>
-
-        <div className="transactions-filter-actions">
-          <button
-            data-testid="transactions-clear-filters"
-            type="button"
-            onClick={() => setFilter(emptyFilter)}
-          >
-            Limpar filtros
-          </button>
-        </div>
-        {activeFilterChips.length > 0 ? (
-          <div className="transactions-active-filters">
-            {activeFilterChips.map((chip) => (
-              <button
-                key={chip.label}
+        {isBootstrapError ? (
+          <ErrorBanner
+            message="Não foi possível carregar o período inicial das transações."
+            action={
+              <Button
                 type="button"
-                onClick={() =>
+                size="sm"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  void refetchInitialPeriod();
+                }}
+              >
+                Tentar novamente
+              </Button>
+            }
+          />
+        ) : null}
+        <ErrorBanner message={categoriesError ? "Não foi possível carregar categorias." : null} />
+        <ErrorBanner message={transactionsError ? "Não foi possível carregar transações." : null} />
+        <ErrorBanner message={actionError} />
+        <SuccessBanner message={actionSuccess} />
+
+        <Card className="mb-6 border-financy-border p-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <Input
+              label="Buscar"
+              type="text"
+              placeholder="Buscar por descrição"
+              value={searchInput}
+              onChange={(event) => {
+                setSearchInput(event.target.value);
+              }}
+              startIcon={<IconSearch className="h-4 w-4" />}
+            />
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="transactions-filter-type"
+                className="text-sm font-medium leading-5 text-financy-text-secondary"
+              >
+                Tipo
+              </label>
+              <Select
+                id="transactions-filter-type"
+                value={filter.type}
+                onChange={(event) => {
+                  setPage(1);
                   setFilter((prev) => ({
                     ...prev,
-                    [chip.key]: chip.key === "type" ? "ALL" : "",
-                  }))
-                }
+                    type: event.target.value as TransactionFilterType,
+                  }));
+                }}
               >
-                {chip.label} ×
-              </button>
-            ))}
+                <option value="ALL">Todos</option>
+                <option value="INCOME">Receitas</option>
+                <option value="EXPENSE">Despesas</option>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="transactions-filter-category"
+                className="text-sm font-medium leading-5 text-financy-text-secondary"
+              >
+                Categoria
+              </label>
+              <Select
+                id="transactions-filter-category"
+                value={filter.categoryId}
+                onChange={(event) => {
+                  setPage(1);
+                  setFilter((prev) => ({ ...prev, categoryId: event.target.value }));
+                }}
+              >
+                <option value="">Todas</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label
+                htmlFor="transactions-filter-period"
+                className="text-sm font-medium leading-5 text-financy-text-secondary"
+              >
+                Período
+              </label>
+              {isPeriodReady && period ? (
+                <PeriodSelector
+                  id="transactions-filter-period"
+                  data-testid="transactions-period"
+                  value={period}
+                  onChange={(nextPeriod) => {
+                    setPage(1);
+                    setPeriod(nextPeriod);
+                  }}
+                />
+              ) : (
+                <div className="inline-flex min-h-[50px] items-center rounded-lg border border-financy-border bg-financy-soft px-3.5 py-[15px] text-base leading-[18px] text-financy-muted">
+                  Carregando período...
+                </div>
+              )}
+            </div>
           </div>
-        ) : null}
-      </section>
+        </Card>
 
-      <section className="transactions-summary-grid">
-        <article className="transactions-summary-card t-resize">
-          <h3>Total filtrado</h3>
-          <p>{sortedTransactions.length}</p>
-        </article>
-        <article className="transactions-summary-card t-resize">
-          <h3>Receitas filtradas</h3>
-          <p>{currencyFormatter.format(incomeTotal)}</p>
-        </article>
-        <article className="transactions-summary-card t-resize">
-          <h3>Despesas filtradas</h3>
-          <p>{currencyFormatter.format(expenseTotal)}</p>
-        </article>
-        <article className="transactions-summary-card t-resize">
-          <h3>Saldo filtrado</h3>
-          <p>{currencyFormatter.format(balance)}</p>
-        </article>
-      </section>
-
-      <section>
-        {sortedTransactions.length === 0 ? (
-          <p>Nenhuma transação encontrada para os filtros aplicados.</p>
-        ) : (
-          <>
-            <div className="transactions-group-list">
-              {groupedTransactions.map((group, groupIndex) => (
-                <section key={`${group.dateKey}-${groupIndex}`} className="transactions-group">
-                  <header className="transactions-group-header">
-                    <div>
-                      <h3>{group.dateLabel}</h3>
-                      <p>{group.transactions.length} transação(ões)</p>
-                    </div>
-                    <div className="transactions-group-totals">
-                      <span>Receitas: {currencyFormatter.format(group.income)}</span>
-                      <span>Despesas: {currencyFormatter.format(group.expense)}</span>
-                      <strong>Saldo: {currencyFormatter.format(group.balance)}</strong>
-                    </div>
-                  </header>
-                  <ul>
-                    {group.transactions.map((transaction) => {
-                      return (
-                        <li
-                          key={transaction.id}
-                          className="transactions-item"
-                          data-testid={`transaction-item-${transaction.id}`}
-                        >
-                          <div className="transactions-item-main">
-                            <strong>{transaction.title}</strong>
-                            <p>
-                              {transaction.type === "INCOME" ? "Receita" : "Despesa"} ·{" "}
-                              {currencyFormatter.format(transaction.amount)} ·{" "}
-                              {transaction.category?.name ?? "Sem categoria"} ·{" "}
-                              {new Date(transaction.date).toLocaleDateString("pt-BR")}
-                            </p>
-                            {transaction.description ? <p>{transaction.description}</p> : null}
-                            {transaction.receiptUrl ? (
-                              <p>
-                                <a href={transaction.receiptUrl} rel="noreferrer" target="_blank">
-                                  Comprovante
-                                </a>
-                              </p>
-                            ) : null}
-                          </div>
-                          <div className="transactions-item-actions">
-                            <button
-                              data-testid={`transaction-edit-${transaction.id}`}
-                              type="button"
-                              onClick={() => openEditDialog(transaction)}
-                            >
-                              Editar
-                            </button>
-                            <button
-                              data-testid={`transaction-delete-${transaction.id}`}
-                              disabled={deleting}
-                              type="button"
-                              onClick={async () => {
-                                const confirmed = window.confirm(
-                                  "Deseja realmente excluir esta transação?",
-                                );
-                                if (!confirmed) {
-                                  return;
-                                }
-
-                                try {
-                                  setActionError(null);
-                                  setActionSuccess(null);
-                                  const response = await deleteTransaction({
-                                    variables: { id: transaction.id },
-                                  });
-                                  if (response.data?.deleteTransaction) {
-                                    setActionSuccess("Transação excluída com sucesso.");
-                                  } else {
-                                    setActionError("Transação não encontrada para exclusão.");
-                                  }
-                                } catch (mutationError) {
-                                  setActionError(
-                                    getTransactionActionErrorMessage(
-                                      mutationError,
-                                      "Não foi possível excluir a transação.",
-                                    ),
-                                  );
-                                }
-                              }}
-                            >
-                              Excluir
-                            </button>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ))}
-            </div>
-            <div className="transactions-pagination">
-              <button
-                disabled={currentPage <= 1}
-                type="button"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-              >
-                Anterior
-              </button>
-              <span>
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                disabled={currentPage >= totalPages}
-                type="button"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-              >
-                Próxima
-              </button>
-            </div>
-          </>
-        )}
-      </section>
-
-      {isCreateDialogOpen ? (
-        <div className="modal-overlay" role="presentation">
-          <dialog
-            data-testid="transactions-create-modal"
-            className={`modal-card transactions-modal t-modal ${isCreateDialogClosing ? "is-closing" : "is-open"}`}
-            open
-          >
-            <h2>Nova transação</h2>
-            <form
-              onSubmit={async (event) => {
-                event.preventDefault();
-                if (isCreateDisabled) {
-                  return;
-                }
-                const currentCreateCycle = createDialogCycleRef.current;
-
-                try {
-                  setActionError(null);
-                  setActionSuccess(null);
-                  await createTransaction({
-                    variables: { input: buildTransactionPayload(form) },
-                  });
-                  setForm(emptyForm);
-                  if (createDialogCycleRef.current === currentCreateCycle) {
-                    closeCreateDialog();
-                  }
-                  setActionSuccess("Transação criada com sucesso.");
-                } catch (mutationError) {
-                  setActionError(
-                    getTransactionActionErrorMessage(
-                      mutationError,
-                      "Não foi possível criar a transação.",
-                    ),
-                  );
-                }
-              }}
-            >
-              <label>
-                Título
-                <input
-                  data-testid="transactions-create-title"
-                  autoComplete="off"
-                  required
-                  type="text"
-                  value={form.title}
-                  onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                />
-              </label>
-              <label>
+        <Card className="overflow-hidden border-financy-border">
+          <div className="sm:overflow-x-auto">
+            <div className="hidden min-w-[960px] grid-cols-[minmax(280px,1fr)_84px_184px_128px_156px_128px] border-b border-financy-border sm:grid">
+              <div className="box-border px-[25px] py-5 text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
                 Descrição
-                <input
-                  data-testid="transactions-create-description"
-                  autoComplete="off"
-                  type="text"
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      description: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Valor
-                <input
-                  data-testid="transactions-create-amount"
-                  min="0"
-                  required
-                  step="0.01"
-                  type="number"
-                  value={form.amount}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      amount: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Tipo
-                <select
-                  data-testid="transactions-create-type"
-                  value={form.type}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      type: event.target.value as TransactionForm["type"],
-                    }))
-                  }
-                >
-                  <option value="EXPENSE">Despesa</option>
-                  <option value="INCOME">Receita</option>
-                </select>
-              </label>
-              <label>
-                Data
-                <input
-                  data-testid="transactions-create-date"
-                  required
-                  type="date"
-                  value={form.date}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      date: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Categoria
-                <select
-                  data-testid="transactions-create-category"
-                  required
-                  value={form.categoryId}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      categoryId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Comprovante
-                <input
-                  data-testid="transactions-create-receipt"
-                  accept=".pdf,image/*"
-                  type="file"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) {
-                      return;
-                    }
-
-                    try {
-                      setActionError(null);
-                      setUploadingCreateReceipt(true);
-                      const uploaded = await uploadReceipt(file);
-                      setForm((prev) => ({
-                        ...prev,
-                        receiptKey: uploaded.receiptKey,
-                        receiptUrl: uploaded.receiptUrl,
-                      }));
-                    } catch {
-                      setActionError("Não foi possível enviar o comprovante.");
-                    } finally {
-                      setUploadingCreateReceipt(false);
-                      event.target.value = "";
-                    }
-                  }}
-                />
-              </label>
-              {form.receiptUrl ? (
-                <p>
-                  Comprovante anexado.{" "}
-                  <a href={form.receiptUrl} rel="noreferrer" target="_blank">
-                    Abrir
-                  </a>{" "}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((prev) => ({
-                        ...prev,
-                        receiptKey: "",
-                        receiptUrl: "",
-                      }))
-                    }
-                  >
-                    Remover
-                  </button>
-                </p>
-              ) : null}
-              <div className="modal-actions">
-                <button
-                  data-testid="transactions-create-confirm"
-                  disabled={isCreateDisabled}
-                  type="submit"
-                >
-                  <span className="t-text-swap">
-                    {uploadingCreateReceipt ? "Enviando comprovante..." : "Criar transação"}
-                  </span>
-                </button>
-                <button
-                  data-testid="transactions-create-cancel"
-                  type="button"
-                  onClick={closeCreateDialog}
-                >
-                  Cancelar
-                </button>
               </div>
-            </form>
-          </dialog>
-        </div>
+              <div className="box-border px-[25px] py-5 text-center text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
+                Data
+              </div>
+              <div className="box-border px-[25px] py-5 text-center text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
+                Categoria
+              </div>
+              <div className="box-border px-[25px] py-5 text-center text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
+                Tipo
+              </div>
+              <div className="box-border px-[25px] py-5 text-right text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
+                Valor
+              </div>
+              <div className="box-border px-[25px] py-5 text-right text-[12px] font-medium uppercase tracking-[0.6px] text-financy-muted">
+                Ações
+              </div>
+            </div>
+
+            {transactionsLoading ? (
+              <div className="p-6 text-center text-financy-muted" aria-live="polite">
+                Carregando transações...
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="p-6 text-center text-financy-muted">
+                Nenhuma transação encontrada para o período selecionado.
+              </div>
+            ) : (
+              <ul className="m-0 flex list-none flex-col p-0 sm:min-w-[960px]">
+                {transactions.map((transaction) => {
+                  const isIncome = transaction.type === "INCOME";
+                  const categoryVariant = getCategoryVariant(transaction.category);
+                  const categoryIcon = transaction.category?.icon ?? "tag";
+                  const { bgClassName, iconClassName } = getCategoryIconClasses(categoryVariant);
+
+                  return (
+                    <TransactionRow
+                      key={transaction.id}
+                      variant="table"
+                      title={transaction.title}
+                      date={new Date(transaction.date).toLocaleDateString("pt-BR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                        timeZone: "UTC",
+                      })}
+                      categoryLabel={transaction.category?.name ?? "Sem categoria"}
+                      categoryVariant={categoryVariant}
+                      type={transaction.type}
+                      amountLabel={`${isIncome ? "+" : "-"} ${currencyFormatter.format(transaction.amount)}`}
+                      leadingIcon={
+                        <CategoryIcon icon={categoryIcon} className={`h-4 w-4 ${iconClassName}`} />
+                      }
+                      leadingIconBgClassName={bgClassName}
+                      actions={
+                        <>
+                          <IconButton
+                            variant="danger"
+                            aria-label="Excluir transação"
+                            disabled={deleting}
+                            onClick={() => setDeletingTransaction(transaction)}
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </IconButton>
+                          <IconButton
+                            aria-label="Editar transação"
+                            onClick={() => openEditDialog(transaction)}
+                          >
+                            <IconSquarePen className="h-4 w-4" />
+                          </IconButton>
+                        </>
+                      }
+                    />
+                  );
+                })}
+              </ul>
+            )}
+
+            <div className="flex flex-col gap-3 border-t border-financy-border px-[25px] py-5 sm:min-w-[960px] sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-financy-text-secondary">
+                {tableRowsFrom} a {tableRowsTo} | {totalResults} resultados
+              </p>
+
+              <div className="flex items-center gap-2">
+                <IconButton
+                  aria-label="Página anterior"
+                  disabled={page <= 1}
+                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                >
+                  <IconChevronLeft className="h-[9.333px] w-[5.333px]" />
+                </IconButton>
+
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((value) => (
+                  <PaginationButton
+                    key={value}
+                    label={String(value)}
+                    state={value === page ? "active" : "default"}
+                    onClick={() => setPage(value)}
+                  />
+                ))}
+
+                <IconButton
+                  aria-label="Próxima página"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                >
+                  <IconChevronRight className="h-[9.333px] w-[5.333px]" />
+                </IconButton>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </section>
+
+      {periodRange ? (
+        <CreateTransactionModal
+          filter={periodRange}
+          isOpen={isCreateDialogOpen || Boolean(editingTransaction)}
+          mode={editingTransaction ? "edit" : "create"}
+          transactionId={editingTransaction?.id ?? null}
+          initialValues={
+            editingTransaction
+              ? {
+                  description: editingTransaction.title,
+                  date: editingTransaction.date.slice(0, 10),
+                  amount: editingTransaction.amount,
+                  type: editingTransaction.type,
+                  categoryId: editingTransaction.categoryId,
+                }
+              : null
+          }
+          onClose={() => {
+            setIsCreateDialogOpen(false);
+            closeEditDialog();
+          }}
+          onSaved={async (mode) => {
+            setActionError(null);
+            setActionSuccess(
+              mode === "edit"
+                ? "Transação atualizada com sucesso."
+                : "Transação criada com sucesso.",
+            );
+            await refetchTransactions();
+            await refetchTransactionsCount();
+          }}
+        />
       ) : null}
 
-      {editingId ? (
-        <div className="modal-overlay" role="presentation">
-          <dialog
-            data-testid="transactions-edit-modal"
-            className={`modal-card transactions-modal t-modal ${isEditDialogClosing ? "is-closing" : "is-open"}`}
-            open
-          >
-            <h2>Editar transação</h2>
-            <form
-              onSubmit={async (event) => {
-                event.preventDefault();
-                if (isUpdateDisabled) {
-                  return;
-                }
-
-                try {
-                  setActionError(null);
-                  setActionSuccess(null);
-                  await updateTransaction({
-                    variables: {
-                      id: editingId,
-                      input: buildTransactionPayload(editingForm),
-                    },
-                  });
-                  closeEditDialog();
-                  setActionSuccess("Transação atualizada com sucesso.");
-                } catch (mutationError) {
-                  setActionError(
-                    getTransactionActionErrorMessage(
-                      mutationError,
-                      "Não foi possível atualizar a transação.",
-                    ),
-                  );
-                }
-              }}
+      <Modal
+        isOpen={Boolean(deletingTransaction)}
+        onClose={closeDeleteDialog}
+        showCloseButton
+        title="Excluir transação"
+        subtitle="Essa ação removerá a transação selecionada."
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm font-semibold text-financy-muted">
+            Deseja confirmar a exclusão desta transação?
+          </p>
+          <div className="flex items-center justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deleting}
+              onClick={closeDeleteDialog}
             >
-              <label>
-                Título
-                <input
-                  data-testid="transactions-edit-title"
-                  autoComplete="off"
-                  required
-                  type="text"
-                  value={editingForm.title}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      title: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Descrição
-                <input
-                  data-testid="transactions-edit-description"
-                  autoComplete="off"
-                  type="text"
-                  value={editingForm.description}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      description: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Valor
-                <input
-                  data-testid="transactions-edit-amount"
-                  min="0"
-                  required
-                  step="0.01"
-                  type="number"
-                  value={editingForm.amount}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      amount: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Tipo
-                <select
-                  data-testid="transactions-edit-type"
-                  value={editingForm.type}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      type: event.target.value as TransactionForm["type"],
-                    }))
-                  }
-                >
-                  <option value="EXPENSE">Despesa</option>
-                  <option value="INCOME">Receita</option>
-                </select>
-              </label>
-              <label>
-                Data
-                <input
-                  data-testid="transactions-edit-date"
-                  required
-                  type="date"
-                  value={editingForm.date}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      date: event.target.value,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Categoria
-                <select
-                  data-testid="transactions-edit-category"
-                  required
-                  value={editingForm.categoryId}
-                  onChange={(event) =>
-                    setEditingForm((prev) => ({
-                      ...prev,
-                      categoryId: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Selecione</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Comprovante
-                <input
-                  data-testid="transactions-edit-receipt"
-                  accept=".pdf,image/*"
-                  type="file"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (!file || !editingId) {
-                      return;
-                    }
-
-                    await handleEditReceiptUpload(editingId, file);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-              {editingForm.receiptUrl ? (
-                <p>
-                  <a href={editingForm.receiptUrl} rel="noreferrer" target="_blank">
-                    Abrir comprovante
-                  </a>{" "}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setEditingForm((prev) => ({
-                        ...prev,
-                        receiptKey: "",
-                        receiptUrl: "",
-                      }))
-                    }
-                  >
-                    Remover comprovante
-                  </button>
-                </p>
-              ) : null}
-              <div className="modal-actions">
-                <button
-                  data-testid="transactions-edit-confirm"
-                  disabled={isUpdateDisabled}
-                  type="submit"
-                >
-                  <span className="t-text-swap">
-                    {uploadingEditReceipt ? "Enviando comprovante..." : "Salvar"}
-                  </span>
-                </button>
-                <button
-                  data-testid="transactions-edit-cancel"
-                  type="button"
-                  onClick={closeEditDialog}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </dialog>
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={deleting}
+              startIcon={<IconTrash className="h-4 w-4" />}
+              className="!text-financy-danger hover:!text-financy-danger"
+              onClick={handleConfirmDeleteTransaction}
+            >
+              {deleting ? "Excluindo..." : "Excluir transação"}
+            </Button>
+          </div>
         </div>
-      ) : null}
+      </Modal>
     </main>
   );
 };

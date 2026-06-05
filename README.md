@@ -68,12 +68,14 @@ Fluxo de autenticação:
 ## 🏗️ Arquitetura
 
 ```mermaid
-flowchart LR
-    A([React + Apollo]) --> B([Fastify + Mercurius])
-    B --> C([Prisma])
-    C --> D[(PostgreSQL)]
-    B --> E([S3 Storage Service])
-    E --> F[(MinIO / S3)]
+  flowchart LR
+      A([React + Apollo]) --> B([Fastify + Mercurius])
+      B --> C([Prisma])
+      C --> D[(PostgreSQL)]
+      B --> E([S3 Storage Service])
+      E --> F[(MinIO / S3)]
+      B --> G([SMTP Client])
+      G --> H[(Mailpit / SMTP Provider)]
 ```
 
 Monorepo gerenciado com `pnpm workspaces`:
@@ -82,7 +84,8 @@ Monorepo gerenciado com `pnpm workspaces`:
 .
 ├── backend/     # API GraphQL, Prisma, domínios (auth, category, transaction, storage)
 ├── frontend/    # App React, páginas protegidas, testes E2E
-├── scripts/     # Smoke tests de integração local
+├── scripts/     # Orquestração E2E e utilitários de ambiente
+├── backend/tests # Testes automatizados de API (suítes de backend)
 └── .github/     # Workflows de CI, hooks e template de PR
 ```
 
@@ -94,31 +97,30 @@ Monorepo gerenciado com `pnpm workspaces`:
 
 - [Node.js 20+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
 - [Docker Desktop 24+](https://www.docker.com/products/docker-desktop/)
-- Arquivo `.env` baseado em `.env.example`
+- Nenhum `.env` é obrigatório para desenvolvimento local; os scripts carregam `.env.example`.
 
 ### Desenvolvimento
 
 ```bash
-# 1. Copie as variáveis de ambiente
-cp .env.example .env
+# 1. Valide a configuração dos Compose (sem subir serviços)
+pnpm dev:check
 
-# 2. Suba o ambiente completo de desenvolvimento
-pnpm compose:up
+# 2. Suba o ambiente completo de desenvolvimento (um único comando na raiz)
+pnpm dev
 ```
 
-Política de dependências (Docker-first):
+Uso de `.env` no desenvolvimento:
+- `.env.example` é versionado e carregado automaticamente pelos scripts Docker.
+- `.env` é opcional e deve ser usado apenas para sobrescrever valores locais.
+
+Artefatos temporários locais:
+- qualquer arquivo/script de debug/refatoração manual deve ser criado em `/.tmp-run/manual/`.
+- não criar arquivos temporários no root do repositório.
+
+Política de dependências:
 - `node_modules` Linux roda apenas em volumes Docker nomeados.
 - `node_modules` do host Windows não é compartilhado com os containers.
 - `pnpm-lock.yaml` permanece como lockfile único entre host e Docker.
-
-Fallback offline no host (instalação apenas):
-
-```bash
-pnpm install:host:offline
-```
-
-Esse comando usa store separado em `.pnpm-store/host` e não altera o estado
-de volumes do Docker.
 
 | Serviço | URL |
 |---|---|
@@ -127,37 +129,51 @@ de volumes do Docker.
 | Backend / GraphQL | http://localhost:4000/graphql |
 | MinIO Console | http://localhost:9001 |
 
-No ambiente de desenvolvimento, o backend executa `prisma db push` automaticamente no startup do container.
+No ambiente de desenvolvimento, o backend executa `prisma migrate deploy` e `prisma db seed` automaticamente no startup do container, deixando a conta de seed padrão e dados iniciais disponíveis antes da primeira execução da aplicação.
+
+Fluxo Prisma:
+- `backend/prisma/schema.prisma` define o modelo declarativo.
+- `backend/prisma/migrations/**/migration.sql` é gerado pelo Prisma Migrate e deve ser versionado.
+- `prisma migrate deploy` aplica o histórico de migrations no banco.
+- `prisma db seed` cria o usuário local padrão, categorias e transações iniciais.
 
 Contrato de chamadas do frontend no desenvolvimento:
 - o browser usa `/graphql`;
 - o Vite faz proxy para `http://backend:4000` na rede Docker.
 
-Para encerrar: `pnpm compose:down`
+Para encerrar: `pnpm dev:down`
 
-### Produção
+Fluxo rápido do dia a dia (uso no root do repositório):
 
 ```bash
-# 1. Copie as variáveis de ambiente
-cp .env.example .env
-
-# 2. Suba o ambiente de produção
-pnpm compose:up:prod
-
-# Encerrar
-pnpm compose:down:prod
+pnpm dev:check          # valida contratos de env/compose
+pnpm dev                # sobe API, frontend, postgres, minio e mailpit
+pnpm dev:verify:backend # suites de backend (contrato + autenticação)
+pnpm dev:verify:journey # jornada e2e preview em Docker
+pnpm dev:verify:full    # backend + e2e smoke/contract + jornada preview
+pnpm dev:down           # encerra tudo e limpa volumes nomeados da sessão
+pnpm dev:logs           # acompanha logs da stack de desenvolvimento
 ```
 
-Contrato de chamadas do frontend em produção:
-- o frontend usa `VITE_BACKEND_URL` explícita;
+### Produção e deploy
+
+O `docker-compose.yml` deste repositório é exclusivo para desenvolvimento local e CI.
+Produção não deve usar os valores de `.env.example`; configure o deploy na plataforma alvo com secrets reais e variáveis equivalentes.
+
+Contrato de chamadas do frontend fora do desenvolvimento:
+- o frontend deve usar `VITE_BACKEND_URL` explícita;
 - as chamadas seguem `${VITE_BACKEND_URL}/graphql` (sem proxy de desenvolvimento).
 
-Configuração de exposição em produção:
-- portas públicas: `5173` (frontend) e `4000` (backend);
-- `postgres` e `minio` ficam apenas na rede interna Docker (sem publicação no host).
+Contrato de upload assinado (S3/MinIO):
+- `AWS_S3_ENDPOINT_INTERNAL`: endpoint interno da rede Docker/VPC usado pelo backend.
+- `AWS_S3_ENDPOINT_PUBLIC`: endpoint público acessível pelo navegador.
+- `S3_PUBLIC_ORIGIN_HOSTS`: lista CSV de hosts que devem receber URL assinada com `AWS_S3_ENDPOINT_PUBLIC`.
+- Para hosts fora da lista, o backend assina com `AWS_S3_ENDPOINT_INTERNAL`.
+- A rede Docker usa alias interno `s3.internal` para o serviço de storage.
+- Em ECS/ECR, configure os mesmos nomes de env na Task Definition (sem fallback de código).
 
 Observação de infraestrutura:
-- os comandos usam projetos Docker separados (`financy-dev` e `financy-prod`) para evitar conflito entre stacks.
+- os comandos Docker usam projetos isolados: `financy-dev` no desenvolvimento e `financy-ci-<suite>` no CI.
 - o ambiente Docker usa store dedicado via `PNPM_STORE_DIR=/pnpm/store`.
 
 ---
@@ -166,33 +182,53 @@ Observação de infraestrutura:
 
 ### E2E (Playwright)
 
-Os testes E2E rodam em um container dedicado com Chromium pré-instalado.
+Os testes E2E rodam em um container dedicado com Chromium pré-instalado e seguem uma taxonomia única por intenção:
+
+- `smoke`: contrato mínimo funcional e proteção de rota.
+- `contract`: validações essenciais de carregamento sem erros globais falsos.
+- `journey`: fluxo completo com bootstrap de dados.
+- `transition`: estabilidade de animações de navegação.
+
+Para execução E2E fora do Docker, o runner da raiz carrega `.env.example` automaticamente.
+Use `.env` apenas quando precisar sobrescrever valores locais.
+Comandos principais no root:
 
 ```bash
-# Suíte completa do Style Guide
-pnpm test:e2e
-
-# Apenas smoke E2E
-pnpm test:e2e:smoke
-
-# Evidência visual automatizada
-pnpm test:e2e:visual
+pnpm test:e2e:preview
+pnpm e2e:smoke
+pnpm e2e:contract
+pnpm e2e:journey
+pnpm e2e:transition
+pnpm test:e2e:smoke-contract
 ```
 
-Para executar o smoke de browser no ambiente Docker:
+## Conta seed para QA e desenvolvimento
+
+Essas credenciais são usadas como conta padrão em ambiente local:
+
+- Nome: `Financy Admin`
+- E-mail: `admin@financy.local`
+- Senha: `TestAdmin123!`
+
+Elas são usadas pelo `prisma db seed` no startup de desenvolvimento e por `e2e-bootstrap` como base da jornada.
+O seed também cria categorias e transações locais para que o dashboard abra com dados úteis em um banco limpo.
+Essa conta é apenas para ambiente local/QA e não representa usuário de produção.
+
+## Recuperação de acesso por e-mail (OTP)
+
+O fluxo de recuperação usa o endereço de e-mail cadastrado na conta para solicitar o código:
+
+- Em `/login`, clique em `Recuperar senha`.
+- Em `/forgot-password` (etapa 1), informe o **e-mail de cadastro**.
+- Verifique o código recebido no e-mail configurado no backend (`SMTP_*`) e valide com a etapa de nova senha.
+- O e-mail pode ser visualizado no SMTP local (`mailpit`) quando rodando em `development`.
+
+### Testes de API (backend)
 
 ```bash
-pnpm smoke:auth:browser:docker
-```
-
-### Smoke tests (API GraphQL)
-
-```bash
-# Smoke completo da API (register, login, CRUD, upload)
-pnpm smoke:graphql
-
-# Regressão de autenticação (cenários positivos e negativos)
-pnpm smoke:auth
+pnpm test:backend
+pnpm test:backend:api-contract
+pnpm test:backend:auth-regression
 ```
 
 Os relatórios E2E ficam em `frontend/playwright-report` após a execução.

@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import { IconMail, IconUserRoundPlus } from "@/assets/icons";
+import { IconEyeClosed, IconLock, IconLogIn, IconMail, IconUserRoundOutline } from "@/assets/icons";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ErrorBanner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
+
+const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_MIN_HELPER = `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
 
 export const SignupPage = () => {
   const { user, signup, loading, authError, clearAuthError } = useAuth();
@@ -48,7 +51,9 @@ export const SignupPage = () => {
     return isEmailValid ? "" : "Informe um e-mail válido.";
   };
   const getPasswordError = (value: string) =>
-    value.length >= 6 ? "" : "A senha deve ter pelo menos 6 caracteres.";
+    value.length >= MIN_PASSWORD_LENGTH
+      ? ""
+      : `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
 
   useEffect(() => {
     clearAuthError();
@@ -111,20 +116,7 @@ export const SignupPage = () => {
           ? "active"
           : "empty";
 
-  const passwordStartIcon = (
-    <span className="text-financy-field-placeholder">
-      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" className="h-4 w-4">
-        <path
-          d="M8 10V8a4 4 0 1 1 8 0v2"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.5"
-        />
-        <rect height="10" rx="2" stroke="currentColor" strokeWidth="1.5" width="14" x="5" y="10" />
-      </svg>
-    </span>
-  );
+  const passwordStartIcon = <IconLock className="h-4 w-4" />;
 
   const passwordEndIcon = (
     <button
@@ -148,20 +140,7 @@ export const SignupPage = () => {
           <circle cx="8" cy="8" r="1.9" stroke="currentColor" strokeWidth="1.2" />
         </svg>
       ) : (
-        <svg aria-hidden="true" fill="none" viewBox="0 0 16 16" className="h-4 w-4">
-          <path
-            d="M1.3 8c1.2-2.3 3.3-3.5 6.7-3.5s5.5 1.2 6.7 3.5"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="1.2"
-          />
-          <path
-            d="M6.4 10.4a2 2 0 0 0 3.2 0"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="1.2"
-          />
-        </svg>
+        <IconEyeClosed className="h-[9px] w-4 text-[#374151]" />
       )}
     </button>
   );
@@ -191,7 +170,7 @@ export const SignupPage = () => {
             Criar conta
           </h1>
           <p className="mt-1 text-center text-[16px] leading-[24px] text-[#4b5563]">
-            Registre-se para começar a usar o Financy
+            Comece a controlar suas finanças ainda hoje
           </p>
           <form
             className="mt-8 flex flex-col gap-6"
@@ -224,10 +203,11 @@ export const SignupPage = () => {
               id="signup-name"
               autoComplete="name"
               data-testid="signup-name"
-              label="Nome"
+              label="Nome completo"
               placeholder="Seu nome completo"
               required
               state={nameState}
+              startIcon={<IconUserRoundOutline className="h-4 w-4" />}
               helper={nameError || undefined}
               helperError={Boolean(nameError)}
               disabled={isBusy}
@@ -275,12 +255,12 @@ export const SignupPage = () => {
               autoComplete="new-password"
               data-testid="signup-password"
               label="Senha"
-              placeholder="Crie uma senha segura"
+              placeholder="Digite sua senha"
               required
               state={passwordState}
               startIcon={passwordStartIcon}
               endIcon={passwordEndIcon}
-              helper={passwordError || undefined}
+              helper={passwordError || PASSWORD_MIN_HELPER}
               helperError={Boolean(passwordError)}
               disabled={isBusy}
               type={isPasswordVisible ? "text" : "password"}
@@ -319,7 +299,7 @@ export const SignupPage = () => {
                     className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white transition-opacity duration-200 ease-out"
                   />
                 )}
-                <span className="t-text-swap">{isBusy ? "Cadastrando..." : "Criar conta"}</span>
+                <span className="t-text-swap">{isBusy ? "Cadastrando..." : "Cadastrar"}</span>
               </span>
             </Button>
           </form>
@@ -327,7 +307,7 @@ export const SignupPage = () => {
           <div className="mt-8">
             <div className="flex items-center gap-3 text-sm text-[#6b7280]">
               <span className="h-px flex-1 bg-slate-300" />
-              <span>Ou</span>
+              <span>ou</span>
               <span className="h-px flex-1 bg-slate-300" />
             </div>
             <p className="mt-6 text-center text-[14px] leading-[20px] text-[#4b5563]">
@@ -338,15 +318,15 @@ export const SignupPage = () => {
               data-testid="signup-login-link"
               aria-disabled={isBusy}
               tabIndex={isBusy ? -1 : undefined}
-              onClick={(event) => {
+              onClick={(event: MouseEvent<HTMLAnchorElement>) => {
                 if (isBusy) {
                   event.preventDefault();
                 }
               }}
               className="mt-4 inline-flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-[8px] border border-financy-field-border bg-financy-surface text-[16px] font-medium leading-[24px] text-financy-text-secondary transition duration-200 hover:bg-financy-surface-hover aria-disabled:pointer-events-none aria-disabled:opacity-60"
             >
-              <IconUserRoundPlus className="h-[18px] w-[18px] shrink-0 text-financy-text-secondary" />
-              <span className="whitespace-nowrap">Entrar</span>
+              <IconLogIn className="h-[18px] w-[18px] shrink-0 text-financy-text-secondary" />
+              <span className="whitespace-nowrap">Fazer login</span>
             </Link>
           </div>
         </Card>

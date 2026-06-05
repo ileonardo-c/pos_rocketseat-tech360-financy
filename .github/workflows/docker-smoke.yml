@@ -1,4 +1,4 @@
-name: docker-smoke
+name: docker-verification
 
 on:
   pull_request:
@@ -6,28 +6,38 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: docker-smoke-${{ github.workflow }}-${{ github.ref }}
+  group: docker-verification-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  docker-smoke:
-    name: docker-smoke
+  docker-verification:
+    name: Verify ${{ matrix.target }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - backend-api-contract
+          - backend-auth-regression
+          - e2e-smoke-contract
+          - e2e-journey-preview
+    env:
+      PROJECT_NAME: financy-ci-${{ matrix.target }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy environment file
-        run: cp .env.example .env
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and start CI compose stack
-        run: docker compose -p financy-ci -f docker-compose.ci.yml up -d --build --wait --wait-timeout 120
+      - name: Clean previous CI compose stack
+        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v --remove-orphans
 
-      - name: Wait for backend readiness
+      - name: Build and start CI compose stack
+        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml up -d --build --wait --wait-timeout 120
+
+      - name: Wait for backend
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
@@ -41,6 +51,7 @@ jobs:
           exit 1
 
       - name: Wait for frontend
+        if: startsWith(matrix.target, 'e2e-')
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
@@ -56,50 +67,76 @@ jobs:
       - name: Validate pnpm runtime toolchain
         run: |
           set -euo pipefail
-          docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
-          docker compose -p financy-ci -f docker-compose.ci.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
 
-      - name: Run E2E smoke flow
-        run: docker compose -p financy-ci -f docker-compose.ci.yml --profile e2e run --name financy-ci-e2e-smoke e2e
-
-      - name: Collect E2E artifacts from container
-        if: always()
+      - name: Validate application builds
+        if: startsWith(matrix.target, 'backend-')
         run: |
           set -euo pipefail
-          rm -rf frontend/playwright-report frontend/test-results
-          mkdir -p frontend
-          if docker ps -a --format '{{.Names}}' | grep -qx 'financy-ci-e2e-smoke'; then
-            if docker exec financy-ci-e2e-smoke test -d /app/frontend/playwright-report; then
-              docker cp financy-ci-e2e-smoke:/app/frontend/playwright-report frontend/playwright-report
-            fi
-            if docker exec financy-ci-e2e-smoke test -d /app/frontend/test-results; then
-              docker cp financy-ci-e2e-smoke:/app/frontend/test-results frontend/test-results
-            fi
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend build"
+
+      - name: Validate frontend build
+        if: startsWith(matrix.target, 'e2e-')
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --filter @financy/frontend build"
+
+      - name: Run verification target
+        id: run_target
+        run: |
+          set -euo pipefail
+          TARGET="${{ matrix.target }}"
+          if [[ "$TARGET" == "backend-api-contract" ]]; then
+            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm test:api-contract"
+            exit 0
+          fi
+          if [[ "$TARGET" == "backend-auth-regression" ]]; then
+            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql pnpm test:auth-regression"
+            exit 0
+          fi
+          if [[ "$TARGET" == "e2e-smoke-contract" ]]; then
+            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --name "${PROJECT_NAME}-e2e" e2e sh -lc "pnpm test:e2e:smoke-contract"
+            exit 0
+          fi
+          if [[ "$TARGET" == "e2e-journey-preview" ]]; then
+            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --name "${PROJECT_NAME}-e2e" e2e sh -lc "pnpm e2e:journey"
+            exit 0
+          fi
+          echo "Unsupported target: $TARGET"
+          exit 1
+
+      - name: Collect E2E artifacts from container
+        if: startsWith(matrix.target, 'e2e-') && always()
+        run: |
+          set -euo pipefail
+          mkdir -p "frontend/.artifacts/${{ matrix.target }}"
+          if [ -d "frontend/playwright-report" ]; then
+            rm -rf "frontend/.artifacts/${{ matrix.target }}/playwright-report"
+            cp -R "frontend/playwright-report" "frontend/.artifacts/${{ matrix.target }}/playwright-report"
+          fi
+          if [ -d "frontend/test-results" ]; then
+            rm -rf "frontend/.artifacts/${{ matrix.target }}/test-results"
+            cp -R "frontend/test-results" "frontend/.artifacts/${{ matrix.target }}/test-results"
           fi
 
-      - name: Run auth smoke flow
-        run: docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
-
       - name: Upload E2E artifacts
-        if: always()
+        if: startsWith(matrix.target, 'e2e-') && always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-artifacts
-          path: |
-            frontend/playwright-report
-            frontend/test-results
+          name: e2e-artifacts-${{ matrix.target }}
+          path: frontend/.artifacts/${{ matrix.target }}
           if-no-files-found: ignore
 
       - name: Show compose status
         if: always()
-        run: docker compose -p financy-ci -f docker-compose.ci.yml ps
+        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml ps
 
       - name: Show compose logs
         if: failure()
         run: |
-          docker compose -p financy-ci -f docker-compose.ci.yml logs --no-color backend backend-init frontend postgres minio
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml logs --no-color backend frontend postgres minio minio-init mailpit
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose -p financy-ci -f docker-compose.ci.yml down -v
-
+        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v

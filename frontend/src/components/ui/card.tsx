@@ -1,12 +1,15 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 
 import { cx } from "@/lib/utils";
 
-type CardProps = {
+type CardProps = HTMLAttributes<HTMLElement> & {
   children: ReactNode;
-  className?: string;
 };
 
-export const Card = ({ children, className }: CardProps) => {
-  return <section className={cx("rounded-xl border bg-white p-4", className)}>{children}</section>;
+export const Card = ({ children, className, ...props }: CardProps) => {
+  return (
+    <section className={cx("rounded-xl border bg-white", className)} {...props}>
+      {children}
+    </section>
+  );
 };

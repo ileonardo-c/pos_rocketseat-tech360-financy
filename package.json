@@ -3,33 +3,40 @@
   "private": true,
   "packageManager": "pnpm@10.5.0",
   "scripts": {
-    "prepare": "sh -c 'if [ -f .github/hooks/pre-commit ] && [ -d .git/hooks ]; then cp .github/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit; fi'",
-    "install:all": "pnpm install",
-    "install:host:offline": "pnpm install --store-dir .pnpm-store/host --prefer-offline",
-    "biome": "biome check .",
+    "prepare": "node -e \"const fs=require('node:fs');const source='.github/hooks/pre-commit';const target='.git/hooks/pre-commit';if(fs.existsSync(source)&&fs.existsSync('.git/hooks')){fs.copyFileSync(source,target);fs.chmodSync(target,0o755);}\"",
     "format": "biome format .",
     "check": "biome check .",
-    "dev:backend": "pnpm --filter @financy/backend dev",
     "build:backend": "pnpm --filter @financy/backend build",
-    "dev:frontend": "pnpm --filter @financy/frontend dev",
     "build:frontend": "pnpm --filter @financy/frontend build",
-    "dev": "pnpm -r --parallel --filter @financy/backend --filter @financy/frontend dev",
-    "compose:up": "docker compose -p financy-dev -f docker-compose.development.yml up -d --build",
-    "compose:down": "docker compose -p financy-dev -f docker-compose.development.yml down --remove-orphans -v",
-    "compose:up:prod": "docker compose -p financy-prod -f docker-compose.yml up -d --build",
-    "compose:down:prod": "docker compose -p financy-prod -f docker-compose.yml down --remove-orphans -v",
-    "compose:logs": "docker compose -p financy-dev -f docker-compose.development.yml logs -f",
-    "prisma:generate": "pnpm --filter @financy/backend prisma:generate",
-    "smoke:graphql": "node scripts/graphql-smoke.mjs",
-    "smoke:auth": "node scripts/auth-regression.mjs",
-    "smoke:auth:browser": "node scripts/auth-browser-smoke.mjs",
-    "smoke:auth:browser:docker": "docker compose -p financy-dev -f docker-compose.development.yml --profile e2e run --rm e2e",
-    "test:e2e": "pnpm --filter @financy/frontend test:e2e",
-    "test:e2e:smoke": "pnpm --filter @financy/frontend test:e2e:smoke",
-    "test:e2e:visual": "pnpm --filter @financy/frontend test:e2e:visual"
+    "dev": "pnpm dev:up",
+    "dev:check": "node scripts/compose-check.mjs",
+    "dev:up": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml up -d --build && echo. && echo Development environments: && echo Frontend: http://localhost:5173 && echo Backend GraphQL: http://localhost:4000/graphql && echo Mailpit: http://localhost:8025 && echo MinIO Console: http://localhost:9001",
+    "dev:down": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml down --remove-orphans -v",
+    "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
+    "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
+    "test:backend:auth-regression": "pnpm --filter @financy/backend test:auth-regression",
+    "test:backend": "pnpm test:backend:api-contract && pnpm test:backend:auth-regression",
+    "dev:verify:backend": "pnpm dev:up && pnpm test:backend",
+    "test:e2e:smoke-contract": "pnpm e2e:smoke && pnpm e2e:contract",
+    "test:e2e:preview": "pnpm e2e:journey",
+    "e2e:smoke-contract:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm test:e2e:smoke-contract\"",
+    "e2e:journey:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm e2e:journey\"",
+    "dev:verify:journey": "pnpm dev:up && pnpm e2e:journey:docker",
+    "dev:verify:preview": "pnpm dev:up && pnpm e2e:journey:docker && pnpm test:e2e:smoke-contract",
+    "dev:verify:full": "pnpm dev:up && pnpm test:backend && pnpm test:e2e:smoke-contract && pnpm e2e:journey:docker",
+    "e2e:smoke": "node scripts/e2e-runner.mjs test:e2e:smoke",
+    "e2e:ownership": "node scripts/e2e-runner.mjs test:e2e:ownership",
+    "e2e:journey": "node scripts/e2e-bootstrap.mjs && node scripts/e2e-runner.mjs test:e2e:journey",
+    "e2e:contract": "node scripts/e2e-runner.mjs test:e2e:contract",
+    "e2e:transition": "node scripts/e2e-runner.mjs test:e2e:transition"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "playwright": "^1.54.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "fast-uri": "^3.1.2"
+    }
   }
 }

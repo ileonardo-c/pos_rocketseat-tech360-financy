@@ -12,12 +12,13 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 
 O projeto opera exclusivamente via Docker Compose. **Nunca execute serviços diretamente no host.**
 
-Dois arquivos Compose coexistem — use o correto para cada contexto:
+O arquivo Compose versionado é focado em desenvolvimento local:
 
 | Arquivo                          | Contexto                                                     | Script raiz            |
 | -------------------------------- | ------------------------------------------------------------ | ---------------------- |
-| `docker-compose.development.yml` | Desenvolvimento — hot reload, volumes montados, perfil `e2e` | `pnpm compose:up`      |
-| `docker-compose.yml`             | Produção — imagens compiladas, sem volumes de código         | `pnpm compose:up:prod` |
+| `docker-compose.yml`             | Desenvolvimento e CI — hot reload, volumes montados, perfil `e2e` | `pnpm dev`             |
+
+Produção não deve usar o compose local; configure o deploy na plataforma alvo com secrets reais.
 
 Todos os comandos de ciclo de vida, testes e smoke estão definidos em `package.json` (raiz). Consulte os scripts disponíveis antes de invocar `docker compose` diretamente.
 
