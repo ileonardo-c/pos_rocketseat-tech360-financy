@@ -10,7 +10,7 @@
     "build:frontend": "pnpm --filter @financy/frontend build",
     "dev": "pnpm dev:up",
     "dev:check": "node scripts/compose-check.mjs",
-    "dev:up": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml up -d --build && echo. && echo Development environments: && echo Frontend: http://localhost:5173 && echo Backend GraphQL: http://localhost:4000/graphql && echo Mailpit: http://localhost:8025 && echo MinIO Console: http://localhost:9001",
+    "dev:up": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml up -d --build && node -e \"console.log()\" && echo Development environments: && echo Frontend: http://localhost:5173 && echo Backend GraphQL: http://localhost:4000/graphql && echo Mailpit: http://localhost:8025 && echo MinIO Console: http://localhost:9001",
     "dev:down": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml down --remove-orphans -v",
     "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
     "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
