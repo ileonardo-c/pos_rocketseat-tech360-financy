@@ -47,21 +47,29 @@ jobs:
             HEAD_SHA="${{ github.sha }}"
           fi
 
-          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md')
-          if [ -z "$CHANGED_FILES" ]; then
+          mapfile -t CHANGED_FILES < <(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx' '*.js' '*.jsx' '*.json' '*.md')
+          if [ "${#CHANGED_FILES[@]}" -eq 0 ]; then
             echo "No Biome-eligible files changed."
             exit 0
           fi
 
-          BIOME_FILES=$(echo "$CHANGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json)' || true)
-          if [ -z "$BIOME_FILES" ]; then
+          BIOME_FILES=()
+          for file in "${CHANGED_FILES[@]}"; do
+            case "$file" in
+              backend/*|frontend/*|biome.json|package.json)
+                BIOME_FILES+=("$file")
+                ;;
+            esac
+          done
+
+          if [ "${#BIOME_FILES[@]}" -eq 0 ]; then
             echo "No changed files are in the Biome validation scope."
             exit 0
           fi
 
           echo "Files validated by Biome:"
-          echo "$BIOME_FILES"
-          pnpm exec biome check --no-errors-on-unmatched $BIOME_FILES
+          printf '%s\n' "${BIOME_FILES[@]}"
+          pnpm exec biome check --no-errors-on-unmatched "${BIOME_FILES[@]}"
 
       - name: Generate Prisma client
         run: pnpm --filter @financy/backend prisma:generate
@@ -75,6 +83,15 @@ jobs:
           export PORT=4100
           export JWT_SECRET="$(openssl rand -hex 32)"
           export DATABASE_URL=postgresql://localhost:5432/financy
+          export AWS_S3_ENDPOINT_INTERNAL=http://127.0.0.1:9000
+          export AWS_S3_ENDPOINT_PUBLIC=http://127.0.0.1:9000
+          export S3_PUBLIC_ORIGIN_HOSTS=localhost,127.0.0.1
+          export AWS_REGION=us-east-1
+          export AWS_ACCESS_KEY_ID=minioadmin
+          export AWS_SECRET_ACCESS_KEY=minioadmin123
+          export AWS_S3_BUCKET=financy
+          export AWS_S3_FORCE_PATH_STYLE=true
+          export AWS_S3_URL_EXPIRES_IN=900
           pnpm --filter @financy/backend start &
           SERVER_PID=$!
           cleanup() {

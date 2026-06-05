@@ -41,6 +41,8 @@ const request = async (query, token, variables = {}, extraHeaders = {}) => {
   return {
     httpStatus: response.status,
     data: payload.data,
+    code: payload.code ?? "",
+    message: payload.message ?? "",
     errors: payload.errors ?? [],
   };
 };
@@ -68,6 +70,11 @@ const getFirstErrorExtensionCode = (errors) => {
 const ensureHasErrorCode = (errors, expected) => {
   const code = getFirstErrorExtensionCode(errors);
   ensure(code === expected.toLowerCase(), `Expected error code "${expected}", got "${code}"`);
+};
+
+const ensureHasResponseCode = (result, expected) => {
+  const code = `${result.code ?? ""}`.toLowerCase();
+  ensure(code === expected.toLowerCase(), `Expected response code "${expected}", got "${code}"`);
 };
 
 const ensureHasErrorStatus = (errors, expectedStatus) => {
@@ -316,10 +323,14 @@ const run = async () => {
     "Mutation with cookie session must enforce CSRF",
   );
   ensure(
-    csrfBypassedMutation.errors.length > 0,
+    csrfBypassedMutation.errors.length > 0 || csrfBypassedMutation.code === "CSRF_TOKEN_INVALID",
     "Mutation with missing CSRF token should return an error",
   );
-  ensureHasErrorCode(csrfBypassedMutation.errors, "CSRF_TOKEN_INVALID");
+  if (csrfBypassedMutation.errors.length > 0) {
+    ensureHasErrorCode(csrfBypassedMutation.errors, "CSRF_TOKEN_INVALID");
+  } else {
+    ensureHasResponseCode(csrfBypassedMutation, "CSRF_TOKEN_INVALID");
+  }
 
   const loginData = await request(loginMutation, undefined, {
     input: { email: user.email, password: user.password },

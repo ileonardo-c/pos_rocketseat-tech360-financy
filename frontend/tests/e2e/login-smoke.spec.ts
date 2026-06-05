@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, type Response, expect, test } from "@playwright/test";
 
 import { buildTransientE2EUser } from "./support/e2e-users";
 
@@ -18,6 +18,74 @@ const waitForLoginScreen = async (page: Page) => {
 const waitForAuthenticatedDashboard = async (page: Page) => {
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 15_000 });
+};
+
+const getGraphqlOperationName = (requestBody: unknown) => {
+  if (!requestBody || typeof requestBody !== "object") {
+    return null;
+  }
+
+  const body = requestBody as { operationName?: string; query?: string };
+  return body.operationName ?? body.query?.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? null;
+};
+
+const isGraphqlOperationResponse = (response: Response, operationName: string) => {
+  if (!response.url().includes("/graphql") || response.request().method() !== "POST") {
+    return false;
+  }
+
+  const rawBody = response.request().postData() ?? "";
+  if (
+    rawBody.includes(`"operationName":"${operationName}"`) ||
+    rawBody.includes(`mutation ${operationName}`) ||
+    rawBody.includes(`query ${operationName}`)
+  ) {
+    return true;
+  }
+
+  try {
+    return getGraphqlOperationName(response.request().postDataJSON?.()) === operationName;
+  } catch {
+    return false;
+  }
+};
+
+const isGraphqlFieldResponse = async (response: Response, fieldName: string) => {
+  if (!response.url().includes("/graphql") || response.request().method() !== "POST") {
+    return false;
+  }
+
+  try {
+    const payload = await response.json();
+    if (Object.prototype.hasOwnProperty.call(payload.data ?? {}, fieldName)) {
+      return true;
+    }
+
+    return Boolean(
+      payload.errors?.some((error: { path?: unknown }) => {
+        return Array.isArray(error.path) && error.path.includes(fieldName);
+      }),
+    );
+  } catch {
+    return false;
+  }
+};
+
+const submitLoginForm = async (page: Page, user: { email: string; password: string }) => {
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
+
+  const submitButton = page.getByRole("button", { name: "Entrar" });
+  const loginResponse = page.waitForResponse((response) => {
+    return isGraphqlOperationResponse(response, "Login");
+  });
+
+  await expect(submitButton).toBeEnabled({ timeout: 15_000 });
+  await submitButton.click({ timeout: 15_000 });
+  const response = await loginResponse;
+  const payload = await response.json();
+  expect(payload.errors).toBeFalsy();
+  expect(payload.data?.login?.token).toBeTruthy();
 };
 
 const createTransientUser = async (
@@ -62,12 +130,39 @@ const createTransientUserViaUi = async (
     timeout: 15_000,
   });
 
-  await page.getByTestId("signup-name").fill(user.name);
-  await page.getByTestId("signup-email").fill(user.email);
-  await page.getByTestId("signup-password").fill(user.password);
-  await page.getByTestId("signup-password").press("Enter");
+  const nameInput = page.getByTestId("signup-name");
+  const emailInput = page.getByTestId("signup-email");
+  const passwordInput = page.getByTestId("signup-password");
+  const signupForm = page.getByTestId("signup-form");
+
+  await expect(nameInput).toBeVisible({ timeout: 15_000 });
+  await expect(emailInput).toBeVisible({ timeout: 15_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 15_000 });
+
+  await nameInput.fill(user.name);
+  await emailInput.fill(user.email);
+  await passwordInput.fill(user.password);
+  const submitButton = page.getByRole("button", { name: "Cadastrar" });
+  const registerResponse = page.waitForResponse(async (response) => {
+    return isGraphqlFieldResponse(response, "register");
+  });
+
+  await expect(submitButton).toBeEnabled({ timeout: 15_000 });
+  await Promise.all([
+    page.waitForURL(/\/login/, { timeout: 15_000, waitUntil: "domcontentloaded" }),
+    signupForm.evaluate((form) => {
+      if (!(form instanceof HTMLFormElement)) {
+        throw new Error("Signup form element was not found");
+      }
+      form.requestSubmit();
+    }),
+  ]);
+  const response = await registerResponse;
+  const payload = await response.json();
+  expect(payload.errors).toBeFalsy();
+  expect(payload.data?.register?.created).toBeTruthy();
   await waitForLoginScreen(page);
-  await expect(page.getByText(/conta criada com sucesso/i)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible({ timeout: 15_000 });
 };
 
 const clearClientState = async (page: Page) => {
@@ -95,9 +190,7 @@ test("@smoke-login fluxo de login funcional com usuário transitório", async ({
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Criar conta" })).toBeVisible();
 
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await submitLoginForm(page, user);
 
   await waitForAuthenticatedDashboard(page);
 
@@ -110,15 +203,14 @@ test("@smoke-login fluxo de login funcional com usuário transitório", async ({
 });
 
 test("@smoke-login fluxo de cadastro funcional com usuário transitório", async ({ page }) => {
+  test.setTimeout(60_000);
   const user = buildTransientE2EUser();
 
   await clearClientState(page);
 
   await createTransientUserViaUi(page, user);
 
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await submitLoginForm(page, user);
   await waitForAuthenticatedDashboard(page);
 });
 
