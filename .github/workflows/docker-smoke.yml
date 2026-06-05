@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 25
     env:
       PROJECT_NAME: financy-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      RATE_LIMIT_GLOBAL_MAX_REQUESTS: 1000
+      RATE_LIMIT_AUTH_MAX_REQUESTS: 200
     steps:
       - name: Checkout
         uses: actions/checkout@v4
