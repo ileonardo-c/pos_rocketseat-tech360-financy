@@ -150,7 +150,7 @@ pnpm dev:check          # valida contratos de env/compose
 pnpm dev                # sobe API, frontend, postgres, minio e mailpit
 pnpm dev:verify:backend # suites de backend (contrato + autenticação)
 pnpm dev:verify:journey # jornada e2e preview em Docker
-pnpm dev:verify:full    # backend + e2e smoke/contract + jornada preview
+pnpm dev:verify:full    # backend + e2e smoke/contract em Docker + jornada preview
 pnpm dev:down           # encerra tudo e limpa volumes nomeados da sessão
 pnpm dev:logs           # acompanha logs da stack de desenvolvimento
 ```
@@ -195,12 +195,15 @@ Comandos principais no root:
 
 ```bash
 pnpm test:e2e:preview
+pnpm e2e:smoke-contract:docker
 pnpm e2e:smoke
 pnpm e2e:contract
 pnpm e2e:journey
 pnpm e2e:transition
 pnpm test:e2e:smoke-contract
 ```
+
+Use `pnpm e2e:smoke-contract:docker` no fluxo Docker-first. O comando `pnpm test:e2e:smoke-contract` roda no host e fica reservado para diagnóstico local quando Playwright estiver instalado fora do container.
 
 ## Conta seed para QA e desenvolvimento
 
