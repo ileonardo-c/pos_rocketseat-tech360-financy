@@ -6,8 +6,8 @@ export const buildTransientE2EUser = () => {
   const password = "E2E_UserPass123!";
 
   return {
-    name: `E2E User ${suffix}`,
-    updatedName: `E2E User Updated ${suffix}`,
+    name: "Teste User",
+    updatedName: "Teste User Updated",
     email: `e2e.${suffix}@financy.local`,
     password,
     categoryName: `Categoria E2E ${suffix}`,
