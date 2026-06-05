@@ -265,7 +265,7 @@ export class TransactionService {
 
     return Array.from(categoryTotals.values())
       .map((item) => {
-        const categoryName = categoriesById.get(item.categoryId) ?? "Categoria removida";
+        const categoryName = categoriesById.get(item.categoryId) ?? "Removed category";
         const total = item.incomeTotal + item.expenseTotal;
         return {
           categoryId: item.categoryId,
