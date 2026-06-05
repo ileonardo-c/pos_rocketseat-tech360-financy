@@ -50,27 +50,6 @@ const isGraphqlOperationResponse = (response: Response, operationName: string) =
   }
 };
 
-const isGraphqlFieldResponse = async (response: Response, fieldName: string) => {
-  if (!response.url().includes("/graphql") || response.request().method() !== "POST") {
-    return false;
-  }
-
-  try {
-    const payload = await response.json();
-    if (Object.prototype.hasOwnProperty.call(payload.data ?? {}, fieldName)) {
-      return true;
-    }
-
-    return Boolean(
-      payload.errors?.some((error: { path?: unknown }) => {
-        return Array.isArray(error.path) && error.path.includes(fieldName);
-      }),
-    );
-  } catch {
-    return false;
-  }
-};
-
 const submitLoginForm = async (page: Page, user: { email: string; password: string }) => {
   await page.getByTestId("signin-email").fill(user.email);
   await page.getByTestId("signin-password").fill(user.password);
@@ -143,8 +122,8 @@ const createTransientUserViaUi = async (
   await emailInput.fill(user.email);
   await passwordInput.fill(user.password);
   const submitButton = page.getByRole("button", { name: "Cadastrar" });
-  const registerResponse = page.waitForResponse(async (response) => {
-    return isGraphqlFieldResponse(response, "register");
+  const registerResponse = page.waitForResponse((response) => {
+    return isGraphqlOperationResponse(response, "Register");
   });
 
   await expect(submitButton).toBeEnabled({ timeout: 15_000 });
