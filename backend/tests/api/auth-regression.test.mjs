@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 if (!process.env.DATABASE_URL) {
   const envExample = await readFile(new URL("../../../.env.example", import.meta.url), "utf8");
@@ -460,6 +461,25 @@ const run = async () => {
   ensureStatus(missingUser.httpStatus, [200, 401], "Login with nonexistent user");
   ensure(missingUser.errors.length > 0, "Login with nonexistent user must return error");
   ensureHasErrorMessage(missingUser.errors, "invalid credentials");
+
+  const legacyPassword = "123456";
+  const legacyEmail = `legacy-${user.email}`;
+  await prisma.user.create({
+    data: {
+      name: "Legacy Password User",
+      email: legacyEmail,
+      password: await bcrypt.hash(legacyPassword, 10),
+    },
+  });
+  const legacyLogin = await request(loginMutation, undefined, {
+    input: { email: legacyEmail, password: legacyPassword },
+  });
+  ensure(legacyLogin.httpStatus === 200, "Legacy short password login should return HTTP 200");
+  ensure(
+    legacyLogin.errors.length === 0,
+    `Legacy short password login should not return errors: ${JSON.stringify(legacyLogin.errors)}`,
+  );
+  ensure(legacyLogin.data?.login?.token, "Legacy short password login should include token");
 
   const wrongPassword = await request(loginMutation, undefined, {
     input: { email: user.email, password: "wrong-password" },

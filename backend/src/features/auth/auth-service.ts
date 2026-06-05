@@ -77,10 +77,6 @@ export class AuthService {
     if (!normalizedPassword.length) {
       throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
-    if (normalizedPassword.length < MIN_PASSWORD_LENGTH) {
-      throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
-    }
-
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
       throw new AppError("Invalid credentials", 401, "AUTH_INVALID_CREDENTIALS");
