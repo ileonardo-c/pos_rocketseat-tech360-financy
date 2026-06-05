@@ -66,6 +66,8 @@ type TransactionInput = {
   categoryId: string;
 };
 
+type TransactionUpdateInput = Omit<TransactionInput, "description">;
+
 const emptyForm: TransactionForm = {
   description: "",
   date: "",
@@ -150,7 +152,7 @@ type TransactionFormProps = {
   creating: boolean;
   updating: boolean;
   onCreate: (input: TransactionInput) => Promise<void>;
-  onUpdate: (input: TransactionInput, id: string) => Promise<void>;
+  onUpdate: (input: TransactionUpdateInput, id: string) => Promise<void>;
   onSave: (mode: "create" | "edit") => void | Promise<void>;
   onClose: () => void;
 };
@@ -237,7 +239,6 @@ const TransactionForm = ({
             await onUpdate(
               {
                 title: form.description.trim(),
-                description: null,
                 amount,
                 type: transactionType,
                 date: form.date,

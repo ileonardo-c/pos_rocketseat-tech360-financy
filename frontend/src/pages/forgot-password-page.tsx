@@ -68,11 +68,11 @@ export const ForgotPasswordPage = () => {
       : `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
   };
 
-  const getConfirmPasswordError = (value: string) => {
+  const getConfirmPasswordError = (value: string, passwordValue: string) => {
     if (!value.trim()) {
       return "Confirme a nova senha.";
     }
-    return value === newPassword ? "" : "As senhas não coincidem.";
+    return value === passwordValue ? "" : "As senhas não coincidem.";
   };
 
   const emailError = useMemo(
@@ -85,8 +85,8 @@ export const ForgotPasswordPage = () => {
     [newPassword, touched.newPassword],
   );
   const confirmPasswordError = useMemo(
-    () => (touched.confirmPassword ? getConfirmPasswordError(confirmPassword) : ""),
-    [confirmPassword, touched.confirmPassword],
+    () => (touched.confirmPassword ? getConfirmPasswordError(confirmPassword, newPassword) : ""),
+    [confirmPassword, newPassword, touched.confirmPassword],
   );
 
   const emailState = emailError
@@ -165,8 +165,13 @@ export const ForgotPasswordPage = () => {
     event.preventDefault();
     setTouched({ email: true, code: true, newPassword: true, confirmPassword: true });
 
+    const submitCodeError = getCodeError(code);
+    const submitPasswordError = getPasswordError(newPassword);
+    const submitConfirmPasswordError = getConfirmPasswordError(confirmPassword, newPassword);
     const hasValidationError =
-      Boolean(codeError) || Boolean(newPasswordError) || Boolean(confirmPasswordError);
+      Boolean(submitCodeError) ||
+      Boolean(submitPasswordError) ||
+      Boolean(submitConfirmPasswordError);
     if (hasValidationError) {
       return;
     }
