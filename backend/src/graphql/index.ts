@@ -126,299 +126,299 @@ export const typeDefs = `
   }
 
   """
-  Dados necessários para criar uma nova conta.
+  Data required to create a new account.
   """
   input RegisterInput {
     """
-    Nome completo exibido no perfil.
+    Full name displayed in the profile.
     """
     name: String!
     """
-    E-mail único usado para autenticação.
+    Unique email address used for authentication.
     """
     email: String!
     """
-    Senha de acesso da conta.
+    Account password.
     """
     password: String!
   }
 
   """
-  Credenciais para iniciar sessão.
+  Credentials used to sign in.
   """
   input LoginInput {
     """
-    E-mail cadastrado na conta.
+    Email address registered for the account.
     """
     email: String!
     """
-    Senha da conta.
+    Account password.
     """
     password: String!
     """
-    Persistir sessão no navegador.
+    Persist the session in the browser.
     """
     rememberMe: Boolean
   }
 
   """
-  Dados para solicitar código de recuperação de senha.
+  Data used to request a password reset code.
   """
   input RequestPasswordResetInput {
     """
-    E-mail da conta que receberá o código OTP.
+    Account email address that will receive the OTP code.
     """
     email: String!
   }
 
   """
-  Dados para confirmar a recuperação e definir nova senha.
+  Data used to confirm recovery and set a new password.
   """
   input ResetPasswordInput {
     """
-    E-mail da conta em recuperação.
+    Email address of the account being recovered.
     """
     email: String!
     """
-    Código OTP recebido por e-mail.
+    OTP code received by email.
     """
     code: String!
     """
-    Nova senha que substituirá a senha atual.
+    New password that will replace the current password.
     """
     newPassword: String!
   }
 
   """
-  Campos permitidos para atualização de perfil.
+  Fields allowed for profile updates.
   """
   input UpdateProfileInput {
     """
-    Novo nome completo do usuário.
+    New full name for the user.
     """
     name: String
     """
-    E-mail do usuário (somente leitura nesta API).
+    User email address (read-only in this API).
     """
     email: String
   }
 
   """
-  Chave do arquivo de avatar já enviado ao storage.
+  Key of the avatar file already uploaded to storage.
   """
   input UpdateProfileAvatarInput {
     """
-    Chave final do objeto no bucket (ex.: users/{userId}/...).
+    Final object key in the bucket (for example, users/{userId}/...).
     """
     avatarKey: String!
   }
 
   """
-  Dados para criar uma categoria.
+  Data used to create a category.
   """
   input CreateCategoryInput {
     """
-    Nome da categoria.
+    Category name.
     """
     name: String!
     """
-    Descrição opcional da categoria.
+    Optional category description.
     """
     description: String
     """
-    Identificador do ícone da categoria.
+    Category icon identifier.
     """
     icon: String
     """
-    Cor da categoria (token ou valor suportado pela aplicação).
+    Category color (token or value supported by the application).
     """
     color: String
   }
 
   """
-  Dados para atualizar uma categoria existente.
+  Data used to update an existing category.
   """
   input UpdateCategoryInput {
     """
-    Novo nome da categoria.
+    New category name.
     """
     name: String
     """
-    Nova descrição da categoria.
+    New category description.
     """
     description: String
     """
-    Novo identificador de ícone.
+    New icon identifier.
     """
     icon: String
     """
-    Nova cor da categoria.
+    New category color.
     """
     color: String
   }
 
   """
-  Dados para criar uma transação.
+  Data used to create a transaction.
   """
   input CreateTransactionInput {
     """
-    Título curto da transação.
+    Short transaction title.
     """
     title: String!
     """
-    Descrição detalhada opcional.
+    Optional detailed description.
     """
     description: String
     """
-    Valor monetário da transação.
+    Transaction amount.
     """
     amount: Float!
     """
-    Tipo da transação (ex.: INCOME ou EXPENSE).
+    Transaction type (for example, INCOME or EXPENSE).
     """
     type: String!
     """
-    Data da transação no formato ISO.
+    Transaction date in ISO format.
     """
     date: String!
     """
-    Identificador da categoria vinculada.
+    Identifier of the linked category.
     """
     categoryId: String!
     """
-    Chave do comprovante no storage (quando houver).
+    Receipt key in storage, when available.
     """
     receiptKey: String
     """
-    URL pública do comprovante (quando houver).
+    Public receipt URL, when available.
     """
     receiptUrl: String
   }
 
   """
-  Dados para atualização parcial de uma transação.
+  Data used for partial transaction updates.
   """
   input UpdateTransactionInput {
     """
-    Novo título da transação.
+    New transaction title.
     """
     title: String
     """
-    Nova descrição da transação.
+    New transaction description.
     """
     description: String
     """
-    Novo valor da transação.
+    New transaction amount.
     """
     amount: Float
     """
-    Novo tipo da transação.
+    New transaction type.
     """
     type: String
     """
-    Nova data da transação no formato ISO.
+    New transaction date in ISO format.
     """
     date: String
     """
-    Nova categoria vinculada.
+    New linked category.
     """
     categoryId: String
     """
-    Nova chave de comprovante no storage.
+    New receipt key in storage.
     """
     receiptKey: String
     """
-    Nova URL pública de comprovante.
+    New public receipt URL.
     """
     receiptUrl: String
   }
 
   """
-  Dados para solicitar URL assinada de upload de comprovante.
+  Data used to request a signed receipt upload URL.
   """
   input UploadInput {
     """
-    Nome original do arquivo.
+    Original file name.
     """
     fileName: String!
     """
-    MIME type do comprovante (PDF, JPEG, PNG ou WebP).
+    Receipt MIME type (PDF, JPEG, PNG, or WebP).
     """
     contentType: String!
     """
-    Tamanho do arquivo em bytes.
+    File size in bytes.
     """
     sizeBytes: Int!
   }
 
   """
-  Dados para solicitar upload de foto de perfil.
+  Data used to request a profile photo upload.
   """
   input ProfileAvatarUploadInput {
     """
-    Nome original do arquivo de avatar.
+    Original avatar file name.
     """
     fileName: String!
     """
-    MIME type do avatar.
+    Avatar MIME type.
     """
     contentType: String!
     """
-    Tamanho do arquivo em bytes.
+    File size in bytes.
     """
     sizeBytes: Int!
   }
 
   """
-  Filtro temporal usado em resumos e gráficos.
+  Date range filter used in summaries and charts.
   """
   input TransactionSummaryFilterInput {
     """
-    Data inicial do período (YYYY-MM-DD).
+    Start date of the period (YYYY-MM-DD).
     """
     from: String
     """
-    Data final do período (YYYY-MM-DD).
+    End date of the period (YYYY-MM-DD).
     """
     to: String
   }
 
   """
-  Filtro de listagem de transações.
+  Filter used for transaction listings.
   """
   input TransactionListFilterInput {
     """
-    Termo textual para busca por título/descrição.
+    Text term used to search by title or description.
     """
     query: String
     """
-    Tipo da transação para filtro.
+    Transaction type filter.
     """
     type: String
     """
-    Categoria específica para filtro.
+    Specific category filter.
     """
     categoryId: ID
     """
-    Data inicial do período (YYYY-MM-DD).
+    Start date of the period (YYYY-MM-DD).
     """
     from: String
     """
-    Data final do período (YYYY-MM-DD).
+    End date of the period (YYYY-MM-DD).
     """
     to: String
   }
 
   """
-  Configuração de ordenação da listagem de transações.
+  Sort configuration for transaction listings.
   """
   input TransactionSortInput {
     """
-    Campo usado para ordenar os resultados.
+    Field used to sort the results.
     """
     field: TransactionSortField = DATE
     """
-    Direção da ordenação.
+    Sort direction.
     """
     direction: SortDirection = DESC
   }
@@ -431,35 +431,35 @@ export const typeDefs = `
   }
 
   """
-  Operações de leitura da API.
+  Read operations exposed by the API.
   """
   type Query {
     """
-    Retorna o usuário autenticado na sessão atual.
+    Returns the authenticated user for the current session.
     """
     me: User
     """
-    Lista todas as categorias do usuário autenticado.
+    Lists all categories for the authenticated user.
     """
     categories: [Category!]!
     """
-    Lista categorias com paginação.
+    Lists categories with pagination.
     """
     categoriesList(page: Int = 1, perPage: Int = 8): [Category!]!
     """
-    Retorna a quantidade total de categorias do usuário.
+    Returns the total number of categories for the user.
     """
     categoriesCount: Int!
     """
-    Retorna métricas consolidadas de categorias.
+    Returns consolidated category metrics.
     """
     categoriesOverview: CategoriesOverview!
     """
-    Resolve o período inicial de transações com regra backend-first.
+    Resolves the initial transaction period using backend-first rules.
     """
     transactionsInitialPeriod: TransactionsInitialPeriod!
     """
-    Lista transações com filtros, ordenação e paginação.
+    Lists transactions with filters, sorting, and pagination.
     """
     transactions(
       filter: TransactionListFilterInput
@@ -468,29 +468,29 @@ export const typeDefs = `
       perPage: Int = 10
     ): [Transaction!]!
     """
-    Retorna a contagem total de transações no filtro informado.
+    Returns the total transaction count for the provided filter.
     """
     transactionsCount(filter: TransactionListFilterInput): Int!
     """
-    Lista as transações mais recentes para o dashboard.
+    Lists the most recent transactions for the dashboard.
     """
     dashboardRecentTransactions(
       filter: TransactionSummaryFilterInput
       limit: Int = 5
     ): [Transaction!]!
     """
-    Retorna resumo consolidado de receitas, despesas e saldo.
+    Returns a consolidated summary of income, expenses, and balance.
     """
     transactionSummary(filter: TransactionSummaryFilterInput): TransactionSummary!
     """
-    Retorna resumo agrupado por categoria.
+    Returns a summary grouped by category.
     """
     transactionCategorySummary(
       filter: TransactionSummaryFilterInput
       limit: Int
     ): [TransactionCategorySummary!]!
     """
-    Retorna série temporal de evolução das transações.
+    Returns a time series of transaction evolution.
     """
     transactionTimeline(
       filter: TransactionSummaryFilterInput
@@ -499,71 +499,71 @@ export const typeDefs = `
   }
 
   """
-  Operações de escrita da API.
+  Write operations exposed by the API.
   """
   type Mutation {
     """
-    Cria uma nova conta de usuário.
+    Creates a new user account.
     """
     register(input: RegisterInput!): RegisterPayload!
     """
-    Autentica usuário e retorna token de sessão.
+    Authenticates a user and returns a session token.
     """
     login(input: LoginInput!): AuthPayload!
     """
-    Encerra sessão atual removendo cookie de autenticação.
+    Ends the current session by removing the authentication cookie.
     """
     logout: Boolean!
     """
-    Atualiza dados permitidos do perfil do usuário.
+    Updates allowed profile data for the user.
     """
     updateProfile(input: UpdateProfileInput!): User!
     """
-    Solicita URL assinada para upload de avatar.
+    Requests a signed URL for avatar upload.
     """
     requestProfileAvatarUploadUrl(input: ProfileAvatarUploadInput!): UploadPayload!
     """
-    Confirma e salva o avatar enviado.
+    Confirms and saves the uploaded avatar.
     """
     updateProfileAvatar(input: UpdateProfileAvatarInput!): User!
     """
-    Remove a foto de perfil atual.
+    Removes the current profile photo.
     """
     removeProfileAvatar: User!
     """
-    Solicita código OTP para recuperação de senha.
+    Requests an OTP code for password recovery.
     """
     requestPasswordReset(input: RequestPasswordResetInput!): Boolean!
     """
-    Valida OTP e redefine a senha da conta.
+    Validates the OTP and resets the account password.
     """
     resetPassword(input: ResetPasswordInput!): Boolean!
     """
-    Cria uma nova categoria.
+    Creates a new category.
     """
     createCategory(input: CreateCategoryInput!): Category!
     """
-    Atualiza uma categoria existente.
+    Updates an existing category.
     """
     updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
     """
-    Exclui uma categoria pelo identificador.
+    Deletes a category by identifier.
     """
     deleteCategory(id: ID!): Boolean!
     """
-    Cria uma nova transação.
+    Creates a new transaction.
     """
     createTransaction(input: CreateTransactionInput!): Transaction!
     """
-    Atualiza uma transação existente.
+    Updates an existing transaction.
     """
     updateTransaction(id: ID!, input: UpdateTransactionInput!): Transaction!
     """
-    Exclui uma transação pelo identificador.
+    Deletes a transaction by identifier.
     """
     deleteTransaction(id: ID!): Boolean!
     """
-    Solicita URL assinada para upload de comprovante.
+    Requests a signed URL for receipt upload.
     """
     requestUploadUrl(input: UploadInput!): UploadPayload!
   }
