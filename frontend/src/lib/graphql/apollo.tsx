@@ -90,9 +90,10 @@ const emitSessionExpired = () => {
 const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   const operationName = operation.operationName ?? "";
   const isPublicAuthOperation = PUBLIC_AUTH_OPERATIONS.has(operationName);
+  const isSessionHydrationOperation = operationName === "Me";
 
   if (graphQLErrors?.some((error) => isAuthenticationGraphQLError(error))) {
-    if (isPublicAuthOperation) {
+    if (isPublicAuthOperation || isSessionHydrationOperation) {
       return;
     }
     emitSessionExpired();
@@ -103,7 +104,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
     "statusCode" in (networkError ?? {})
       ? Number((networkError as { statusCode?: number }).statusCode)
       : undefined;
-  if (statusCode === 401 && !isPublicAuthOperation) {
+  if (statusCode === 401 && !isPublicAuthOperation && !isSessionHydrationOperation) {
     emitSessionExpired();
     return;
   }

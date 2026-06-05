@@ -141,7 +141,7 @@ export class PasswordResetService {
         where: { id: user.id },
         data: { password: hashedPassword },
       });
-      await transactionRepository.markPasswordResetCodeAsUsed(codeRecord.id);
+      await transactionRepository.markActivePasswordResetCodesAsUsed(user.id, email);
     });
 
     return true;

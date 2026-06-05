@@ -89,6 +89,19 @@ export class AuthRepository {
     });
   }
 
+  markActivePasswordResetCodesAsUsed(userId: string, email: string) {
+    return this.prisma.passwordResetCode.updateMany({
+      where: {
+        userId,
+        email,
+        usedAt: null,
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+  }
+
   markOlderPasswordResetCodesAsUsed(userId: string, before: Date) {
     return this.prisma.passwordResetCode.updateMany({
       where: {

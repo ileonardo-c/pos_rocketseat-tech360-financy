@@ -1,5 +1,25 @@
+import { createHmac } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { PrismaClient } from "@prisma/client";
+
+if (!process.env.DATABASE_URL) {
+  const envExample = await readFile(new URL("../../../.env.example", import.meta.url), "utf8");
+  const databaseUrlLine = envExample
+    .split(/\r?\n/)
+    .find((line) => line.trim().startsWith("DATABASE_URL="));
+  const databaseUrl = databaseUrlLine
+    ?.slice("DATABASE_URL=".length)
+    .trim()
+    .replace("@localhost:", "@127.0.0.1:");
+  if (databaseUrl) {
+    process.env.DATABASE_URL = databaseUrl;
+  }
+}
+
 const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
 const textEncoder = new TextEncoder();
+const resetCodePepper = process.env.RESET_CODE_PEPPER ?? "financy-reset-pepper";
+const prisma = new PrismaClient();
 
 const toBase64Url = (value) => Buffer.from(value).toString("base64url");
 
@@ -126,6 +146,12 @@ const requestPasswordResetMutation = `
   }
 `;
 
+const resetPasswordMutation = `
+  mutation ResetPassword($input: ResetPasswordInput!) {
+    resetPassword(input: $input)
+  }
+`;
+
 const meQuery = `
   query Me {
     me { id email }
@@ -183,6 +209,25 @@ const createCategoryWithMisleadingOperationNameMutation = `
     }
   }
 `;
+
+const hashResetCode = (code) => {
+  return createHmac("sha256", resetCodePepper).update(code).digest("hex");
+};
+
+const createPasswordResetCode = async ({ userId, email, code, createdAt }) => {
+  return prisma.passwordResetCode.create({
+    data: {
+      userId,
+      email,
+      codeHash: hashResetCode(code),
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+      maxAttempts: 5,
+      requestedIp: "127.0.0.1",
+      userAgent: "auth-regression",
+      createdAt,
+    },
+  });
+};
 
 const run = async () => {
   const user = buildRandomInput();
@@ -318,15 +363,87 @@ const run = async () => {
     "Missing user password reset request should return generic success",
   );
 
+  await prisma.passwordResetCode.deleteMany({ where: { userId } });
+  const olderResetCode = "111111";
+  const newerResetCode = "222222";
+  await createPasswordResetCode({
+    userId,
+    email: user.email,
+    code: olderResetCode,
+    createdAt: new Date(Date.now() - 2 * 60 * 1000),
+  });
+  await createPasswordResetCode({
+    userId,
+    email: user.email,
+    code: newerResetCode,
+    createdAt: new Date(Date.now() - 60 * 1000),
+  });
+
+  const firstResetPassword = "ResetPass123!";
+  const secondResetPassword = "SecondReset123!";
+  const resetPasswordResult = await request(resetPasswordMutation, undefined, {
+    input: {
+      email: user.email,
+      code: newerResetCode,
+      newPassword: firstResetPassword,
+    },
+  });
+  ensure(resetPasswordResult.httpStatus === 200, "Password reset should return HTTP 200");
+  ensure(
+    resetPasswordResult.errors.length === 0,
+    `Password reset should not return errors: ${JSON.stringify(resetPasswordResult.errors)}`,
+  );
+  ensure(resetPasswordResult.data?.resetPassword === true, "Password reset should return success");
+
+  const activeResetCodesAfterReset = await prisma.passwordResetCode.count({
+    where: {
+      userId,
+      email: user.email,
+      usedAt: null,
+      expiresAt: {
+        gte: new Date(),
+      },
+    },
+  });
+  ensure(activeResetCodesAfterReset === 0, "Password reset must invalidate all active codes");
+
+  const staleResetPasswordResult = await request(resetPasswordMutation, undefined, {
+    input: {
+      email: user.email,
+      code: olderResetCode,
+      newPassword: secondResetPassword,
+    },
+  });
+  ensureStatus(staleResetPasswordResult.httpStatus, [200, 422], "Stale reset code reuse");
+  ensure(staleResetPasswordResult.errors.length > 0, "Stale reset code must return error");
+  ensureHasErrorCode(staleResetPasswordResult.errors, "PASSWORD_RESET_CODE_INVALID");
+
+  const firstResetLogin = await request(loginMutation, undefined, {
+    input: { email: user.email, password: firstResetPassword },
+  });
+  ensure(firstResetLogin.httpStatus === 200, "Reset credentials should authenticate");
+  ensure(
+    firstResetLogin.errors.length === 0,
+    `Reset credentials authentication failed: ${JSON.stringify(firstResetLogin.errors)}`,
+  );
+  ensure(firstResetLogin.data?.login?.token, "Reset credentials login should include token");
+
+  const secondResetLogin = await request(loginMutation, undefined, {
+    input: { email: user.email, password: secondResetPassword },
+  });
+  ensureStatus(secondResetLogin.httpStatus, [200, 401], "Rejected stale reset credentials");
+  ensure(secondResetLogin.errors.length > 0, "Rejected stale reset credentials must return error");
+  ensureHasErrorMessage(secondResetLogin.errors, "invalid credentials");
+
   const confirmOriginalLogin = await request(loginMutation, undefined, {
     input: { email: user.email, password: user.password },
   });
-  ensure(confirmOriginalLogin.httpStatus === 200, "Original credentials must still authenticate");
+  ensureStatus(confirmOriginalLogin.httpStatus, [200, 401], "Original credentials after reset");
   ensure(
-    confirmOriginalLogin.errors.length === 0,
-    `Original credentials authentication failed after duplicate attempt: ${JSON.stringify(confirmOriginalLogin.errors)}`,
+    confirmOriginalLogin.errors.length > 0,
+    "Original credentials must stop authenticating after password reset",
   );
-  ensure(confirmOriginalLogin.data?.login?.token, "Login response should include token");
+  ensureHasErrorMessage(confirmOriginalLogin.errors, "invalid credentials");
 
   const invalidRegister = await request(registerMutation, undefined, {
     input: { name: "a", email: "invalid-email", password: "123" },
@@ -423,7 +540,7 @@ const run = async () => {
   }
 
   const loginData = await request(loginMutation, undefined, {
-    input: { email: user.email, password: user.password },
+    input: { email: user.email, password: firstResetPassword },
   });
   ensure(loginData.httpStatus === 200, "Login request should return HTTP 200");
   ensure(
@@ -517,7 +634,11 @@ const run = async () => {
   console.log("auth-regression: all scenarios passed");
 };
 
-run().catch((error) => {
-  console.error(`auth-regression failed: ${error.message}`);
-  process.exit(1);
-});
+run()
+  .catch((error) => {
+    console.error(`auth-regression failed: ${error.message}`);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

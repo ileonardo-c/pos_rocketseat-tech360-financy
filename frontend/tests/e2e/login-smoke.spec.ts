@@ -216,6 +216,22 @@ test("@smoke-login fluxo de cadastro funcional com usuário transitório", async
   await waitForAuthenticatedDashboard(page);
 });
 
+test("@smoke-login rotas públicas permanecem acessíveis sem sessão", async ({ page }) => {
+  await clearClientState(page);
+
+  await page.goto(`${APP_URL}/signup`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/signup/);
+  await expect(page.getByRole("heading", { name: "Criar conta" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.goto(`${APP_URL}/forgot-password`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/forgot-password/);
+  await expect(page.getByRole("heading", { name: "Recuperar senha" })).toBeVisible({
+    timeout: 15_000,
+  });
+});
+
 test("@smoke-login sessão inválida em /categories redireciona para /login sem banner", async ({
   page,
 }) => {
