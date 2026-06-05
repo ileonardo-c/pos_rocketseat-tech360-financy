@@ -11,19 +11,11 @@ concurrency:
 
 jobs:
   docker-verification:
-    name: Verify ${{ matrix.target }}
+    name: Verify Docker suite
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - backend-api-contract
-          - backend-auth-regression
-          - e2e-smoke-contract
-          - e2e-journey-preview
     env:
-      PROJECT_NAME: financy-ci-${{ matrix.target }}
+      PROJECT_NAME: financy-ci-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,10 +24,19 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Clean previous CI compose stack
-        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v --remove-orphans
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v --remove-orphans
 
       - name: Build and start CI compose stack
-        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml up -d --build --wait --wait-timeout 120
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml up -d --build --wait --wait-timeout 120
+
+      - name: Build E2E runner image
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e build e2e
 
       - name: Wait for backend
         run: |
@@ -51,7 +52,6 @@ jobs:
           exit 1
 
       - name: Wait for frontend
-        if: startsWith(matrix.target, 'e2e-')
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
@@ -71,72 +71,142 @@ jobs:
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
 
       - name: Validate application builds
-        if: startsWith(matrix.target, 'backend-')
         run: |
           set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend build"
+          backend_log="$(mktemp)"
+          frontend_log="$(mktemp)"
+          status=0
 
-      - name: Validate frontend build
-        if: startsWith(matrix.target, 'e2e-')
-        run: |
-          set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --filter @financy/frontend build"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend build" >"${backend_log}" 2>&1 &
+          backend_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --filter @financy/frontend build" >"${frontend_log}" 2>&1 &
+          frontend_pid="$!"
 
-      - name: Run verification target
-        id: run_target
-        run: |
-          set -euo pipefail
-          TARGET="${{ matrix.target }}"
-          if [[ "$TARGET" == "backend-api-contract" ]]; then
-            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend test:api-contract"
-            exit 0
+          if ! wait "${backend_pid}"; then
+            status=1
           fi
-          if [[ "$TARGET" == "backend-auth-regression" ]]; then
-            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql pnpm --filter @financy/backend test:auth-regression"
-            exit 0
-          fi
-          if [[ "$TARGET" == "e2e-smoke-contract" ]]; then
-            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --name "${PROJECT_NAME}-e2e" e2e sh -lc "pnpm test:e2e:smoke-contract"
-            exit 0
-          fi
-          if [[ "$TARGET" == "e2e-journey-preview" ]]; then
-            docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --name "${PROJECT_NAME}-e2e" e2e sh -lc "pnpm e2e:journey"
-            exit 0
-          fi
-          echo "Unsupported target: $TARGET"
-          exit 1
+          echo "Backend build output"
+          cat "${backend_log}"
 
-      - name: Collect E2E artifacts from container
-        if: startsWith(matrix.target, 'e2e-') && always()
+          if ! wait "${frontend_pid}"; then
+            status=1
+          fi
+          echo "Frontend build output"
+          cat "${frontend_log}"
+
+          exit "${status}"
+
+      - name: Verify backend contracts
+        id: backend_contracts
+        continue-on-error: true
         run: |
           set -euo pipefail
-          mkdir -p "frontend/.artifacts/${{ matrix.target }}"
+          api_log="$(mktemp)"
+          auth_log="$(mktemp)"
+          status=0
+
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend test:api-contract" >"${api_log}" 2>&1 &
+          api_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql pnpm --filter @financy/backend test:auth-regression" >"${auth_log}" 2>&1 &
+          auth_pid="$!"
+
+          if ! wait "${api_pid}"; then
+            status=1
+          fi
+          echo "Backend API contract output"
+          cat "${api_log}"
+
+          if ! wait "${auth_pid}"; then
+            status=1
+          fi
+          echo "Backend auth regression output"
+          cat "${auth_log}"
+
+          exit "${status}"
+
+      - name: Verify e2e smoke-contract
+        id: e2e_smoke_contract
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "pnpm test:e2e:smoke-contract"
+
+      - name: Collect e2e smoke-contract artifacts
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "frontend/.artifacts/e2e-smoke-contract"
           if [ -d "frontend/playwright-report" ]; then
-            rm -rf "frontend/.artifacts/${{ matrix.target }}/playwright-report"
-            cp -R "frontend/playwright-report" "frontend/.artifacts/${{ matrix.target }}/playwright-report"
+            rm -rf "frontend/.artifacts/e2e-smoke-contract/playwright-report"
+            cp -R "frontend/playwright-report" "frontend/.artifacts/e2e-smoke-contract/playwright-report"
           fi
           if [ -d "frontend/test-results" ]; then
-            rm -rf "frontend/.artifacts/${{ matrix.target }}/test-results"
-            cp -R "frontend/test-results" "frontend/.artifacts/${{ matrix.target }}/test-results"
+            rm -rf "frontend/.artifacts/e2e-smoke-contract/test-results"
+            cp -R "frontend/test-results" "frontend/.artifacts/e2e-smoke-contract/test-results"
+          fi
+
+      - name: Verify e2e journey-preview
+        id: e2e_journey_preview
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "pnpm e2e:journey"
+
+      - name: Collect e2e journey-preview artifacts
+        if: always()
+        run: |
+          set -euo pipefail
+          mkdir -p "frontend/.artifacts/e2e-journey-preview"
+          if [ -d "frontend/playwright-report" ]; then
+            rm -rf "frontend/.artifacts/e2e-journey-preview/playwright-report"
+            cp -R "frontend/playwright-report" "frontend/.artifacts/e2e-journey-preview/playwright-report"
+          fi
+          if [ -d "frontend/test-results" ]; then
+            rm -rf "frontend/.artifacts/e2e-journey-preview/test-results"
+            cp -R "frontend/test-results" "frontend/.artifacts/e2e-journey-preview/test-results"
           fi
 
       - name: Upload E2E artifacts
-        if: startsWith(matrix.target, 'e2e-') && always()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-artifacts-${{ matrix.target }}
-          path: frontend/.artifacts/${{ matrix.target }}
+          name: e2e-artifacts
+          path: frontend/.artifacts
           if-no-files-found: ignore
+
+      - name: Fail on verification errors
+        if: always()
+        run: |
+          set -euo pipefail
+          status=0
+          if [ "${{ steps.backend_contracts.outcome }}" != "success" ]; then
+            echo "Backend contract verification failed"
+            status=1
+          fi
+          if [ "${{ steps.e2e_smoke_contract.outcome }}" != "success" ]; then
+            echo "E2E smoke-contract verification failed"
+            status=1
+          fi
+          if [ "${{ steps.e2e_journey_preview.outcome }}" != "success" ]; then
+            echo "E2E journey-preview verification failed"
+            status=1
+          fi
+          exit "${status}"
 
       - name: Show compose status
         if: always()
-        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml ps
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml ps
 
       - name: Show compose logs
-        if: failure()
+        if: always() && (steps.backend_contracts.outcome != 'success' || steps.e2e_smoke_contract.outcome != 'success' || steps.e2e_journey_preview.outcome != 'success')
         run: |
+          set -euo pipefail
           docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml logs --no-color backend frontend postgres minio minio-init mailpit
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v
