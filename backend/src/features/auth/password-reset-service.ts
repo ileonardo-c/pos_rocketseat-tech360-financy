@@ -79,7 +79,7 @@ export class PasswordResetService {
       requestCooldownWindowStart,
     );
     if (recentRequestCount > 0) {
-      throw new AppError("Too many reset requests", 429, "PASSWORD_RESET_REQUEST_COOLDOWN");
+      return true;
     }
 
     const payload = this.createPayload({

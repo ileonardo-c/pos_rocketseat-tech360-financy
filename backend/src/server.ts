@@ -24,7 +24,7 @@ const rateLimitDefaults = {
     windowMs: 60_000,
   },
   auth: {
-    maxRequests: 12,
+    maxRequests: 30,
     windowMs: 60_000,
   },
 };
@@ -132,12 +132,218 @@ const getCsrfTokenHeader = (headers: Record<string, string | string[] | undefine
   return getHeaderValue(headers?.["x-csrf-token"]);
 };
 
-const isStateChangingOperation = (operationType: string, operationName: string) => {
-  if (operationType !== "mutation") {
+const UNKNOWN_PROTECTED_MUTATION_FIELD = "__unknown_protected_mutation__";
+const publicAuthMutationFields = new Set([
+  "login",
+  "register",
+  "requestPasswordReset",
+  "resetPassword",
+]);
+
+const isPublicAuthMutationField = (fieldName: string) => {
+  return publicAuthMutationFields.has(fieldName);
+};
+
+const stripGraphQLNoise = (query: string) => {
+  return query
+    .replace(/"""[\s\S]*?"""/g, '""')
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/#[^\r\n]*/g, "");
+};
+
+const findMatchingBraceIndex = (source: string, openBraceIndex: number) => {
+  let depth = 0;
+
+  for (let index = openBraceIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+};
+
+const findMutationSelectionSet = (query: string, operationName: string) => {
+  const sanitizedQuery = stripGraphQLNoise(query);
+  const mutationPattern = /\bmutation(?:\s+([A-Za-z_][\w]*))?[^{}]*\{/g;
+  let fallbackSelectionSet = "";
+
+  for (const match of sanitizedQuery.matchAll(mutationPattern)) {
+    const mutationName = match[1] ?? "";
+    const openBraceIndex = (match.index ?? 0) + match[0].lastIndexOf("{");
+    const closeBraceIndex = findMatchingBraceIndex(sanitizedQuery, openBraceIndex);
+    if (closeBraceIndex < 0) {
+      return "";
+    }
+
+    const selectionSet = sanitizedQuery.slice(openBraceIndex + 1, closeBraceIndex);
+    if (!fallbackSelectionSet) {
+      fallbackSelectionSet = selectionSet;
+    }
+    if (operationName && mutationName === operationName) {
+      return selectionSet;
+    }
+  }
+
+  return operationName ? "" : fallbackSelectionSet;
+};
+
+const skipBalancedGroup = (source: string, startIndex: number, open: string, close: string) => {
+  let depth = 0;
+
+  for (let index = startIndex; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === open) {
+      depth += 1;
+    } else if (char === close) {
+      depth -= 1;
+      if (depth === 0) {
+        return index + 1;
+      }
+    }
+  }
+
+  return source.length;
+};
+
+const readGraphQLName = (source: string, startIndex: number) => {
+  const match = /[A-Za-z_][\w]*/.exec(source.slice(startIndex));
+  if (!match || match.index !== 0) {
+    return { name: "", nextIndex: startIndex };
+  }
+
+  return {
+    name: match[0],
+    nextIndex: startIndex + match[0].length,
+  };
+};
+
+const extractTopLevelFieldNames = (selectionSet: string) => {
+  const fieldNames: string[] = [];
+  let depth = 0;
+  let index = 0;
+
+  while (index < selectionSet.length) {
+    const char = selectionSet[index];
+
+    if (char === "." && selectionSet.slice(index, index + 3) === "...") {
+      index += 3;
+      while (index < selectionSet.length && /[^\s{]/.test(selectionSet[index] ?? "")) {
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === "{") {
+      depth += 1;
+      index += 1;
+      continue;
+    }
+
+    if (char === "}") {
+      depth = Math.max(depth - 1, 0);
+      index += 1;
+      continue;
+    }
+
+    if (depth !== 0 || !/[A-Za-z_]/.test(char)) {
+      index += 1;
+      continue;
+    }
+
+    const firstName = readGraphQLName(selectionSet, index);
+    if (!firstName.name) {
+      index += 1;
+      continue;
+    }
+
+    let cursor = firstName.nextIndex;
+    while (/\s/.test(selectionSet[cursor] ?? "")) {
+      cursor += 1;
+    }
+
+    let fieldName = firstName.name;
+    if (selectionSet[cursor] === ":") {
+      cursor += 1;
+      while (/\s/.test(selectionSet[cursor] ?? "")) {
+        cursor += 1;
+      }
+      const aliasedName = readGraphQLName(selectionSet, cursor);
+      fieldName = aliasedName.name;
+      cursor = aliasedName.nextIndex;
+    }
+
+    if (fieldName) {
+      fieldNames.push(fieldName);
+    }
+
+    while (cursor < selectionSet.length) {
+      const current = selectionSet[cursor];
+      if (current === "(") {
+        cursor = skipBalancedGroup(selectionSet, cursor, "(", ")");
+        continue;
+      }
+      if (current === "{") {
+        cursor = skipBalancedGroup(selectionSet, cursor, "{", "}");
+        break;
+      }
+      if (current === "\n" || current === "}") {
+        break;
+      }
+      if (/[A-Za-z_]/.test(current ?? "")) {
+        break;
+      }
+      cursor += 1;
+    }
+
+    index = cursor;
+  }
+
+  return fieldNames;
+};
+
+const extractGraphQLMutationFieldNames = (rawBody: unknown) => {
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    return [];
+  }
+
+  const body = rawBody as { operationName?: unknown; query?: unknown };
+  if (typeof body.query !== "string") {
+    return [];
+  }
+
+  const operationName =
+    typeof body.operationName === "string" && body.operationName.trim().length > 0
+      ? body.operationName.trim()
+      : "";
+  const selectionSet = findMutationSelectionSet(body.query, operationName);
+
+  if (!selectionSet) {
+    return extractGraphQLOperationType(rawBody) === "mutation"
+      ? [UNKNOWN_PROTECTED_MUTATION_FIELD]
+      : [];
+  }
+
+  const fieldNames = extractTopLevelFieldNames(selectionSet);
+  return fieldNames.length > 0 ? fieldNames : [UNKNOWN_PROTECTED_MUTATION_FIELD];
+};
+
+const isStateChangingOperation = (operationType: string, mutationFieldNames: string[]) => {
+  if (operationType !== "mutation" && mutationFieldNames.length === 0) {
     return false;
   }
 
-  return !isAuthOperation(operationName);
+  if (mutationFieldNames.length === 0) {
+    return operationType === "mutation";
+  }
+
+  return mutationFieldNames.some((fieldName) => !isPublicAuthMutationField(fieldName));
 };
 
 const globalRateLimiter = createRateWindowState(
@@ -148,40 +354,6 @@ const authRateLimiter = createRateWindowState(
   parseRateLimitEnv("RATE_LIMIT_AUTH_MAX_REQUESTS", rateLimitDefaults.auth.maxRequests),
   parseRateLimitEnv("RATE_LIMIT_AUTH_WINDOW_MS", rateLimitDefaults.auth.windowMs),
 );
-
-const isAuthOperation = (operationName: string) => {
-  const normalized = operationName.trim();
-  if (!normalized) {
-    return false;
-  }
-
-  return (
-    normalized === "Login" ||
-    normalized === "Register" ||
-    normalized === "RequestPasswordReset" ||
-    normalized === "ResetPassword"
-  );
-};
-
-const extractGraphQLOperationName = (rawBody: unknown) => {
-  if (!rawBody || typeof rawBody !== "object") {
-    return "";
-  }
-
-  const body = rawBody as { operationName?: unknown; query?: unknown };
-  if (typeof body.operationName === "string" && body.operationName.trim().length > 0) {
-    return body.operationName.trim();
-  }
-
-  if (typeof body.query === "string") {
-    const match = body.query.match(/\b(?:query|mutation)\s+([A-Za-z_][\w]*)/);
-    if (match?.[1]) {
-      return match[1];
-    }
-  }
-
-  return "";
-};
 
 const respondRateLimitError = (reply: FastifyReply, remainingWindowMs: number) => {
   const retryAfter = Math.max(Math.ceil(remainingWindowMs / 1000), 1);
@@ -222,11 +394,11 @@ app.addHook("preValidation", async (request, reply) => {
     return;
   }
 
-  const operationName = extractGraphQLOperationName(request.body);
   const operationType = extractGraphQLOperationType(request.body);
+  const mutationFieldNames = extractGraphQLMutationFieldNames(request.body);
 
   const { source, cookieToken } = normalizeAuthTokenSources(request);
-  const isStateChanging = isStateChangingOperation(operationType, operationName);
+  const isStateChanging = isStateChangingOperation(operationType, mutationFieldNames);
   const csrfCookieToken = readCsrfSessionTokenFromCookie(request.headers.cookie);
   const csrfHeaderToken = getCsrfTokenHeader(request.headers);
   if (source === "cookie" && isStateChanging && cookieToken) {
@@ -241,13 +413,18 @@ app.addHook("preValidation", async (request, reply) => {
     return respondRateLimitError(reply, globalRate.remainingWindowMs);
   }
 
-  if (!isAuthOperation(operationName)) {
+  const authMutationFields = mutationFieldNames.filter((fieldName) =>
+    isPublicAuthMutationField(fieldName),
+  );
+  if (authMutationFields.length === 0) {
     return;
   }
 
-  const authRate = authRateLimiter(ip);
-  if (!authRate.allowed) {
-    return respondRateLimitError(reply, authRate.remainingWindowMs);
+  for (const authMutationField of new Set(authMutationFields)) {
+    const authRate = authRateLimiter(`${ip}:${authMutationField}`);
+    if (!authRate.allowed) {
+      return respondRateLimitError(reply, authRate.remainingWindowMs);
+    }
   }
 });
 

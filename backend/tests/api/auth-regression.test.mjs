@@ -120,6 +120,12 @@ const loginMutation = `
   }
 `;
 
+const requestPasswordResetMutation = `
+  mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
+    requestPasswordReset(input: $input)
+  }
+`;
+
 const meQuery = `
   query Me {
     me { id email }
@@ -164,6 +170,14 @@ const categoriesOverviewQuery = `
 
 const createCategoryMutation = `
   mutation CreateCategory($input: CreateCategoryInput!) {
+    createCategory(input: $input) {
+      id
+    }
+  }
+`;
+
+const createCategoryWithMisleadingOperationNameMutation = `
+  mutation Login($input: CreateCategoryInput!) {
     createCategory(input: $input) {
       id
     }
@@ -259,6 +273,51 @@ const run = async () => {
   ensureHasErrorCode(duplicateWithDifferentPassword.errors, "AUTH_EMAIL_ALREADY_REGISTERED");
   ensure(!duplicateWithDifferentPassword.data, "Duplicate registration must not return data");
 
+  const resetRequest = await request(requestPasswordResetMutation, undefined, {
+    input: { email: user.email },
+  });
+  ensure(resetRequest.httpStatus === 200, "Password reset request should return HTTP 200");
+  ensure(
+    resetRequest.errors.length === 0,
+    `Password reset request should not return errors: ${JSON.stringify(resetRequest.errors)}`,
+  );
+  ensure(
+    resetRequest.data?.requestPasswordReset === true,
+    "Password reset request should return generic success",
+  );
+
+  const repeatedResetRequest = await request(requestPasswordResetMutation, undefined, {
+    input: { email: user.email },
+  });
+  ensure(
+    repeatedResetRequest.httpStatus === 200,
+    "Repeated password reset request should return HTTP 200",
+  );
+  ensure(
+    repeatedResetRequest.errors.length === 0,
+    `Repeated password reset request should not reveal cooldown: ${JSON.stringify(repeatedResetRequest.errors)}`,
+  );
+  ensure(
+    repeatedResetRequest.data?.requestPasswordReset === true,
+    "Repeated password reset request should return generic success",
+  );
+
+  const missingResetRequest = await request(requestPasswordResetMutation, undefined, {
+    input: { email: `missing-reset-${user.email}` },
+  });
+  ensure(
+    missingResetRequest.httpStatus === 200,
+    "Missing user password reset request should return HTTP 200",
+  );
+  ensure(
+    missingResetRequest.errors.length === 0,
+    `Missing user password reset request should not return errors: ${JSON.stringify(missingResetRequest.errors)}`,
+  );
+  ensure(
+    missingResetRequest.data?.requestPasswordReset === true,
+    "Missing user password reset request should return generic success",
+  );
+
   const confirmOriginalLogin = await request(loginMutation, undefined, {
     input: { email: user.email, password: user.password },
   });
@@ -330,6 +389,37 @@ const run = async () => {
     ensureHasErrorCode(csrfBypassedMutation.errors, "CSRF_TOKEN_INVALID");
   } else {
     ensureHasResponseCode(csrfBypassedMutation, "CSRF_TOKEN_INVALID");
+  }
+
+  const csrfMisleadingOperationNameMutation = await request(
+    createCategoryWithMisleadingOperationNameMutation,
+    undefined,
+    {
+      input: {
+        name: "Misleading operation blocked by CSRF",
+        description: "Operation name must not bypass CSRF.",
+        icon: "utensils",
+        color: "blue",
+      },
+    },
+    {
+      cookie: "financy_session=invalid.token; Path=/",
+    },
+  );
+  ensureStatus(
+    csrfMisleadingOperationNameMutation.httpStatus,
+    [200, 403],
+    "Misleading operation name mutation with cookie session must enforce CSRF",
+  );
+  ensure(
+    csrfMisleadingOperationNameMutation.errors.length > 0 ||
+      csrfMisleadingOperationNameMutation.code === "CSRF_TOKEN_INVALID",
+    "Misleading operation name mutation should return a CSRF error",
+  );
+  if (csrfMisleadingOperationNameMutation.errors.length > 0) {
+    ensureHasErrorCode(csrfMisleadingOperationNameMutation.errors, "CSRF_TOKEN_INVALID");
+  } else {
+    ensureHasResponseCode(csrfMisleadingOperationNameMutation, "CSRF_TOKEN_INVALID");
   }
 
   const loginData = await request(loginMutation, undefined, {

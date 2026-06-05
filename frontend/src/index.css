@@ -229,6 +229,14 @@
     pointer-events: auto;
   }
 
+  .t-modal.is-closing {
+    transform: scale(var(--modal-scale-close));
+    opacity: 0;
+    pointer-events: none;
+    transition: transform var(--modal-close-dur) var(--modal-ease), opacity var(--modal-close-dur)
+      var(--modal-ease);
+  }
+
   .t-modal-overlay {
     opacity: 0;
     transition: opacity var(--modal-open-dur) var(--modal-ease);
@@ -237,6 +245,11 @@
 
   .t-modal-overlay.is-open {
     opacity: 1;
+  }
+
+  .t-modal-overlay.is-closing {
+    opacity: 0;
+    transition: opacity var(--modal-close-dur) var(--modal-ease);
   }
 
   .t-toast-slot {
@@ -394,6 +407,8 @@
   @media (prefers-reduced-motion: reduce) {
     .t-modal,
     .t-modal-overlay,
+    .t-modal.is-closing,
+    .t-modal-overlay.is-closing,
     .t-toast-slot,
     .t-toast {
       transition: none !important;

@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 
@@ -11,6 +11,8 @@ type ModalProps = {
   lockBody?: "always" | "auto" | "never";
   onClose: () => void;
 };
+
+type ModalState = "closed" | "open" | "closing";
 
 let activeModalCount = 0;
 let lockedBodyOverflow = "";
@@ -25,6 +27,22 @@ const getFocusableElements = (container: HTMLElement) => {
       !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true",
   );
 };
+
+const getModalCloseDurationMs = () => {
+  const duration = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue("--modal-close-dur")
+    .trim();
+  const parsed = Number.parseFloat(duration);
+
+  if (!Number.isFinite(parsed)) {
+    return 150;
+  }
+
+  return duration.endsWith("s") && !duration.endsWith("ms") ? parsed * 1000 : parsed;
+};
+
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const lockBodyScroll = () => {
   if (activeModalCount === 0) {
@@ -74,6 +92,11 @@ export const Modal = ({
   const dialogDescriptionId = `${dialogId}-description`;
   const scrollLockActiveRef = useRef(false);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  const [isMounted, setIsMounted] = useState(isOpen);
+  const [modalState, setModalState] = useState<ModalState>(isOpen ? "open" : "closed");
+  const isMountedRef = useRef(isOpen);
+  const openFrameRef = useRef<number | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
 
   const setScrollLock = (shouldLockBody: boolean) => {
     if (shouldLockBody && !scrollLockActiveRef.current) {
@@ -83,6 +106,25 @@ export const Modal = ({
     if (!shouldLockBody && scrollLockActiveRef.current) {
       unlockBodyScroll();
       scrollLockActiveRef.current = false;
+    }
+  };
+
+  const setModalMounted = (value: boolean) => {
+    isMountedRef.current = value;
+    setIsMounted(value);
+  };
+
+  const clearOpenFrame = () => {
+    if (openFrameRef.current !== null) {
+      window.cancelAnimationFrame(openFrameRef.current);
+      openFrameRef.current = null;
+    }
+  };
+
+  const clearCloseTimeout = () => {
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
     }
   };
 
@@ -116,7 +158,7 @@ export const Modal = ({
   useLayoutEffect(() => {
     const mode = lockBody;
 
-    if (!isOpen) {
+    if (!isMounted) {
       setScrollLock(false);
       return;
     }
@@ -135,10 +177,57 @@ export const Modal = ({
     return () => {
       window.removeEventListener("resize", onResize);
     };
-  }, [lockBody, isOpen]);
+  }, [lockBody, isMounted]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (isOpen) {
+      clearCloseTimeout();
+      clearOpenFrame();
+      setModalMounted(true);
+
+      if (prefersReducedMotion()) {
+        setModalState("open");
+        return;
+      }
+
+      setModalState("closed");
+      openFrameRef.current = window.requestAnimationFrame(() => {
+        openFrameRef.current = window.requestAnimationFrame(() => {
+          openFrameRef.current = null;
+          setModalState("open");
+        });
+      });
+      return;
+    }
+
+    clearOpenFrame();
+
+    if (!isMountedRef.current) {
+      setModalState("closed");
+      return;
+    }
+
+    if (prefersReducedMotion()) {
+      clearCloseTimeout();
+      setModalState("closed");
+      setModalMounted(false);
+      return;
+    }
+
+    setModalState("closing");
+    closeTimeoutRef.current = window.setTimeout(() => {
+      closeTimeoutRef.current = null;
+      setModalState("closed");
+      setModalMounted(false);
+    }, getModalCloseDurationMs());
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (modalState !== "open") {
       return;
     }
 
@@ -162,10 +251,10 @@ export const Modal = ({
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [isOpen]);
+  }, [modalState]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isMounted) {
       return;
     }
 
@@ -174,10 +263,13 @@ export const Modal = ({
       previous.focus();
     }
     previouslyFocusedElementRef.current = null;
-  }, [isOpen]);
+  }, [isMounted]);
 
   useEffect(() => {
     return () => {
+      clearOpenFrame();
+      clearCloseTimeout();
+
       if (scrollLockActiveRef.current) {
         unlockBodyScroll();
         scrollLockActiveRef.current = false;
@@ -187,13 +279,16 @@ export const Modal = ({
     };
   }, []);
 
-  if (!isOpen) {
+  if (!isMounted) {
     return null;
   }
 
+  const transitionClass =
+    modalState === "open" ? "is-open" : modalState === "closing" ? "is-closing" : "";
+
   const modal = (
     <div
-      className="t-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 overscroll-none is-open"
+      className={`t-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 overscroll-none ${transitionClass}`}
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
@@ -209,7 +304,7 @@ export const Modal = ({
         aria-describedby={subtitle ? dialogDescriptionId : undefined}
         aria-modal={true}
         tabIndex={-1}
-        className="t-modal relative flex w-[calc(100%-2rem)] sm:w-full max-w-[448px] max-h-[min(90vh,680px)] flex-col overflow-hidden rounded-[12px] border border-financy-border bg-financy-surface shadow-2xl is-open"
+        className={`t-modal relative flex w-[calc(100%-2rem)] sm:w-full max-w-[448px] max-h-[min(90vh,680px)] flex-col overflow-hidden rounded-[12px] border border-financy-border bg-financy-surface shadow-2xl ${transitionClass}`}
         onKeyDown={(event) => {
           if (event.key !== "Tab") {
             return;

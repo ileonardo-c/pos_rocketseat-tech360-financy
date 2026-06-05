@@ -8,6 +8,14 @@ const API_BASE_HOST = process.env.E2E_API_HOST ?? APP_BASE_URL.hostname;
 const API_URL =
   process.env.E2E_API_URL ?? `${APP_BASE_URL.protocol}//${API_BASE_HOST}:4000/graphql`;
 
+type ModalTransitionSample = {
+  className: string | null;
+  overlayClassName: string | null;
+  opacity: number | null;
+  overlayOpacity: number | null;
+  transform: string | null;
+};
+
 const createTransientUser = async (
   page: Page,
   user: { name: string; email: string; password: string },
@@ -41,6 +49,20 @@ const createTransientUser = async (
   expect(payload.data?.register?.created).toBeTruthy();
 };
 
+const loginTransientUser = async (page: Page) => {
+  const user = buildTransientE2EUser();
+
+  await page.context().clearCookies();
+  await page.goto(`${APP_URL}/login`, { waitUntil: "networkidle" });
+  await createTransientUser(page, user);
+
+  await page.getByRole("heading", { name: "Fazer login" }).waitFor({ timeout: 15_000 });
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
+  await page.getByRole("button", { name: "Entrar" }).click();
+  await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 45_000 });
+};
+
 const goToRoute = async (page: Page, routeLinkName: string, routeHref?: string) => {
   const link = page.getByRole("link", { name: routeLinkName });
 
@@ -55,6 +77,72 @@ const goToRoute = async (page: Page, routeLinkName: string, routeHref?: string) 
 
   await page.locator(`a[href="${routeHref}"]`).first().click();
 };
+
+const startModalTransitionObserver = async (page: Page) => {
+  await page.evaluate(() => {
+    const hostWindow = window as Window & {
+      __modalTransitionObserver?: MutationObserver;
+      __modalTransitionSamples?: ModalTransitionSample[];
+    };
+
+    hostWindow.__modalTransitionObserver?.disconnect();
+    hostWindow.__modalTransitionSamples = [];
+
+    const sample = () => {
+      const modal = document.querySelector(".t-modal");
+      const overlay = document.querySelector(".t-modal-overlay");
+      if (!modal || !overlay) {
+        return;
+      }
+
+      const modalStyle = window.getComputedStyle(modal);
+      const overlayStyle = window.getComputedStyle(overlay);
+      hostWindow.__modalTransitionSamples?.push({
+        className: modal.className,
+        overlayClassName: overlay.className,
+        opacity: Number.parseFloat(modalStyle.opacity),
+        overlayOpacity: Number.parseFloat(overlayStyle.opacity),
+        transform: modalStyle.transform,
+      });
+    };
+
+    const observer = new MutationObserver(sample);
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+      childList: true,
+      subtree: true,
+    });
+
+    hostWindow.__modalTransitionObserver = observer;
+  });
+};
+
+const readModalTransitionSamples = async (page: Page) =>
+  page.evaluate(() => {
+    const hostWindow = window as Window & {
+      __modalTransitionObserver?: MutationObserver;
+      __modalTransitionSamples?: ModalTransitionSample[];
+    };
+
+    const modal = document.querySelector(".t-modal");
+    const overlay = document.querySelector(".t-modal-overlay");
+    if (modal && overlay) {
+      const modalStyle = window.getComputedStyle(modal);
+      const overlayStyle = window.getComputedStyle(overlay);
+      hostWindow.__modalTransitionSamples?.push({
+        className: modal.className,
+        overlayClassName: overlay.className,
+        opacity: Number.parseFloat(modalStyle.opacity),
+        overlayOpacity: Number.parseFloat(overlayStyle.opacity),
+        transform: modalStyle.transform,
+      });
+    }
+
+    hostWindow.__modalTransitionObserver?.disconnect();
+    hostWindow.__modalTransitionObserver = undefined;
+    return hostWindow.__modalTransitionSamples ?? [];
+  });
 
 const getRouteTransitionClass = async (page: Page) =>
   (await page.getByTestId("route-transition-root").getAttribute("class")) ?? "";
@@ -96,20 +184,8 @@ const waitForRouteTransitionIdle = async (page: Page, timeoutMs = 1800) => {
 };
 
 test("@transition valida transições de rota sem disparo em busca", async ({ page }) => {
-  const user = buildTransientE2EUser();
-
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.context().clearCookies();
-  await page.goto(`${APP_URL}/login`, { waitUntil: "networkidle" });
-
-  await createTransientUser(page, user);
-
-  await page.getByRole("heading", { name: "Fazer login" }).waitFor({ timeout: 15_000 });
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 45_000 });
+  await loginTransientUser(page);
 
   const baseClass = await getRouteTransitionClass(page);
   expect(baseClass).toContain("t-route");
@@ -162,4 +238,78 @@ test("@transition valida transições de rota sem disparo em busca", async ({ pa
   await page.waitForTimeout(1_200);
   const afterSearchChangeClass = await getRouteTransitionClass(page);
   expect(afterSearchChangeClass).toBe(beforeSearchChangeClass);
+});
+
+test("@transition valida abertura e fechamento do modal", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await loginTransientUser(page);
+
+  await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Categorias" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await startModalTransitionObserver(page);
+  await page.getByRole("button", { name: "Nova categoria" }).click();
+  await expect(page.getByRole("dialog", { name: "Nova categoria" })).toBeVisible({
+    timeout: 10_000,
+  });
+  await page.waitForTimeout(320);
+
+  const openSamples = await readModalTransitionSamples(page);
+  expect(openSamples.length).toBeGreaterThan(0);
+  expect(
+    openSamples.some(
+      (sample) =>
+        sample.className !== null &&
+        !sample.className.includes("is-open") &&
+        !sample.className.includes("is-closing") &&
+        ((sample.opacity ?? 1) < 1 || sample.transform !== "matrix(1, 0, 0, 1, 0, 0)"),
+    ),
+  ).toBeTruthy();
+  expect(
+    openSamples.some(
+      (sample) =>
+        sample.className?.includes("is-open") &&
+        sample.overlayClassName?.includes("is-open") &&
+        sample.opacity === 1 &&
+        sample.overlayOpacity === 1 &&
+        sample.transform === "matrix(1, 0, 0, 1, 0, 0)",
+    ),
+  ).toBeTruthy();
+
+  await startModalTransitionObserver(page);
+  await page
+    .getByRole("dialog", { name: "Nova categoria" })
+    .getByRole("button", { name: "Fechar" })
+    .click();
+  await expect(page.getByRole("dialog", { name: "Nova categoria" })).toHaveCount(0, {
+    timeout: 10_000,
+  });
+
+  const closeSamples = await readModalTransitionSamples(page);
+  expect(
+    closeSamples.some(
+      (sample) =>
+        sample.className?.includes("is-closing") && sample.overlayClassName?.includes("is-closing"),
+    ),
+  ).toBeTruthy();
+});
+
+test("@transition modal respeita redução de movimento", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await loginTransientUser(page);
+
+  await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Categorias" })).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: "Nova categoria" }).click();
+  const dialog = page.getByRole("dialog", { name: "Nova categoria" });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator(".t-modal")).toHaveClass(/is-open/);
+
+  await dialog.getByRole("button", { name: "Fechar" }).click();
+  await expect(dialog).toHaveCount(0, { timeout: 1_000 });
 });
