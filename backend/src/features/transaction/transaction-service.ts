@@ -479,9 +479,10 @@ export class TransactionService {
   }
 
   private buildPublicReceiptUrl(receiptKey: string) {
-    const { endpoint = "", bucket = "" } = getStorageConfig();
+    const { endpoint = "", publicEndpoint, bucket = "" } = getStorageConfig();
+    const receiptEndpoint = publicEndpoint || endpoint;
 
-    return `${endpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
+    return `${receiptEndpoint.replace(/\/$/, "")}/${bucket}/${receiptKey}`;
   }
 
   private hasStorageConfiguration() {

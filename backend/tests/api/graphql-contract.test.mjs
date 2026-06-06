@@ -208,7 +208,7 @@ const updateCategoryMutation = `
 
 const updateTransactionMutation = `
   mutation UpdateTransaction($id: ID!, $input: UpdateTransactionInput!) {
-    updateTransaction(id: $id, input: $input) { id title amount userId }
+    updateTransaction(id: $id, input: $input) { id title amount userId receiptKey receiptUrl }
   }
 `;
 
@@ -346,6 +346,21 @@ const run = async () => {
   ensure(
     uploadData.requestUploadUrl.key.startsWith(`users/${userId}/receipts/`),
     "Upload key does not match authenticated user namespace",
+  );
+
+  const receiptTransactionData = await request(updateTransactionMutation, token, {
+    id: transactionId,
+    input: {
+      receiptKey: uploadData.requestUploadUrl.key,
+    },
+  });
+  ensure(
+    receiptTransactionData?.updateTransaction?.receiptKey === uploadData.requestUploadUrl.key,
+    "Updated transaction receipt key mismatch",
+  );
+  ensure(
+    receiptTransactionData?.updateTransaction?.receiptUrl === uploadData.requestUploadUrl.publicUrl,
+    "Updated transaction receipt URL should match the public upload URL",
   );
 
   const invalidUploadContentType = await requestWithGraphQLErrors(requestUploadUrlMutation, token, {

@@ -395,7 +395,8 @@ app.register(cors, {
 });
 
 app.addHook("preValidation", async (request, reply) => {
-  if (request.method !== "POST" || request.url !== "/graphql") {
+  const requestPathname = new URL(request.url, "http://localhost").pathname;
+  if (request.method !== "POST" || requestPathname !== "/graphql") {
     return;
   }
 

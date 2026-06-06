@@ -18,6 +18,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
+const graphqlUrlWithQuery = `${graphqlUrl}?x=1`;
 const textEncoder = new TextEncoder();
 const resetCodePepper = process.env.RESET_CODE_PEPPER ?? "financy-reset-pepper";
 const prisma = new PrismaClient();
@@ -47,8 +48,8 @@ const signHs256Token = async ({ payload, secret }) => {
   return `${unsignedToken}.${signaturePart}`;
 };
 
-const request = async (query, token, variables = {}, extraHeaders = {}) => {
-  const response = await fetch(graphqlUrl, {
+const request = async (query, token, variables = {}, extraHeaders = {}, url = graphqlUrl) => {
+  const response = await fetch(url, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -591,6 +592,38 @@ const run = async () => {
     ensureHasErrorCode(csrfBypassedMutation.errors, "CSRF_TOKEN_INVALID");
   } else {
     ensureHasResponseCode(csrfBypassedMutation, "CSRF_TOKEN_INVALID");
+  }
+
+  const csrfQueryStringMutation = await request(
+    createCategoryMutation,
+    undefined,
+    {
+      input: {
+        name: "CSRF query string blocked",
+        description: "Query string must not bypass CSRF.",
+        icon: "utensils",
+        color: "blue",
+      },
+    },
+    {
+      cookie: "financy_session=invalid.token; Path=/",
+    },
+    graphqlUrlWithQuery,
+  );
+  ensureStatus(
+    csrfQueryStringMutation.httpStatus,
+    [200, 403],
+    "GraphQL query string mutation with cookie session must enforce CSRF",
+  );
+  ensure(
+    csrfQueryStringMutation.errors.length > 0 ||
+      csrfQueryStringMutation.code === "CSRF_TOKEN_INVALID",
+    "GraphQL query string mutation should return a CSRF error",
+  );
+  if (csrfQueryStringMutation.errors.length > 0) {
+    ensureHasErrorCode(csrfQueryStringMutation.errors, "CSRF_TOKEN_INVALID");
+  } else {
+    ensureHasResponseCode(csrfQueryStringMutation, "CSRF_TOKEN_INVALID");
   }
 
   const csrfMisleadingOperationNameMutation = await request(
