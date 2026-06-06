@@ -5,6 +5,28 @@ export const AUTH_COOKIE_NAME = "financy_session";
 export const AUTH_CSRF_COOKIE_NAME = "financy_csrf";
 
 const DAY_IN_SECONDS = 24 * 60 * 60;
+const DEFAULT_COOKIE_SAME_SITE = "Strict";
+
+const resolveAuthCookieSameSite = () => {
+  const rawValue = process.env.AUTH_COOKIE_SAME_SITE?.trim().toLowerCase();
+  switch (rawValue) {
+    case "lax":
+      return "Lax";
+    case "none":
+      return "None";
+    case "strict":
+    case "":
+    case undefined:
+      return DEFAULT_COOKIE_SAME_SITE;
+    default:
+      console.warn("Invalid AUTH_COOKIE_SAME_SITE value. Falling back to Strict.");
+      return DEFAULT_COOKIE_SAME_SITE;
+  }
+};
+
+const shouldUseSecureCookie = (sameSite: string) => {
+  return process.env.NODE_ENV === "production" || sameSite === "None";
+};
 
 const parseJwtExpiresInToSeconds = (value: string) => {
   const trimmed = value.trim();
@@ -39,15 +61,16 @@ const buildCookieParts = (token: string, rememberMe = false) => {
   const expiresInSeconds = rememberMe
     ? parseJwtExpiresInToSeconds(process.env.JWT_EXPIRES_IN || "7d")
     : undefined;
+  const sameSite = resolveAuthCookieSameSite();
 
   const parts = [
     `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)}`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    `SameSite=${sameSite}`,
   ];
 
-  if (process.env.NODE_ENV === "production") {
+  if (shouldUseSecureCookie(sameSite)) {
     parts.push("Secure");
   }
 
@@ -68,14 +91,15 @@ const buildCsrfCookieParts = (token: string, rememberMe = false) => {
   const expiresInSeconds = rememberMe
     ? parseJwtExpiresInToSeconds(process.env.JWT_EXPIRES_IN || "7d")
     : undefined;
+  const sameSite = resolveAuthCookieSameSite();
 
   const parts = [
     `${AUTH_CSRF_COOKIE_NAME}=${encodeURIComponent(token)}`,
     "Path=/",
-    "SameSite=Strict",
+    `SameSite=${sameSite}`,
   ];
 
-  if (process.env.NODE_ENV === "production") {
+  if (shouldUseSecureCookie(sameSite)) {
     parts.push("Secure");
   }
 
@@ -138,15 +162,16 @@ export const clearAuthSessionCookie = (reply: FastifyReply) => {
 
 const buildAuthSessionClearCookie = () => {
   const cookieDomain = process.env.AUTH_COOKIE_DOMAIN?.trim();
+  const sameSite = resolveAuthCookieSameSite();
   const cookieParts = [
     `${AUTH_COOKIE_NAME}=`,
     "Path=/",
     "HttpOnly",
-    "SameSite=Strict",
+    `SameSite=${sameSite}`,
     "Max-Age=0",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
   ];
-  if (process.env.NODE_ENV === "production") {
+  if (shouldUseSecureCookie(sameSite)) {
     cookieParts.push("Secure");
   }
   if (cookieDomain) {
@@ -157,19 +182,20 @@ const buildAuthSessionClearCookie = () => {
 
 const buildCsrfSessionClearCookie = () => {
   const cookieDomain = process.env.AUTH_COOKIE_DOMAIN?.trim();
+  const sameSite = resolveAuthCookieSameSite();
   const cookieParts = [
     `${AUTH_CSRF_COOKIE_NAME}=`,
     "Path=/",
     "Max-Age=0",
     "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
-    "SameSite=Strict",
+    `SameSite=${sameSite}`,
   ];
 
   if (cookieDomain) {
     cookieParts.push(`Domain=${cookieDomain}`);
   }
 
-  if (process.env.NODE_ENV === "production") {
+  if (shouldUseSecureCookie(sameSite)) {
     cookieParts.push("Secure");
   }
 

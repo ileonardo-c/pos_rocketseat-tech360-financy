@@ -146,6 +146,12 @@ const loginMutation = `
   }
 `;
 
+const logoutMutation = `
+  mutation Logout {
+    logout
+  }
+`;
+
 const requestPasswordResetMutation = `
   mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
     requestPasswordReset(input: $input)
@@ -527,6 +533,34 @@ const run = async () => {
   ensure(
     legacySessionCsrfBootstrap.setCookie.includes("financy_csrf="),
     "Legacy cookie session without CSRF must receive a CSRF cookie",
+  );
+
+  const legacySessionLogoutWithoutCsrf = await request(
+    logoutMutation,
+    undefined,
+    {},
+    {
+      cookie: `financy_session=${firstResetLogin.data.login.token}; Path=/`,
+    },
+  );
+  ensure(
+    legacySessionLogoutWithoutCsrf.httpStatus === 200,
+    "Legacy cookie session logout without CSRF should return HTTP 200",
+  );
+  ensure(
+    legacySessionLogoutWithoutCsrf.errors.length === 0,
+    `Legacy cookie session logout without CSRF should not return errors: ${JSON.stringify(
+      legacySessionLogoutWithoutCsrf.errors,
+    )}`,
+  );
+  ensure(
+    legacySessionLogoutWithoutCsrf.data?.logout === true,
+    "Legacy cookie session logout without CSRF should return success",
+  );
+  ensure(
+    legacySessionLogoutWithoutCsrf.setCookie.includes("financy_session=") &&
+      legacySessionLogoutWithoutCsrf.setCookie.includes("Max-Age=0"),
+    "Legacy cookie session logout without CSRF should clear auth cookies",
   );
 
   const csrfBypassedMutation = await request(

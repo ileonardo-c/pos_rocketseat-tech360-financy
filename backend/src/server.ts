@@ -139,6 +139,7 @@ const getCsrfTokenHeader = (headers: Record<string, string | string[] | undefine
 const UNKNOWN_PROTECTED_MUTATION_FIELD = "__unknown_protected_mutation__";
 const publicAuthMutationFields = new Set([
   "login",
+  "logout",
   "register",
   "requestPasswordReset",
   "resetPassword",
