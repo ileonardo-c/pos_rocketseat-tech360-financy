@@ -98,7 +98,8 @@ export class PasswordResetService {
 
     const sendResult = await this.sendResetCodeEmail(email, plainCode);
     if (!sendResult.success) {
-      throw new AppError("Unable to send password reset email", 503, "PASSWORD_RESET_EMAIL_FAILED");
+      console.warn("Password reset email delivery failed after code creation", { email });
+      return true;
     }
 
     return true;

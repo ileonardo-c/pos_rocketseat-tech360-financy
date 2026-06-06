@@ -5,7 +5,11 @@ import type { FastifyReply } from "fastify";
 import mercurius from "mercurius";
 import { buildContext } from "./context";
 import { resolvers, typeDefs } from "./graphql/index";
-import { readAuthSessionTokenFromCookie, readCsrfSessionTokenFromCookie } from "./lib/auth-cookie";
+import {
+  readAuthSessionTokenFromCookie,
+  readCsrfSessionTokenFromCookie,
+  setCsrfSessionCookie,
+} from "./lib/auth-cookie";
 import { assertProductionSecurityConfig, getRequiredEnv } from "./lib/env";
 import { AppError } from "./lib/errors";
 import { getStorageConfig } from "./lib/storage-env";
@@ -402,6 +406,10 @@ app.addHook("preValidation", async (request, reply) => {
   const csrfCookieToken = readCsrfSessionTokenFromCookie(request.headers.cookie);
   const csrfHeaderToken = getCsrfTokenHeader(request.headers);
   if (source === "cookie" && isStateChanging && cookieToken) {
+    if (!csrfCookieToken) {
+      setCsrfSessionCookie(reply);
+      return respondCsrfError(reply);
+    }
     if (!csrfHeaderToken || !secureStringEquals(csrfHeaderToken, csrfCookieToken)) {
       return respondCsrfError(reply);
     }

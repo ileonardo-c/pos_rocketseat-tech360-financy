@@ -59,8 +59,13 @@ const request = async (query, token, variables = {}, extraHeaders = {}) => {
   });
 
   const payload = await response.json();
+  const setCookie =
+    typeof response.headers.getSetCookie === "function"
+      ? response.headers.getSetCookie().join("\n")
+      : (response.headers.get("set-cookie") ?? "");
   return {
     httpStatus: response.status,
+    setCookie,
     data: payload.data,
     code: payload.code ?? "",
     message: payload.message ?? "",
@@ -497,6 +502,32 @@ const run = async () => {
   ensureHasErrorMessage(emptyPassword.errors, "invalid password");
   ensureHasErrorCode(emptyPassword.errors, "AUTH_INVALID_PASSWORD");
   ensureHasErrorStatus(emptyPassword.errors, 422);
+
+  const legacySessionCsrfBootstrap = await request(
+    createCategoryMutation,
+    undefined,
+    {
+      input: {
+        name: "Legacy session requires CSRF",
+        description: "Missing CSRF cookie should bootstrap a new token.",
+        icon: "utensils",
+        color: "blue",
+      },
+    },
+    {
+      cookie: `financy_session=${firstResetLogin.data.login.token}; Path=/`,
+    },
+  );
+  ensureStatus(
+    legacySessionCsrfBootstrap.httpStatus,
+    [200, 403],
+    "Legacy cookie session without CSRF must be blocked",
+  );
+  ensureHasResponseCode(legacySessionCsrfBootstrap, "CSRF_TOKEN_INVALID");
+  ensure(
+    legacySessionCsrfBootstrap.setCookie.includes("financy_csrf="),
+    "Legacy cookie session without CSRF must receive a CSRF cookie",
+  );
 
   const csrfBypassedMutation = await request(
     createCategoryMutation,

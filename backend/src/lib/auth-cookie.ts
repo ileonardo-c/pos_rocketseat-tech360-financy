@@ -122,6 +122,15 @@ export const setAuthSessionCookies = (
   return csrfToken;
 };
 
+export const setCsrfSessionCookie = (
+  reply: FastifyReply,
+  rememberMe = false,
+  csrfToken = generateCsrfToken(),
+) => {
+  applyCookies(reply, [buildCsrfCookieParts(csrfToken, rememberMe)]);
+  return csrfToken;
+};
+
 export const clearAuthSessionCookie = (reply: FastifyReply) => {
   const cookies = [buildAuthSessionClearCookie(), buildCsrfSessionClearCookie()];
   applyCookies(reply, cookies);
