@@ -47,7 +47,7 @@ export const TransactionRow = ({
           </div>
           <div className="min-w-0 flex flex-col">
             <p className="truncate text-base font-medium leading-6 text-financy-text">{title}</p>
-            {/* Oculta data no desktop pois ela tem coluna propria */}
+            {/* Hide the date on desktop because it has its own column. */}
             <p className="mt-0.5 text-sm text-financy-muted sm:hidden">{date}</p>
           </div>
         </div>
