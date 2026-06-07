@@ -190,7 +190,7 @@ const meQuery = `
 
 const createCategoryMutation = `
   mutation CreateCategory($input: CreateCategoryInput!) {
-    createCategory(input: $input) { id name userId }
+    createCategory(input: $input) { id name icon color userId }
   }
 `;
 
@@ -202,7 +202,7 @@ const createTransactionMutation = `
 
 const updateCategoryMutation = `
   mutation UpdateCategory($id: ID!, $input: UpdateCategoryInput!) {
-    updateCategory(id: $id, input: $input) { id name userId }
+    updateCategory(id: $id, input: $input) { id name icon color userId }
   }
 `;
 
@@ -274,7 +274,7 @@ const run = async () => {
 
   const categoryName = `Smoke Category ${randomSuffix}`;
   const categoryData = await request(createCategoryMutation, token, {
-    input: { name: categoryName },
+    input: { name: categoryName, icon: "utensils", color: "blue" },
   });
   const categoryId = categoryData?.createCategory?.id;
   ensure(categoryId, "Category creation returned no id");
@@ -344,6 +344,14 @@ const run = async () => {
 
   const updatedCategoryName = updateCategoryData?.updateCategory?.name;
   ensure(updatedCategoryName === `${categoryName} Editada`, "Updated category name mismatch");
+  ensure(
+    updateCategoryData?.updateCategory?.icon === "utensils",
+    "Partial category rename should preserve icon",
+  );
+  ensure(
+    updateCategoryData?.updateCategory?.color === "blue",
+    "Partial category rename should preserve color",
+  );
 
   const updateTransactionData = await request(updateTransactionMutation, token, {
     id: transactionId,

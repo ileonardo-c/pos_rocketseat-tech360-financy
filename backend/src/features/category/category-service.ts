@@ -292,12 +292,6 @@ export class CategoryService {
       payload.color = normalizedColor;
     }
 
-    if (payload.name && normalizedIcon === undefined && normalizedColor === undefined) {
-      const visual = this.resolveCategoryVisual(payload.name);
-      payload.icon = visual.icon;
-      payload.color = visual.color;
-    }
-
     if (Object.keys(payload).length === 0) {
       return category;
     }

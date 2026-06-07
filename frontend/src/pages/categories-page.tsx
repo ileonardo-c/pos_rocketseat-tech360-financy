@@ -68,7 +68,6 @@ type CategoryFieldErrors = {
 };
 
 const ITEMS_PER_PAGE = 8;
-const PER_PAGE_MAX = 50;
 
 type TagCategory = "gray" | "blue" | "purple" | "pink" | "red" | "orange" | "yellow" | "green";
 
@@ -227,18 +226,17 @@ export const CategoriesPage = () => {
   );
   const [categoryPendingDelete, setCategoryPendingDelete] = useState<Category | null>(null);
 
-  const perPage = Math.min(pageStep * ITEMS_PER_PAGE, PER_PAGE_MAX);
-
   const {
     data: listData,
     loading: listLoading,
     error: listError,
     refetch: refetchList,
+    fetchMore,
     networkStatus: listNetworkStatus,
   } = useQuery<CategoriesListNode>(CATEGORIES_LIST_QUERY, {
     variables: {
       page: 1,
-      perPage,
+      perPage: ITEMS_PER_PAGE,
     },
     fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
@@ -323,6 +321,29 @@ export const CategoriesPage = () => {
       refetchCount(),
       refetchOverview(),
     ]);
+  };
+
+  const loadMoreCategories = async () => {
+    const nextPage = pageStep + 1;
+    await fetchMore({
+      variables: {
+        page: nextPage,
+        perPage: ITEMS_PER_PAGE,
+      },
+      updateQuery: (previousResult, { fetchMoreResult }) => {
+        if (!fetchMoreResult?.categoriesList?.length) {
+          return previousResult;
+        }
+
+        return {
+          categoriesList: [
+            ...(previousResult.categoriesList ?? []),
+            ...fetchMoreResult.categoriesList,
+          ],
+        };
+      },
+    });
+    setPageStep(nextPage);
   };
 
   if (!user) {
@@ -476,7 +497,9 @@ export const CategoriesPage = () => {
               <Button
                 variant="outline"
                 disabled={isLoadingMore || countLoading}
-                onClick={() => setPageStep((prev) => prev + 1)}
+                onClick={() => {
+                  void loadMoreCategories();
+                }}
               >
                 <span className="t-text-swap">
                   {isLoadingMore || countLoading ? "Carregando..." : "Carregar mais"}
