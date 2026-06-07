@@ -45,7 +45,7 @@ import { TransactionRow } from "@/components/ui/transaction-row";
 /* Layout primitives                                                           */
 /* ─────────────────────────────────────────────────────────────────────────── */
 
-/** Wrapper de seção: título leve + área de detalhamento */
+/** Section wrapper: light title plus detail area */
 function ComponentSection({
   title,
   children,
@@ -66,9 +66,9 @@ function ComponentSection({
 }
 
 /**
- * Linha de detalhamento: coluna de labels Martian Mono + coluna de componentes.
- * @param labels    — textos da coluna esquerda, distribuídos verticalmente
- * @param padBottom — padding bottom override (Figma Input usa 160px)
+ * Detail row: Martian Mono label column plus component column.
+ * @param labels    - left-column labels distributed vertically
+ * @param padBottom - padding bottom override (Figma Input uses 160px)
  */
 function DetailRow({
   labels,
@@ -111,7 +111,7 @@ function DetailRow({
   );
 }
 
-/** Célula de linha (alinha verticalmente com o label correspondente) */
+/** Row cell (vertically aligns with the matching label) */
 function Cell({ children }: { children: ReactNode }) {
   return <div className="flex flex-1 flex-col justify-center">{children}</div>;
 }
@@ -127,7 +127,7 @@ export const StyleGuidePage = () => {
       data-testid="style-guide-page"
       data-node-id="1085:814"
     >
-      {/* ── Título principal ─────────────────────────────────────────────── */}
+      {/* Main title */}
       {/* Figma: Plus Jakarta Sans Medium 40px #09090A */}
       <h1 className="text-[40px] font-medium leading-[1.4] text-financy-heading">Componentes</h1>
 
@@ -718,7 +718,7 @@ export const StyleGuidePage = () => {
               <IconCircleArrowUp className="h-4 w-4" />
               Entrada
             </span>
-            {/* Saída */}
+            {/* Output */}
             <span
               data-testid="type-expense"
               className="inline-flex items-center gap-2 text-sm font-medium text-financy-danger"

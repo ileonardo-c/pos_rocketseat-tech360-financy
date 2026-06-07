@@ -183,7 +183,7 @@ const waitForRouteTransitionIdle = async (page: Page, timeoutMs = 1800) => {
   );
 };
 
-test("@transition valida transições de rota sem disparo em busca", async ({ page }) => {
+test("@transition validates route transitions without firing on search", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await loginTransientUser(page);
 
@@ -240,7 +240,7 @@ test("@transition valida transições de rota sem disparo em busca", async ({ pa
   expect(afterSearchChangeClass).toBe(beforeSearchChangeClass);
 });
 
-test("@transition valida abertura e fechamento do modal", async ({ page }) => {
+test("@transition validates modal open and close", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await loginTransientUser(page);
 
@@ -296,7 +296,7 @@ test("@transition valida abertura e fechamento do modal", async ({ page }) => {
   ).toBeTruthy();
 });
 
-test("@transition modal respeita redução de movimento", async ({ page }) => {
+test("@transition modal respects reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await loginTransientUser(page);
 

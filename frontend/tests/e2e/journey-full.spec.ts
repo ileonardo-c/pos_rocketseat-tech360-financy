@@ -48,7 +48,7 @@ const resolveSeedAvatarPayload = () => {
   };
 };
 
-test("@journey-full fluxo completo com conta seed e foto", async ({ page }) => {
+test("@journey-full complete flow with seed account and photo", async ({ page }) => {
   const seedUser = buildSeedE2EUser();
   const updatedName = `${seedUser.name} ${Date.now()}`;
   const categoryName = `AAA Categoria Seed ${Date.now()}`;

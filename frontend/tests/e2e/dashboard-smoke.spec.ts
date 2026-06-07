@@ -20,7 +20,7 @@ const waitForTransactionsPage = async (page: Page) => {
 };
 
 const waitForAuthEntry = async (page: Page) => {
-  await expect(page, "URL deve ficar no endpoint de login").toHaveURL(/\/login|\/$/);
+  await expect(page, "URL should remain on the login entry point").toHaveURL(/\/login|\/$/);
   const emailInput = page.getByTestId("signin-email");
   const passwordInput = page.getByTestId("signin-password");
   const dashboardLink = page.getByRole("link", { name: "Dashboard" });
@@ -43,7 +43,7 @@ const waitForAuthEntry = async (page: Page) => {
     await page.waitForTimeout(250);
   }
 
-  throw new Error("Não foi possível identificar o estado de autenticação no /login.");
+  throw new Error("Unable to determine the authentication state on /login.");
 };
 
 const waitForDashboardReady = async (page: Page) => {
@@ -222,8 +222,8 @@ const createTransactionByApi = async (
   expect(payload.data?.createTransaction?.id).toBeTruthy();
 };
 
-test.describe("@smoke-dashboard fluxo de acesso ao dashboard", () => {
-  test("@smoke-dashboard valida carregamento e proteção de rota do dashboard", async ({ page }) => {
+test.describe("@smoke-dashboard dashboard access flow", () => {
+  test("@smoke-dashboard loads dashboard and protects the route", async ({ page }) => {
     const user = buildTransientE2EUser();
 
     await clearClientState(page);
@@ -257,7 +257,7 @@ test.describe("@smoke-dashboard fluxo de acesso ao dashboard", () => {
     await waitForLoginScreen(page);
   });
 
-  test("@smoke-dashboard valida paginação de transações sem estado vazio falso", async ({
+  test("@smoke-dashboard keeps paginated transactions from showing a false empty state", async ({
     page,
   }) => {
     const user = buildTransientE2EUser();

@@ -176,7 +176,7 @@ const clearClientState = async (page: Page) => {
   });
 };
 
-test("@smoke-login fluxo de login funcional com usuário transitório", async ({ page }) => {
+test("@smoke-login functional login flow with a transient user", async ({ page }) => {
   const user = buildTransientE2EUser();
 
   await clearClientState(page);
@@ -204,7 +204,7 @@ test("@smoke-login fluxo de login funcional com usuário transitório", async ({
   await expect(page.getByText("Não foi possível carregar categorias.")).toHaveCount(0);
 });
 
-test("@smoke-login fluxo de cadastro funcional com usuário transitório", async ({ page }) => {
+test("@smoke-login functional signup flow with a transient user", async ({ page }) => {
   test.setTimeout(90_000);
   const user = buildTransientE2EUser();
 
@@ -216,7 +216,7 @@ test("@smoke-login fluxo de cadastro funcional com usuário transitório", async
   await waitForAuthenticatedDashboard(page);
 });
 
-test("@smoke-login rotas públicas permanecem acessíveis sem sessão", async ({ page }) => {
+test("@smoke-login public routes stay accessible without a session", async ({ page }) => {
   await clearClientState(page);
 
   await page.goto(`${APP_URL}/signup`, { waitUntil: "domcontentloaded" });
@@ -232,7 +232,7 @@ test("@smoke-login rotas públicas permanecem acessíveis sem sessão", async ({
   });
 });
 
-test("@smoke-login sessão inválida em /categories redireciona para /login sem banner", async ({
+test("@smoke-login invalid session on /categories redirects to /login without banner", async ({
   page,
 }) => {
   await clearClientState(page);

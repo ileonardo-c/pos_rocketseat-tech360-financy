@@ -158,9 +158,7 @@ const createTransactionByApi = async (page, token, input) => {
   return payload.data?.createTransaction?.id;
 };
 
-test("@ownership usuário não enxerga dados de outro usuário em categoria e transação", async ({
-  page,
-}) => {
+test("@ownership user cannot see another user's category or transaction data", async ({ page }) => {
   const owner = buildTransientE2EUser();
   const outsider = buildTransientE2EUser();
   const categoryName = `Categoria Owner ${Date.now()}`;
