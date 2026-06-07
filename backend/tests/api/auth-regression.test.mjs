@@ -239,6 +239,19 @@ const createCategoryWithMisleadingOperationNameMutation = `
   }
 `;
 
+const logoutWithProtectedFragmentMutation = `
+  mutation LogoutWithProtectedFragment($input: CreateCategoryInput!) {
+    logout
+    ...ProtectedCategoryMutation
+  }
+
+  fragment ProtectedCategoryMutation on Mutation {
+    createCategory(input: $input) {
+      id
+    }
+  }
+`;
+
 const hashResetCode = (code) => {
   return createHmac("sha256", resetCodePepper).update(code).digest("hex");
 };
@@ -671,6 +684,37 @@ const run = async () => {
     ensureHasErrorCode(csrfMisleadingOperationNameMutation.errors, "CSRF_TOKEN_INVALID");
   } else {
     ensureHasResponseCode(csrfMisleadingOperationNameMutation, "CSRF_TOKEN_INVALID");
+  }
+
+  const csrfFragmentSpreadMutation = await request(
+    logoutWithProtectedFragmentMutation,
+    undefined,
+    {
+      input: {
+        name: "Fragment spread blocked by CSRF",
+        description: "Fragment spread must not bypass CSRF.",
+        icon: "utensils",
+        color: "blue",
+      },
+    },
+    {
+      cookie: "financy_session=invalid.token; Path=/",
+    },
+  );
+  ensureStatus(
+    csrfFragmentSpreadMutation.httpStatus,
+    [200, 403],
+    "Fragment spread mutation with cookie session must enforce CSRF",
+  );
+  ensure(
+    csrfFragmentSpreadMutation.errors.length > 0 ||
+      csrfFragmentSpreadMutation.code === "CSRF_TOKEN_INVALID",
+    "Fragment spread mutation should return a CSRF error",
+  );
+  if (csrfFragmentSpreadMutation.errors.length > 0) {
+    ensureHasErrorCode(csrfFragmentSpreadMutation.errors, "CSRF_TOKEN_INVALID");
+  } else {
+    ensureHasResponseCode(csrfFragmentSpreadMutation, "CSRF_TOKEN_INVALID");
   }
 
   const loginData = await request(loginMutation, undefined, {

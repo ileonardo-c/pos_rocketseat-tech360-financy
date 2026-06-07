@@ -238,6 +238,9 @@ const extractTopLevelFieldNames = (selectionSet: string) => {
     const char = selectionSet[index];
 
     if (char === "." && selectionSet.slice(index, index + 3) === "...") {
+      if (depth === 0) {
+        fieldNames.push(UNKNOWN_PROTECTED_MUTATION_FIELD);
+      }
       index += 3;
       while (index < selectionSet.length && /[^\s{]/.test(selectionSet[index] ?? "")) {
         index += 1;
