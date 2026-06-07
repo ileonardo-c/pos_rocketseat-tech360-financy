@@ -682,7 +682,7 @@ export const CategoriesPage = () => {
                   id: editingCategory.id,
                   input: {
                     name: editingName.trim(),
-                    description: editingDescription.trim() || undefined,
+                    description: editingDescription.trim(),
                     icon: editingIcon,
                     color: editingColor,
                   },

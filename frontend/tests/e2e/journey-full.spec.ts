@@ -77,12 +77,15 @@ test("@journey-full fluxo completo com conta seed e foto", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Nova categoria" })).toBeVisible({
     timeout: 20_000,
   });
+  const categoryDescription = `Descrição ${categoryName}`;
   await page.getByTestId("categories-create-name").fill(categoryName);
+  await page.getByTestId("categories-create-description").fill(categoryDescription);
   await page.getByTestId("categories-create-confirm").click();
   await expect(page.getByText("Categoria criada com sucesso.")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("heading", { name: categoryName })).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByText(categoryDescription)).toBeVisible({ timeout: 20_000 });
   const updatedCategoryName = `${categoryName} Editada`;
   const createdCategoryCard = page
     .getByTestId(/^category-item-/)
@@ -94,6 +97,7 @@ test("@journey-full fluxo completo com conta seed e foto", async ({ page }) => {
     .getByRole("button", { name: `Editar categoria ${categoryName}` })
     .click();
   await page.getByTestId("categories-edit-name").fill(updatedCategoryName);
+  await page.getByTestId("categories-edit-description").fill("");
   await page.getByTestId("categories-edit-confirm").click();
   await expect(page.getByText("Categoria atualizada com sucesso.")).toBeVisible({
     timeout: 20_000,
@@ -101,6 +105,7 @@ test("@journey-full fluxo completo com conta seed e foto", async ({ page }) => {
   await expect(page.getByRole("heading", { name: updatedCategoryName })).toBeVisible({
     timeout: 20_000,
   });
+  await expect(page.getByText(categoryDescription)).toBeHidden({ timeout: 20_000 });
   const updatedCategoryCard = page
     .getByTestId(/^category-item-/)
     .filter({ has: page.getByRole("heading", { name: updatedCategoryName }) });
