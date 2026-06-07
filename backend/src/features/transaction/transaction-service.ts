@@ -648,23 +648,11 @@ export class TransactionService {
       };
     }
 
-    const defaultRange = this.getCurrentMonthRange();
-
     return {
       query,
       type,
       categoryId,
-      from: defaultRange.from,
-      to: defaultRange.to,
     };
-  }
-
-  private getCurrentMonthRange() {
-    const now = new Date();
-    const from = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
-    const to = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
-
-    return { from, to };
   }
 
   private buildMonthRangeFromDate(reference: Date) {

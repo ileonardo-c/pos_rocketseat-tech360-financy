@@ -235,6 +235,12 @@ const transactionsQuery = `
   }
 `;
 
+const transactionsCountQuery = `
+  query TransactionsCount {
+    transactionsCount
+  }
+`;
+
 const deleteTransactionMutation = `
   mutation DeleteTransaction($id: ID!) {
     deleteTransaction(id: $id)
@@ -286,6 +292,25 @@ const run = async () => {
   const transactionId = transactionData?.createTransaction?.id;
   ensure(transactionId, "Transaction creation returned no id");
 
+  const transactionCountBeforeOldTransaction = await request(transactionsCountQuery, token);
+  ensure(
+    transactionCountBeforeOldTransaction?.transactionsCount === 1,
+    `Unfiltered transaction count should be 1 before old transaction, got ${transactionCountBeforeOldTransaction?.transactionsCount}`,
+  );
+
+  const oldTransactionData = await request(createTransactionMutation, token, {
+    input: {
+      title: `Old Smoke Transaction ${randomSuffix}`,
+      description: "E2E smoke transaction outside the current month",
+      amount: 42,
+      type: "EXPENSE",
+      date: "2024-01-15T12:00:00.000Z",
+      categoryId,
+    },
+  });
+  const oldTransactionId = oldTransactionData?.createTransaction?.id;
+  ensure(oldTransactionId, "Old transaction creation returned no id");
+
   const categoriesData = await request(categoriesQuery, token);
   ensure(
     categoriesData.categories.some((category) => category.id === categoryId),
@@ -296,6 +321,16 @@ const run = async () => {
   ensure(
     transactionsData.transactions.some((transaction) => transaction.id === transactionId),
     "Created transaction not found in list",
+  );
+  ensure(
+    transactionsData.transactions.some((transaction) => transaction.id === oldTransactionId),
+    "Old transaction without date filter not found in list",
+  );
+
+  const transactionCountAfterOldTransaction = await request(transactionsCountQuery, token);
+  ensure(
+    transactionCountAfterOldTransaction?.transactionsCount === 2,
+    `Unfiltered transaction count should include old transaction, got ${transactionCountAfterOldTransaction?.transactionsCount}`,
   );
 
   const updateCategoryData = await request(updateCategoryMutation, token, {
@@ -476,6 +511,11 @@ const run = async () => {
     id: transactionId,
   });
   ensure(deleteTransactionData.deleteTransaction === true, "Transaction deletion failed");
+
+  const deleteOldTransactionData = await request(deleteTransactionMutation, token, {
+    id: oldTransactionId,
+  });
+  ensure(deleteOldTransactionData.deleteTransaction === true, "Old transaction deletion failed");
 
   const deleteCategoryData = await request(deleteCategoryMutation, token, { id: categoryId });
   ensure(deleteCategoryData.deleteCategory === true, "Category deletion failed");
