@@ -21,6 +21,10 @@ const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
 const graphqlUrlWithQuery = `${graphqlUrl}?x=1`;
 const textEncoder = new TextEncoder();
 const resetCodePepper = process.env.RESET_CODE_PEPPER ?? "financy-reset-pepper";
+const authRateLimitMaxRequests = Number.parseInt(
+  process.env.RATE_LIMIT_AUTH_MAX_REQUESTS ?? "30",
+  10,
+);
 const prisma = new PrismaClient();
 
 const toBase64Url = (value) => Buffer.from(value).toString("base64url");
@@ -146,6 +150,18 @@ const loginMutation = `
     }
   }
 `;
+
+const buildAliasedLoginRateLimitMutation = () => {
+  const aliases = Array.from({ length: authRateLimitMaxRequests + 1 }, (_, index) => {
+    return `a${String(index + 1).padStart(3, "0")}: login(input: $input) { token }`;
+  }).join("\n    ");
+
+  return `
+    mutation AliasedLoginRateLimit($input: LoginInput!) {
+      ${aliases}
+    }
+  `;
+};
 
 const logoutMutation = `
   mutation Logout {
@@ -675,6 +691,20 @@ const run = async () => {
     `Me query with valid token must not error: ${JSON.stringify(meWithNewToken.errors)}`,
   );
   ensure(meWithNewToken.data?.me?.id === userId, "Me query should return the same user");
+
+  const aliasedLoginRateLimitResult = await request(
+    buildAliasedLoginRateLimitMutation(),
+    undefined,
+    {
+      input: { email: user.email, password: "WrongPass123!" },
+    },
+  );
+  ensureStatus(
+    aliasedLoginRateLimitResult.httpStatus,
+    429,
+    "Aliased login fields must each consume auth rate limit",
+  );
+  ensureHasResponseCode(aliasedLoginRateLimitResult, "TOO_MANY_REQUESTS");
 
   const categoriesListEmpty = await request(categoriesListQuery, loginData.data.login.token, {
     page: 1,

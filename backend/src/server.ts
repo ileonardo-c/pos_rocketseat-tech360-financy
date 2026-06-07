@@ -430,7 +430,7 @@ app.addHook("preValidation", async (request, reply) => {
     return;
   }
 
-  for (const authMutationField of new Set(authMutationFields)) {
+  for (const authMutationField of authMutationFields) {
     const authRate = authRateLimiter(`${ip}:${authMutationField}`);
     if (!authRate.allowed) {
       return respondRateLimitError(reply, authRate.remainingWindowMs);
