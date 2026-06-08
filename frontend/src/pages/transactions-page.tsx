@@ -514,11 +514,21 @@ export const TransactionsPage = () => {
     try {
       setActionError(null);
       setActionSuccess(null);
-      await deleteTransaction({ variables: { id: deletingTransaction.id } });
-      await refetchTransactions();
-      await refetchTransactionsCount();
-      setActionSuccess("Transação excluída com sucesso.");
+      const response = await deleteTransaction({ variables: { id: deletingTransaction.id } });
+
+      if (!response.data?.deleteTransaction) {
+        setActionError("Transação não encontrada para exclusão.");
+        return;
+      }
+
       setDeletingTransaction(null);
+      setActionSuccess("Transação excluída com sucesso.");
+
+      try {
+        await Promise.all([refetchTransactions(), refetchTransactionsCount()]);
+      } catch {
+        setActionError("Transação excluída, mas não foi possível atualizar a lista.");
+      }
     } catch {
       setActionError("Não foi possível excluir a transação.");
     }
@@ -835,13 +845,14 @@ export const TransactionsPage = () => {
       <Modal
         isOpen={Boolean(deletingTransaction)}
         onClose={closeDeleteDialog}
+        closeDisabled={deleting}
         showCloseButton
         title="Excluir transação"
         subtitle="Essa ação removerá a transação selecionada."
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm font-semibold text-financy-muted">
-            Deseja confirmar a exclusão desta transação?
+            {deleting ? "Excluindo transação..." : "Deseja confirmar a exclusão desta transação?"}
           </p>
           <div className="flex items-center justify-end gap-3">
             <Button
@@ -862,7 +873,7 @@ export const TransactionsPage = () => {
               className="!text-financy-danger hover:!text-financy-danger"
               onClick={handleConfirmDeleteTransaction}
             >
-              {deleting ? "Excluindo..." : "Excluir transação"}
+              <span className="t-text-swap">{deleting ? "Excluindo..." : "Excluir transação"}</span>
             </Button>
           </div>
         </div>

@@ -192,7 +192,7 @@ const createTransactionByApi = async (
     amount: number;
     categoryId: string;
   },
-) => {
+): Promise<string> => {
   const response = await page.request.post(API_URL, {
     headers: {
       authorization: `Bearer ${token}`,
@@ -222,6 +222,8 @@ const createTransactionByApi = async (
   expect(response.ok()).toBeTruthy();
   expect(payload.errors).toBeFalsy();
   expect(payload.data?.createTransaction?.id).toBeTruthy();
+
+  return payload.data.createTransaction.id;
 };
 
 const navigateWithPopState = async (page: Page, pathAndSearch: string) => {
@@ -474,5 +476,76 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
       .click();
     await expect(page).toHaveURL(/from=2026-05-01&to=2026-05-31/, { timeout: 15_000 });
     await expect(page.getByText(mayTitle)).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("@smoke-dashboard transaction delete modal shows loading and closes after mutation", async ({
+    page,
+  }) => {
+    const user = buildTransientE2EUser();
+    const marker = Date.now();
+    const transactionTitle = `Delete Modal ${marker}`;
+
+    await clearClientState(page);
+    await createTransientUser(page, user);
+
+    const token = await loginByApi(page, user);
+    const categoryId = await createCategoryByApi(page, token, `Deletion Category ${marker}`);
+    await createTransactionByApi(page, token, {
+      title: transactionTitle,
+      date: "2026-06-15",
+      amount: 32,
+      categoryId,
+    });
+
+    await page.route("**/graphql", async (route) => {
+      const request = route.request();
+      const body = request.method() === "POST" ? request.postDataJSON?.() : null;
+      const operationName =
+        body?.operationName ?? body?.query?.match(/(?:query|mutation)\s+(\w+)/)?.[1];
+
+      if (operationName === "DeleteTransaction") {
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30`, {
+      waitUntil: "domcontentloaded",
+    });
+    await waitForTransactionsPage(page);
+
+    const row = page.getByRole("listitem").filter({ hasText: transactionTitle });
+    await expect(row).toBeVisible({ timeout: 15_000 });
+    await row.getByRole("button", { name: "Excluir transação" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "Excluir transação" });
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+
+    const deleteResponse = page.waitForResponse((response) => {
+      if (!response.url().includes("/graphql") || response.request().method() !== "POST") {
+        return false;
+      }
+
+      const body = response.request().postDataJSON?.();
+      const operationName =
+        body?.operationName ?? body?.query?.match(/(?:query|mutation)\s+(\w+)/)?.[1];
+
+      return operationName === "DeleteTransaction";
+    });
+
+    await dialog.getByRole("button", { name: "Excluir transação" }).click();
+    await expect(dialog.getByRole("button", { name: "Excluindo..." })).toBeDisabled();
+    await expect(dialog.getByText("Excluindo transação...")).toBeVisible();
+
+    const response = await deleteResponse;
+    const payload = await response.json();
+    expect(payload.data?.deleteTransaction).toBe(true);
+
+    await expect(dialog).toBeHidden({ timeout: 15_000 });
+    await expect(page.getByText("Transação excluída com sucesso.")).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(row).toHaveCount(0, { timeout: 15_000 });
   });
 });

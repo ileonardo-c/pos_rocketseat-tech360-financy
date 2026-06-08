@@ -7,6 +7,7 @@ type ModalProps = {
   title: string;
   subtitle?: string;
   showCloseButton?: boolean;
+  closeDisabled?: boolean;
   children: ReactNode;
   lockBody?: "always" | "auto" | "never";
   onClose: () => void;
@@ -82,6 +83,7 @@ export const Modal = ({
   title,
   subtitle,
   showCloseButton,
+  closeDisabled = false,
   lockBody = "always",
   children,
   onClose,
@@ -291,7 +293,7 @@ export const Modal = ({
       className={`t-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4 overscroll-none ${transitionClass}`}
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (!closeDisabled && event.target === event.currentTarget) {
           onClose();
         }
       }}
@@ -362,6 +364,7 @@ export const Modal = ({
               <button
                 aria-label="Fechar"
                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-financy-field-border bg-financy-surface text-financy-muted transition-[background-color,color,border-color] duration-150 hover:bg-financy-surface-hover"
+                disabled={closeDisabled}
                 onClick={onClose}
                 type="button"
               >
