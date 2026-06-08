@@ -208,17 +208,7 @@ export class AuthService {
       throw error;
     }
 
-    if (user.avatarKey && user.avatarKey !== avatarKey) {
-      try {
-        await storageService.deleteObject(user.avatarKey);
-      } catch (error) {
-        console.error("Failed to delete stale avatar object", {
-          userId: ctx.userId,
-          key: user.avatarKey,
-          error,
-        });
-      }
-    }
+    await this.cleanupAvatarObject(storageService, user.avatarKey, avatarKey, ctx.userId);
 
     return this.mapUser(updated);
   }
@@ -233,9 +223,7 @@ export class AuthService {
       throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
     }
 
-    if (user.avatarKey) {
-      await storageService.deleteObject(user.avatarKey);
-    }
+    const previousAvatarKey = user.avatarKey;
 
     let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;
     try {
@@ -250,6 +238,29 @@ export class AuthService {
       throw error;
     }
 
+    await this.cleanupAvatarObject(storageService, previousAvatarKey, null, ctx.userId);
+
     return this.mapUser(updated);
+  }
+
+  private async cleanupAvatarObject(
+    storageService: StorageService,
+    previousAvatarKey: string | null,
+    currentAvatarKey: string | null,
+    userId: string,
+  ) {
+    if (!previousAvatarKey || previousAvatarKey === currentAvatarKey) {
+      return;
+    }
+
+    try {
+      await storageService.deleteObject(previousAvatarKey);
+    } catch (error) {
+      console.warn("Avatar cleanup failed", {
+        userId,
+        key: previousAvatarKey,
+        error,
+      });
+    }
   }
 }

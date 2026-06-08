@@ -47,6 +47,7 @@ Nunca use `|| true` para suprimir falhas de containers ou serviços. Qualquer sa
 - **Nomenclatura de Plugins:** Use "plugin" / "plugins" na documentação, interface do usuário e registros de alterações. A árvore de diretórios do espaço de trabalho permanece inalterada para evitar refatorações em massa.
 - **Estilo TypeScript:** Prefira tipagem estrita. Evite o uso de `any`. Nunca adicione `@ts-nocheck` e não desabilite `no-explicit-any`; corrija a causa raiz e mantenha a tipagem segura.
 - **Boas Práticas de Classes:** Nunca compartilhe comportamento de classe via mutação de protótipo (`Object.defineProperty` em `.prototype`). Use herança ou composição explícitas para que o TypeScript possa validar os tipos.
+- **Regra permanente de consistência com recursos externos:** Sempre que o PR alterar avatar, upload, receipt, storage, S3, MinIO, delete de arquivo ou qualquer side effect externo combinado com Prisma, audite a ordem das operações. O banco é a fonte de verdade. Recurso externo antigo só pode ser apagado depois que o banco deixar de apontar para ele. Falha de banco bloqueia side effect destrutivo; falha de cleanup externo não pode corromper referência persistida.
 
 ------
 
