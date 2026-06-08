@@ -67,7 +67,9 @@ test("@journey-full complete flow with seed account and photo", async ({ page })
   await page.getByTestId("signin-password").fill(seedUser.password);
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: "Transações recentes" })).toBeVisible({
+    timeout: 20_000,
+  });
 
   await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Categorias" }).waitFor();

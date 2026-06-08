@@ -169,7 +169,7 @@ const tests: Array<[string, () => Promise<void>]> = [
       assert(!!lastCall, "findMany should be called once");
       assertDeepEqual(
         lastCall?.orderBy,
-        { date: "desc", createdAt: "desc", id: "desc" },
+        [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         "Recent list must also use stable ordering",
       );
       assert(lastCall?.take === 8, "Recent list should keep requested limit");

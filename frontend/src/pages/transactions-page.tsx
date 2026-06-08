@@ -440,8 +440,11 @@ export const TransactionsPage = () => {
 
   const categories = categoriesData?.categories ?? [];
   const transactions = transactionsData?.transactions ?? [];
+  const hasTransactionsCountLoaded = typeof transactionsCountData?.transactionsCount === "number";
   const totalResults = transactionsCountData?.transactionsCount ?? transactions.length;
-  const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
+  const totalPages = hasTransactionsCountLoaded
+    ? Math.max(1, Math.ceil(totalResults / itemsPerPage))
+    : Math.max(1, page, Math.ceil(transactions.length / itemsPerPage));
 
   useEffect(() => {
     if (searchInput === filter.query) {
@@ -470,10 +473,14 @@ export const TransactionsPage = () => {
   }, [filter, replaceSearchState, searchInput]);
 
   useEffect(() => {
+    if (!hasTransactionsCountLoaded) {
+      return;
+    }
+
     if (page > totalPages) {
       replaceSearchState({ page: totalPages });
     }
-  }, [page, replaceSearchState, totalPages]);
+  }, [hasTransactionsCountLoaded, page, replaceSearchState, totalPages]);
 
   const isBootstrapLoading = !hasValidSearchPeriod && !isPeriodReady && initialPeriodLoading;
   const isBootstrapError = !hasValidSearchPeriod && !isPeriodReady && Boolean(initialPeriodError);

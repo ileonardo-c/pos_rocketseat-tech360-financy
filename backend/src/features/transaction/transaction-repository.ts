@@ -228,11 +228,7 @@ export class TransactionRepository {
       include: {
         category: this.getCategoryInclude(),
       },
-      orderBy: {
-        date: "desc",
-        createdAt: "desc",
-        id: "desc",
-      },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
       take: limit,
     });
   }

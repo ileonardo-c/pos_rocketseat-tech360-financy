@@ -277,6 +277,7 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
 
     const token = await loginByApi(page, user);
     const categoryId = await createCategoryByApi(page, token, `Paginação ${marker}`);
+    let shouldDelayNextTransactionsCount = false;
 
     for (let index = 1; index <= 15; index += 1) {
       await createTransactionByApi(page, token, {
@@ -293,6 +294,11 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
       const operationName =
         body?.operationName ?? body?.query?.match(/(?:query|mutation)\s+(\w+)/)?.[1];
 
+      if (operationName === "TransactionsCount" && shouldDelayNextTransactionsCount) {
+        shouldDelayNextTransactionsCount = false;
+        await new Promise((resolve) => setTimeout(resolve, 1_500));
+      }
+
       if (operationName === "Transactions" && body?.variables?.page === 2) {
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
@@ -308,6 +314,17 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
     });
     await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
     await loginByUi(page, user);
+
+    shouldDelayNextTransactionsCount = true;
+    await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30&page=2`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page).toHaveURL(/page=2/, { timeout: 15_000 });
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("page"), { timeout: 1_200 })
+      .toBe("2");
+    await expect(page.getByText("11 a 15 | 15 resultados")).toBeVisible({ timeout: 15_000 });
+    await expect(page).toHaveURL(/page=2/, { timeout: 15_000 });
 
     await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30`, {
       waitUntil: "domcontentloaded",
