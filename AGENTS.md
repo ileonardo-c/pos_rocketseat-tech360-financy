@@ -155,6 +155,10 @@ Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
 - Se nenhum problema relevante for encontrado, responda apenas: `Nenhum problema relevante encontrado.`
 - Não explique o comportamento geral do agente, não adicione seções de próximos passos, nem encerre com perguntas abertas.
 
+## Regra permanente de consistência com recursos externos
+
+Sempre que o PR alterar avatar, upload, receipt, storage, S3, MinIO, delete de arquivo ou qualquer side effect externo combinado com Prisma, audite a ordem das operações. O banco é a fonte de verdade. Recurso externo antigo só pode ser apagado depois que o banco deixar de apontar para ele. Falha de banco bloqueia side effect destrutivo; falha de cleanup externo não pode corromper a referência persistida.
+
 ### Níveis de Severidade
 
 | **Nível** | **Significado**                                        | **Exemplos**                                                 |

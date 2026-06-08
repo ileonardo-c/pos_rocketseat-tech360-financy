@@ -1,4 +1,5 @@
 import type { GraphQLContext } from "@/context";
+import type { StorageService } from "@/features/storage/storage-service";
 import { AppError } from "@/lib/errors";
 import { getStorageConfig } from "@/lib/storage-env";
 import type { TransactionRepository } from "./transaction-repository";
@@ -80,7 +81,10 @@ type TransactionsInitialPeriod = {
 };
 
 export class TransactionService {
-  constructor(private readonly repository: TransactionRepository) {}
+  constructor(
+    private readonly repository: TransactionRepository,
+    private readonly storageService?: StorageService,
+  ) {}
 
   async listByUser(
     ctx: GraphQLContext,
@@ -162,7 +166,10 @@ export class TransactionService {
       return transaction;
     }
 
-    return this.repository.update(id, payload);
+    const previousReceiptKey = transaction.receiptKey;
+    const updated = await this.repository.update(id, payload);
+    await this.cleanupReceiptObject(ctx.userId, previousReceiptKey, updated.receiptKey);
+    return updated;
   }
 
   async delete(ctx: GraphQLContext, id: string) {
@@ -175,8 +182,30 @@ export class TransactionService {
       return false;
     }
 
+    const previousReceiptKey = transaction.receiptKey;
     await this.repository.deleteById(id);
+    await this.cleanupReceiptObject(ctx.userId, previousReceiptKey, null);
     return true;
+  }
+
+  private async cleanupReceiptObject(
+    userId: string,
+    previousReceiptKey: string | null,
+    newReceiptKey: string | null,
+  ) {
+    if (!this.storageService || !previousReceiptKey || previousReceiptKey === newReceiptKey) {
+      return;
+    }
+
+    try {
+      await this.storageService.deleteObject(previousReceiptKey);
+    } catch (error) {
+      console.warn("Receipt cleanup failed", {
+        userId,
+        key: previousReceiptKey,
+        error,
+      });
+    }
   }
 
   async summaryByUser(

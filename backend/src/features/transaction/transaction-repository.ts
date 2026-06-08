@@ -5,6 +5,18 @@ import type { Transaction } from "@prisma/client";
 export class TransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  private getCategoryInclude() {
+    return {
+      include: {
+        _count: {
+          select: {
+            transactions: true,
+          },
+        },
+      },
+    };
+  }
+
   findLatestByUser(userId: string): Promise<{ date: Date } | null> {
     return this.prisma.transaction.findFirst({
       where: {
@@ -25,7 +37,7 @@ export class TransactionRepository {
         userId,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
       orderBy: {
         date: "desc",
@@ -49,17 +61,18 @@ export class TransactionRepository {
   ): Promise<Transaction[]> {
     const where = this.buildListWhere(userId, options);
 
-    const orderBy: Prisma.TransactionOrderByWithRelationInput =
+    const direction = options.sortDirection === "ASC" ? "asc" : "desc";
+    const orderBy: Prisma.TransactionOrderByWithRelationInput[] =
       options.sortField === "AMOUNT"
-        ? { amount: options.sortDirection === "ASC" ? "asc" : "desc" }
+        ? [{ amount: direction }, { createdAt: direction }, { id: direction }]
         : options.sortField === "TITLE"
-          ? { title: options.sortDirection === "ASC" ? "asc" : "desc" }
-          : { date: options.sortDirection === "ASC" ? "asc" : "desc" };
+          ? [{ title: direction }, { createdAt: direction }, { id: direction }]
+          : [{ date: direction }, { createdAt: direction }, { id: direction }];
 
     return this.prisma.transaction.findMany({
       where,
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
       orderBy,
       skip: (options.page - 1) * options.perPage,
@@ -89,7 +102,7 @@ export class TransactionRepository {
         userId,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -213,10 +226,12 @@ export class TransactionRepository {
         },
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
       orderBy: {
         date: "desc",
+        createdAt: "desc",
+        id: "desc",
       },
       take: limit,
     });
@@ -241,7 +256,7 @@ export class TransactionRepository {
         ...data,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -265,7 +280,7 @@ export class TransactionRepository {
       },
       data,
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -276,7 +291,7 @@ export class TransactionRepository {
         id,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }

@@ -1,3 +1,4 @@
+import type { GraphQLContext } from "@/context";
 import type { Transaction } from "@prisma/client";
 import { authMutations } from "./mutations/auth";
 import { categoryMutations } from "./mutations/category";
@@ -582,17 +583,26 @@ export const resolvers = {
     ...storageMutations,
   },
   Category: {
-    transactionsCount: (category: {
-      transactionsCount?: number;
-      _count?: { transactions?: number };
-    }) => {
+    transactionsCount: async (
+      category: { id?: string; transactionsCount?: number; _count?: { transactions?: number } },
+      _args: unknown,
+      ctx: GraphQLContext,
+    ) => {
       if (typeof category.transactionsCount === "number") {
         return category.transactionsCount;
       }
       if (typeof category._count?.transactions === "number") {
         return category._count.transactions;
       }
-      return 0;
+      const categoryId = category.id;
+      if (!categoryId) {
+        return 0;
+      }
+      return ctx.prisma.transaction.count({
+        where: {
+          categoryId,
+        },
+      });
     },
   },
   Transaction: {
