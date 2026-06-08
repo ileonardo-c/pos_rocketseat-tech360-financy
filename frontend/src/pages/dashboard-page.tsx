@@ -25,7 +25,7 @@ import {
   TRANSACTIONS_INITIAL_PERIOD_QUERY,
 } from "@/lib/graphql/operations";
 import { useQuery } from "@apollo/client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 type Transaction = {
@@ -173,13 +173,15 @@ const getTransactionLeadingBackground = (transaction: Transaction) => {
 export const DashboardPage = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const [apiUnavailable, setApiUnavailable] = useState(false);
   const [isNewTransactionModalOpen, setIsNewTransactionModalOpen] = useState(false);
-  const parsedFilterFromSearch = parseFilterFromSearchParams(searchParams);
-  const hasValidSearchFilter = Boolean(parsedFilterFromSearch);
-  const [resolvedFilter, setResolvedFilter] = useState<SummaryFilter | null>(
-    () => parsedFilterFromSearch,
+  const parsedFilterFromSearch = useMemo(
+    () => parseFilterFromSearchParams(new URLSearchParams(searchParamsString)),
+    [searchParamsString],
   );
+  const hasValidSearchFilter = Boolean(parsedFilterFromSearch);
+  const [fallbackFilter, setFallbackFilter] = useState<SummaryFilter | null>(null);
 
   const {
     data: initialPeriodData,
@@ -190,15 +192,6 @@ export const DashboardPage = () => {
     skip: hasValidSearchFilter,
     fetchPolicy: "network-only",
   });
-
-  useEffect(() => {
-    if (parsedFilterFromSearch) {
-      setResolvedFilter(parsedFilterFromSearch);
-      return;
-    }
-
-    setResolvedFilter(null);
-  }, [parsedFilterFromSearch?.from, parsedFilterFromSearch?.to]);
 
   useEffect(() => {
     if (hasValidSearchFilter || !initialPeriodData) {
@@ -212,24 +205,24 @@ export const DashboardPage = () => {
       return;
     }
 
-    setResolvedFilter({ from, to });
+    setFallbackFilter({ from, to });
   }, [hasValidSearchFilter, initialPeriodData]);
 
-  const filter = parsedFilterFromSearch ?? resolvedFilter;
+  const filter = parsedFilterFromSearch ?? fallbackFilter;
 
   useEffect(() => {
-    if (hasValidSearchFilter || !filter) {
+    if (!filter) {
       return;
     }
 
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(searchParamsString);
     next.set("from", filter.from);
     next.set("to", filter.to);
 
-    if (next.toString() !== searchParams.toString()) {
+    if (next.toString() !== searchParamsString) {
       setSearchParams(next, { replace: true });
     }
-  }, [filter?.from, filter?.to, hasValidSearchFilter, searchParams, setSearchParams]);
+  }, [filter?.from, filter?.to, searchParamsString, setSearchParams]);
 
   const {
     data: summaryData,

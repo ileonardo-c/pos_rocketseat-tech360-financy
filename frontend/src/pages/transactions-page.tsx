@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@apollo/client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import {
@@ -79,6 +79,12 @@ type TransactionFilterState = {
   categoryId: string;
 };
 
+type ParsedTransactionSearchState = {
+  filter: TransactionFilterState;
+  page: number;
+  period: PeriodValue | null;
+};
+
 const itemsPerPage = 10;
 
 const parseISODate = (value: string | null) => {
@@ -132,6 +138,11 @@ const parsePeriodRangeFromSearch = (searchParams: URLSearchParams) => {
   return { from, to };
 };
 
+const getPeriodFromRange = (range: { from: Date; to: Date }): PeriodValue => ({
+  month: range.from.getMonth() + 1,
+  year: range.from.getFullYear(),
+});
+
 const parseFilterType = (value: string | null): TransactionFilterType => {
   if (value === "INCOME" || value === "EXPENSE") {
     return value;
@@ -147,6 +158,57 @@ const parsePage = (value: string | null) => {
   }
 
   return parsed;
+};
+
+const parseTransactionSearchState = (
+  searchParams: URLSearchParams,
+): ParsedTransactionSearchState => {
+  const periodRange = parsePeriodRangeFromSearch(searchParams);
+
+  return {
+    filter: {
+      query: (searchParams.get("query") ?? "").trim(),
+      type: parseFilterType(searchParams.get("type")),
+      categoryId: searchParams.get("categoryId") ?? "",
+    },
+    page: parsePage(searchParams.get("page")),
+    period: periodRange ? getPeriodFromRange(periodRange) : null,
+  };
+};
+
+const buildSearchParamsFromState = ({
+  filter,
+  page,
+  period,
+}: {
+  filter: TransactionFilterState;
+  page: number;
+  period: PeriodValue;
+}) => {
+  const next = new URLSearchParams();
+  const normalizedQuery = filter.query.trim();
+  const periodRange = buildRangeFromPeriod(period);
+
+  if (normalizedQuery) {
+    next.set("query", normalizedQuery);
+  }
+
+  if (filter.type !== "ALL") {
+    next.set("type", filter.type);
+  }
+
+  if (filter.categoryId) {
+    next.set("categoryId", filter.categoryId);
+  }
+
+  next.set("from", periodRange.from);
+  next.set("to", periodRange.to);
+
+  if (page > 1) {
+    next.set("page", String(page));
+  }
+
+  return next;
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -245,26 +307,16 @@ const getCategoryIconClasses = (
 
 export const TransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const parsedPeriodRange = parsePeriodRangeFromSearch(searchParams);
-  const hasValidSearchPeriod = Boolean(parsedPeriodRange);
+  const searchParamsString = searchParams.toString();
+  const parsedSearchState = useMemo(
+    () => parseTransactionSearchState(new URLSearchParams(searchParamsString)),
+    [searchParamsString],
+  );
+  const { filter, page } = parsedSearchState;
+  const hasValidSearchPeriod = Boolean(parsedSearchState.period);
 
-  const [filter, setFilter] = useState<TransactionFilterState>(() => ({
-    query: searchParams.get("query") ?? "",
-    type: parseFilterType(searchParams.get("type")),
-    categoryId: searchParams.get("categoryId") ?? "",
-  }));
-  const [searchInput, setSearchInput] = useState<string>(() => searchParams.get("query") ?? "");
-  const [period, setPeriod] = useState<PeriodValue | null>(() => {
-    if (!parsedPeriodRange) {
-      return null;
-    }
-
-    return {
-      month: parsedPeriodRange.from.getMonth() + 1,
-      year: parsedPeriodRange.from.getFullYear(),
-    };
-  });
-  const [page, setPage] = useState<number>(() => parsePage(searchParams.get("page")));
+  const [searchInput, setSearchInput] = useState<string>(() => parsedSearchState.filter.query);
+  const [fallbackPeriod, setFallbackPeriod] = useState<PeriodValue | null>(null);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -283,19 +335,20 @@ export const TransactionsPage = () => {
   });
 
   useEffect(() => {
-    if (hasValidSearchPeriod || period) {
+    if (hasValidSearchPeriod) {
       return;
     }
 
     const from = parseISODate(initialPeriodData?.transactionsInitialPeriod?.from ?? null);
     if (from) {
-      setPeriod({
+      setFallbackPeriod({
         month: from.getMonth() + 1,
         year: from.getFullYear(),
       });
     }
-  }, [hasValidSearchPeriod, initialPeriodData, period]);
+  }, [hasValidSearchPeriod, initialPeriodData]);
 
+  const period = parsedSearchState.period ?? fallbackPeriod;
   const periodRange = useMemo(() => (period ? buildRangeFromPeriod(period) : null), [period]);
   const isPeriodReady = Boolean(periodRange);
 
@@ -323,38 +376,36 @@ export const TransactionsPage = () => {
     [filterInput, page],
   );
 
-  const searchParamsString = searchParams.toString();
+  const replaceSearchState = useCallback(
+    ({
+      filter: nextFilter = filter,
+      page: nextPage = page,
+      period: nextPeriod = period,
+    }: {
+      filter?: TransactionFilterState;
+      page?: number;
+      period?: PeriodValue | null;
+    } = {}) => {
+      if (!nextPeriod) {
+        return;
+      }
+
+      const next = buildSearchParamsFromState({
+        filter: nextFilter,
+        page: nextPage,
+        period: nextPeriod,
+      });
+
+      if (next.toString() !== searchParamsString) {
+        setSearchParams(next, { replace: true });
+      }
+    },
+    [filter, page, period, searchParamsString, setSearchParams],
+  );
 
   useEffect(() => {
-    if (!periodRange) {
-      return;
-    }
-
-    const next = new URLSearchParams();
-
-    if (filter.query.trim()) {
-      next.set("query", filter.query.trim());
-    }
-
-    if (filter.type !== "ALL") {
-      next.set("type", filter.type);
-    }
-
-    if (filter.categoryId) {
-      next.set("categoryId", filter.categoryId);
-    }
-
-    next.set("from", periodRange.from);
-    next.set("to", periodRange.to);
-
-    if (page > 1) {
-      next.set("page", String(page));
-    }
-
-    if (next.toString() !== searchParamsString) {
-      setSearchParams(next, { replace: true });
-    }
-  }, [filter, page, periodRange?.from, periodRange?.to, searchParamsString, setSearchParams]);
+    replaceSearchState();
+  }, [replaceSearchState]);
 
   const {
     data: categoriesData,
@@ -393,27 +444,36 @@ export const TransactionsPage = () => {
   const totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setFilter((prev) => {
-        if (prev.query === searchInput) {
-          return prev;
-        }
+    if (searchInput === filter.query) {
+      return;
+    }
 
-        setPage(1);
-        return { ...prev, query: searchInput };
+    setSearchInput(filter.query);
+  }, [filter.query]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const nextQuery = searchInput.trim();
+      if (nextQuery === filter.query) {
+        return;
+      }
+
+      replaceSearchState({
+        filter: { ...filter, query: nextQuery },
+        page: 1,
       });
     }, 1000);
 
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [searchInput]);
+  }, [filter, replaceSearchState, searchInput]);
 
   useEffect(() => {
     if (page > totalPages) {
-      setPage(totalPages);
+      replaceSearchState({ page: totalPages });
     }
-  }, [page, totalPages]);
+  }, [page, replaceSearchState, totalPages]);
 
   const isBootstrapLoading = !hasValidSearchPeriod && !isPeriodReady && initialPeriodLoading;
   const isBootstrapError = !hasValidSearchPeriod && !isPeriodReady && Boolean(initialPeriodError);
@@ -544,11 +604,13 @@ export const TransactionsPage = () => {
                 id="transactions-filter-type"
                 value={filter.type}
                 onChange={(event) => {
-                  setPage(1);
-                  setFilter((prev) => ({
-                    ...prev,
-                    type: event.target.value as TransactionFilterType,
-                  }));
+                  replaceSearchState({
+                    filter: {
+                      ...filter,
+                      type: event.target.value as TransactionFilterType,
+                    },
+                    page: 1,
+                  });
                 }}
               >
                 <option value="ALL">Todos</option>
@@ -568,8 +630,10 @@ export const TransactionsPage = () => {
                 id="transactions-filter-category"
                 value={filter.categoryId}
                 onChange={(event) => {
-                  setPage(1);
-                  setFilter((prev) => ({ ...prev, categoryId: event.target.value }));
+                  replaceSearchState({
+                    filter: { ...filter, categoryId: event.target.value },
+                    page: 1,
+                  });
                 }}
               >
                 <option value="">Todas</option>
@@ -594,8 +658,7 @@ export const TransactionsPage = () => {
                   data-testid="transactions-period"
                   value={period}
                   onChange={(nextPeriod) => {
-                    setPage(1);
-                    setPeriod(nextPeriod);
+                    replaceSearchState({ period: nextPeriod, page: 1 });
                   }}
                 />
               ) : (
@@ -698,7 +761,7 @@ export const TransactionsPage = () => {
                 <IconButton
                   aria-label="Página anterior"
                   disabled={page <= 1}
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                  onClick={() => replaceSearchState({ page: Math.max(1, page - 1) })}
                 >
                   <IconChevronLeft className="h-[9.333px] w-[5.333px]" />
                 </IconButton>
@@ -708,14 +771,14 @@ export const TransactionsPage = () => {
                     key={value}
                     label={String(value)}
                     state={value === page ? "active" : "default"}
-                    onClick={() => setPage(value)}
+                    onClick={() => replaceSearchState({ page: value })}
                   />
                 ))}
 
                 <IconButton
                   aria-label="Próxima página"
                   disabled={page >= totalPages}
-                  onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                  onClick={() => replaceSearchState({ page: Math.min(totalPages, page + 1) })}
                 >
                   <IconChevronRight className="h-[9.333px] w-[5.333px]" />
                 </IconButton>

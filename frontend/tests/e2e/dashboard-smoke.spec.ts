@@ -222,6 +222,13 @@ const createTransactionByApi = async (
   expect(payload.data?.createTransaction?.id).toBeTruthy();
 };
 
+const navigateWithPopState = async (page: Page, pathAndSearch: string) => {
+  await page.evaluate((target) => {
+    window.history.pushState({}, "", target);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, pathAndSearch);
+};
+
 test.describe("@smoke-dashboard dashboard access flow", () => {
   test("@smoke-dashboard loads dashboard and protects the route", async ({ page }) => {
     const user = buildTransientE2EUser();
@@ -353,5 +360,88 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
     await page.getByLabel("Buscar").fill(`Transação Paginação ${marker} 01`);
     await expect.poll(() => new URL(page.url()).searchParams.get("page")).toBe(null);
     expect(new URL(page.url()).searchParams.get("query")).toBe(`Transação Paginação ${marker} 01`);
+  });
+
+  test("@smoke-dashboard transactions sync URL-backed period across query changes", async ({
+    page,
+  }) => {
+    const user = buildTransientE2EUser();
+    const marker = Date.now();
+    const mayTitle = `URL Sync May ${marker}`;
+    const juneTitle = `URL Sync June ${marker}`;
+
+    await clearClientState(page);
+    await createTransientUser(page, user);
+
+    const token = await loginByApi(page, user);
+    const categoryId = await createCategoryByApi(page, token, `URL Sync ${marker}`);
+
+    await createTransactionByApi(page, token, {
+      title: mayTitle,
+      date: "2026-05-15",
+      amount: 51,
+      categoryId,
+    });
+    await createTransactionByApi(page, token, {
+      title: juneTitle,
+      date: "2026-06-15",
+      amount: 61,
+      categoryId,
+    });
+
+    await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
+    await loginByUi(page, user);
+
+    await page.goto(`${APP_URL}/transactions?from=2026-05-01&to=2026-05-31`, {
+      waitUntil: "domcontentloaded",
+    });
+    await waitForTransactionsPage(page);
+    await expect(page.getByTestId("transactions-period")).toContainText("Maio / 2026", {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(mayTitle)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(juneTitle)).toHaveCount(0);
+    await expect(page).toHaveURL(/from=2026-05-01&to=2026-05-31/);
+
+    await navigateWithPopState(page, "/transactions?from=2026-06-01&to=2026-06-30");
+    await expect(page).toHaveURL(/from=2026-06-01&to=2026-06-30/);
+    await expect(page.getByTestId("transactions-period")).toContainText("Junho / 2026", {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(juneTitle)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(mayTitle)).toHaveCount(0);
+
+    await page.goBack();
+    await expect(page).toHaveURL(/from=2026-05-01&to=2026-05-31/);
+    await expect(page.getByTestId("transactions-period")).toContainText("Maio / 2026", {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(mayTitle)).toBeVisible({ timeout: 15_000 });
+
+    await page.goForward();
+    await expect(page).toHaveURL(/from=2026-06-01&to=2026-06-30/);
+    await expect(page.getByTestId("transactions-period")).toContainText("Junho / 2026", {
+      timeout: 15_000,
+    });
+    await expect(page.getByText(juneTitle)).toBeVisible({ timeout: 15_000 });
+
+    await navigateWithPopState(page, "/transactions?from=invalid&to=2026-06-30");
+    await expect(page).toHaveURL(/from=2026-06-01&to=2026-06-30/, { timeout: 15_000 });
+    await expect(page.getByTestId("transactions-period")).toContainText("Junho / 2026", {
+      timeout: 15_000,
+    });
+
+    await navigateWithPopState(page, "/transactions");
+    await expect(page).toHaveURL(/\/transactions\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/, {
+      timeout: 15_000,
+    });
+
+    await page.getByTestId("transactions-period").click();
+    await page
+      .locator(".t-dropdown button")
+      .filter({ hasText: /^Maio$/ })
+      .click();
+    await expect(page).toHaveURL(/from=2026-05-01&to=2026-05-31/, { timeout: 15_000 });
+    await expect(page.getByText(mayTitle)).toBeVisible({ timeout: 15_000 });
   });
 });
