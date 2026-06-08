@@ -24,6 +24,14 @@ const serviceWithStorage = (ctx: GraphQLContext) => {
   return new TransactionService(new TransactionRepository(ctx.prisma), storageService);
 };
 
+const serviceForReceiptInput = (ctx: GraphQLContext, input: { receiptKey?: string | null }) => {
+  if (input.receiptKey?.trim()) {
+    return serviceWithStorage(ctx);
+  }
+
+  return service(ctx);
+};
+
 export const transactionMutations = {
   createTransaction: async (
     _: unknown,
@@ -41,7 +49,7 @@ export const transactionMutations = {
     },
     ctx: GraphQLContext,
   ) => {
-    return service(ctx).create(ctx, {
+    return serviceForReceiptInput(ctx, args.input).create(ctx, {
       title: args.input.title,
       description: args.input.description,
       amount: args.input.amount,

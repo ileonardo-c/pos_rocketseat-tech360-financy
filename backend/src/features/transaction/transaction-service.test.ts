@@ -21,11 +21,14 @@ type StoredTransaction = {
 
 type RepositoryCall =
   | { method: "findByIdAndUser"; args: [string, string] }
+  | { method: "findCategoryByIdAndUser"; args: [string, string] }
+  | { method: "create"; args: [string, unknown] }
   | { method: "update"; args: [string, unknown] }
   | { method: "deleteById"; args: [string] };
 
 type StorageMock = {
   deletedKeys: string[];
+  validatedKeys: string[];
   deleteError?: unknown;
   validationError?: unknown;
   deleteObject: (key: string) => Promise<void>;
@@ -49,6 +52,58 @@ class TransactionRepositoryFake {
     if (!this.data || this.data.id !== id || this.data.userId !== userId) {
       return null;
     }
+
+    return {
+      id: this.data.id,
+      userId: this.data.userId,
+      receiptKey: this.data.receiptKey,
+      receiptUrl: this.data.receiptUrl,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      title: "",
+      description: null,
+      amount: 0,
+      type: "INCOME",
+      date: new Date(),
+      categoryId: "category-1",
+      category: null,
+    };
+  }
+
+  async findCategoryByIdAndUser(id: string, userId: string) {
+    this.calls.push({ method: "findCategoryByIdAndUser", args: [id, userId] });
+    if (id !== "category-1" || userId !== "user-1") {
+      return null;
+    }
+
+    return {
+      id,
+      userId,
+      name: "Category",
+      icon: "utensils",
+      color: "blue",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  async create(userId: string, payload: unknown) {
+    this.calls.push({ method: "create", args: [userId, payload] });
+    const receiptKey =
+      typeof payload === "object" && payload !== null && "receiptKey" in payload
+        ? ((payload as { receiptKey?: string | null }).receiptKey ?? null)
+        : null;
+    const receiptUrl =
+      typeof payload === "object" && payload !== null && "receiptUrl" in payload
+        ? ((payload as { receiptUrl?: string | null }).receiptUrl ?? null)
+        : null;
+
+    this.data = {
+      id: "tx-created",
+      userId,
+      receiptKey,
+      receiptUrl,
+    };
 
     return {
       id: this.data.id,
@@ -137,6 +192,7 @@ class TransactionRepositoryFake {
 const createStorageMock = (options: { deleteError?: unknown } = {}): StorageMock => {
   const storage: StorageMock = {
     deletedKeys: [],
+    validatedKeys: [],
     deleteError: options.deleteError,
     deleteObject: async (key: string) => {
       storage.deletedKeys.push(key);
@@ -144,7 +200,8 @@ const createStorageMock = (options: { deleteError?: unknown } = {}): StorageMock
         throw storage.deleteError;
       }
     },
-    validateReceiptUpload: async (_key: string) => {
+    validateReceiptUpload: async (key: string) => {
+      storage.validatedKeys.push(key);
       if (storage.validationError) {
         throw storage.validationError;
       }
@@ -181,6 +238,65 @@ const createService = (repository: TransactionRepositoryFake, storage?: StorageM
 
 const tests: Array<[string, () => Promise<void>]> = [
   [
+    "creates transaction with receipt after upload validation",
+    async () => {
+      const repository = new TransactionRepositoryFake(null);
+      const storage = createStorageMock();
+      const service = createService(repository, storage);
+
+      const result = await service.create(createContext(), {
+        title: "Receipt transaction",
+        amount: 10,
+        type: "EXPENSE",
+        date: "2026-06-01",
+        categoryId: "category-1",
+        receiptKey: "users/user-1/receipts/new.png",
+      });
+
+      if (storage.validatedKeys[0] !== "users/user-1/receipts/new.png") {
+        throw new Error("Expected receipt upload validation before creation");
+      }
+      if (!repository.calls.some((call) => call.method === "create")) {
+        throw new Error("Expected transaction creation after receipt validation");
+      }
+      if (result.receiptKey !== "users/user-1/receipts/new.png") {
+        throw new Error("Expected created transaction with receipt key");
+      }
+    },
+  ],
+  [
+    "rejects avatar key as receipt before creation",
+    async () => {
+      const repository = new TransactionRepositoryFake(null);
+      const storage = createStorageMock();
+      const service = createService(repository, storage);
+
+      await service
+        .create(createContext(), {
+          title: "Invalid receipt transaction",
+          amount: 10,
+          type: "EXPENSE",
+          date: "2026-06-01",
+          categoryId: "category-1",
+          receiptKey: "users/user-1/avatars/avatar.png",
+        })
+        .then(() => {
+          throw new Error("Expected avatar key used as receipt to fail");
+        })
+        .catch((error) => {
+          if (error.message !== "Invalid receipt for this user") {
+            throw error;
+          }
+          if (storage.validatedKeys.length !== 0) {
+            throw new Error("Invalid receipt namespace must not validate upload object");
+          }
+          if (repository.calls.some((call) => call.method === "create")) {
+            throw new Error("Invalid receipt namespace must not create transaction");
+          }
+        });
+    },
+  ],
+  [
     "replaces receipt and cleans previous receipt key after DB update",
     async () => {
       const repository = new TransactionRepositoryFake({
@@ -208,6 +324,38 @@ const tests: Array<[string, () => Promise<void>]> = [
       if (!result.receiptKey || !result.receiptKey.includes("new.png")) {
         throw new Error("Expected updated transaction with new receipt");
       }
+    },
+  ],
+  [
+    "rejects avatar key as receipt before database update",
+    async () => {
+      const repository = new TransactionRepositoryFake({
+        id: "tx-1",
+        userId: "user-1",
+        receiptKey: "users/user-1/receipts/old.png",
+        receiptUrl: "https://storage.local/financy/users/user-1/receipts/old.png",
+      });
+      const storage = createStorageMock();
+      const service = createService(repository, storage);
+
+      await service
+        .update(createContext(), "tx-1", {
+          receiptKey: "users/user-1/avatars/avatar.png",
+        })
+        .then(() => {
+          throw new Error("Expected avatar key used as receipt to fail");
+        })
+        .catch((error) => {
+          if (error.message !== "Invalid receipt for this user") {
+            throw error;
+          }
+          if (storage.validatedKeys.length !== 0) {
+            throw new Error("Invalid receipt namespace must not validate upload object");
+          }
+          if (repository.data?.receiptKey !== "users/user-1/receipts/old.png") {
+            throw new Error("Invalid receipt namespace must not update database");
+          }
+        });
     },
   ],
   [
@@ -274,6 +422,30 @@ const tests: Array<[string, () => Promise<void>]> = [
             throw new Error("Old receipt must not be cleaned after invalid upload");
           }
         });
+    },
+  ],
+  [
+    "does not clean previous key outside receipt namespace after update",
+    async () => {
+      const repository = new TransactionRepositoryFake({
+        id: "tx-1",
+        userId: "user-1",
+        receiptKey: "users/user-1/avatars/avatar.png",
+        receiptUrl: "https://storage.local/financy/users/user-1/avatars/avatar.png",
+      });
+      const storage = createStorageMock();
+      const service = createService(repository, storage);
+
+      await service.update(createContext(), "tx-1", {
+        receiptKey: "users/user-1/receipts/new.png",
+      });
+
+      if (storage.deletedKeys.length !== 0) {
+        throw new Error("Cleanup must not delete objects outside receipt namespace");
+      }
+      if (repository.data?.receiptKey !== "users/user-1/receipts/new.png") {
+        throw new Error("Expected database update to keep new receipt");
+      }
     },
   ],
   [
@@ -386,6 +558,31 @@ const tests: Array<[string, () => Promise<void>]> = [
       }
       if (storage.deletedKeys[0] !== "users/user-1/receipts/old.png") {
         throw new Error("Expected cleanup of deleted transaction receipt");
+      }
+    },
+  ],
+  [
+    "does not clean previous key outside receipt namespace after delete",
+    async () => {
+      const repository = new TransactionRepositoryFake({
+        id: "tx-1",
+        userId: "user-1",
+        receiptKey: "users/user-1/avatars/avatar.png",
+        receiptUrl: "https://storage.local/financy/users/user-1/avatars/avatar.png",
+      });
+      const storage = createStorageMock();
+      const service = createService(repository, storage);
+
+      const result = await service.delete(createContext(), "tx-1");
+      if (!result) {
+        throw new Error("Expected transaction deletion to succeed");
+      }
+
+      if (storage.deletedKeys.length !== 0) {
+        throw new Error("Cleanup must not delete objects outside receipt namespace");
+      }
+      if (repository.data !== null) {
+        throw new Error("Expected transaction deletion in database");
       }
     },
   ],

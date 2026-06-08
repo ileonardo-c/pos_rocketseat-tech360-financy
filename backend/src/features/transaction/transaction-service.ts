@@ -199,6 +199,10 @@ export class TransactionService {
       return;
     }
 
+    if (!this.isReceiptKeyAllowedForUser(userId, previousReceiptKey)) {
+      return;
+    }
+
     try {
       await this.storageService.deleteObject(previousReceiptKey);
     } catch (error) {
@@ -503,7 +507,7 @@ export class TransactionService {
       return { receiptKey: null, receiptUrl: null };
     }
 
-    if (!this.isReceiptKeyOwnedByUser(userId, receiptKey)) {
+    if (!this.isReceiptKeyAllowedForUser(userId, receiptKey)) {
       throw new AppError("Invalid receipt for this user", 403);
     }
 
@@ -517,8 +521,8 @@ export class TransactionService {
     };
   }
 
-  private isReceiptKeyOwnedByUser(userId: string, receiptKey: string) {
-    return receiptKey.startsWith(`users/${userId}/`);
+  private isReceiptKeyAllowedForUser(userId: string, receiptKey: string) {
+    return receiptKey.startsWith(`users/${userId}/receipts/`);
   }
 
   private buildPublicReceiptUrl(receiptKey: string) {

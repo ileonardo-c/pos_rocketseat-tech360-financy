@@ -234,7 +234,7 @@ const createCategoryMutation = `
 
 const createTransactionMutation = `
   mutation CreateTransaction($input: CreateTransactionInput!) {
-    createTransaction(input: $input) { id title categoryId userId }
+    createTransaction(input: $input) { id title categoryId userId receiptKey receiptUrl }
   }
 `;
 
@@ -437,18 +437,68 @@ const run = async () => {
   );
   ensure(uploadResponse.ok, `Receipt upload failed with status ${uploadResponse.status}`);
 
-  const receiptTransactionData = await request(updateTransactionMutation, token, {
-    id: transactionId,
+  const createReceiptTransactionData = await request(createTransactionMutation, token, {
     input: {
+      title: `Smoke Receipt Transaction ${randomSuffix}`,
+      description: "E2E smoke receipt transaction",
+      amount: 77.7,
+      type: "EXPENSE",
+      date: new Date().toISOString(),
+      categoryId,
       receiptKey: uploadData.requestUploadUrl.key,
     },
   });
+  const receiptTransactionId = createReceiptTransactionData?.createTransaction?.id;
+  ensure(receiptTransactionId, "Receipt transaction creation returned no id");
   ensure(
-    receiptTransactionData?.updateTransaction?.receiptKey === uploadData.requestUploadUrl.key,
+    createReceiptTransactionData?.createTransaction?.receiptKey === uploadData.requestUploadUrl.key,
+    "Created transaction receipt key mismatch",
+  );
+  ensure(
+    createReceiptTransactionData?.createTransaction?.receiptUrl ===
+      uploadData.requestUploadUrl.publicUrl,
+    "Created transaction receipt URL should match the public upload URL",
+  );
+
+  const updateUploadData = await request(requestUploadUrlMutation, token, {
+    input: {
+      fileName: `smoke-receipt-update-${randomSuffix}.pdf`,
+      contentType: "application/pdf",
+      sizeBytes: 1024,
+    },
+  });
+  ensure(updateUploadData?.requestUploadUrl?.url, "Missing signed update upload URL");
+  ensure(updateUploadData?.requestUploadUrl?.key, "Missing update upload key");
+  ensure(updateUploadData?.requestUploadUrl?.publicUrl, "Missing update upload public URL");
+  ensure(
+    updateUploadData.requestUploadUrl.key.startsWith(`users/${userId}/receipts/`),
+    "Update upload key does not match authenticated user namespace",
+  );
+
+  const updateReceiptPayload = new TextEncoder().encode("GraphQL smoke update receipt payload");
+  const updateUploadResponse = await uploadToSignedUrl(
+    updateUploadData.requestUploadUrl.url,
+    "application/pdf",
+    updateReceiptPayload,
+  );
+  ensure(
+    updateUploadResponse.ok,
+    `Receipt update upload failed with status ${updateUploadResponse.status}`,
+  );
+
+  const receiptTransactionData = await request(updateTransactionMutation, token, {
+    id: transactionId,
+    input: {
+      receiptKey: updateUploadData.requestUploadUrl.key,
+    },
+  });
+  ensure(
+    receiptTransactionData?.updateTransaction?.receiptKey === updateUploadData.requestUploadUrl.key,
     "Updated transaction receipt key mismatch",
   );
   ensure(
-    receiptTransactionData?.updateTransaction?.receiptUrl === uploadData.requestUploadUrl.publicUrl,
+    receiptTransactionData?.updateTransaction?.receiptUrl ===
+      updateUploadData.requestUploadUrl.publicUrl,
     "Updated transaction receipt URL should match the public upload URL",
   );
 
@@ -565,6 +615,14 @@ const run = async () => {
     id: transactionId,
   });
   ensure(deleteTransactionData.deleteTransaction === true, "Transaction deletion failed");
+
+  const deleteReceiptTransactionData = await request(deleteTransactionMutation, token, {
+    id: receiptTransactionId,
+  });
+  ensure(
+    deleteReceiptTransactionData.deleteTransaction === true,
+    "Receipt transaction deletion failed",
+  );
 
   const deleteOldTransactionData = await request(deleteTransactionMutation, token, {
     id: oldTransactionId,
