@@ -193,6 +193,8 @@ export class AuthService {
       throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
     }
 
+    await storageService.validateProfileAvatarUpload(avatarKey);
+
     const avatarUrl = storageService.publicUrlForKey(avatarKey);
 
     let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;

@@ -548,11 +548,11 @@ export const CategoriesPage = () => {
                 },
               });
               setIsCreateDialogOpen(false);
-              setActionSuccess("Categoria criada com sucesso.");
               setCreateTouched({ name: false, description: false });
               setCreateFocused({ name: false, description: false });
               setCreateFieldErrors({});
-              void refreshCategories();
+              await refreshCategories();
+              setActionSuccess("Categoria criada com sucesso.");
             } catch (mutationError) {
               const code = getGraphQLErrorCode(mutationError);
               if (code === "CATEGORY_NAME_REQUIRED") {
@@ -712,13 +712,13 @@ export const CategoriesPage = () => {
                 },
               });
               setEditingCategory(null);
-              setActionSuccess("Categoria atualizada com sucesso.");
               setEditingName("");
               setEditingDescription("");
               setEditingTouched({ name: false, description: false });
               setEditingFocused({ name: false, description: false });
               setEditingFieldErrors({});
-              void refreshCategories();
+              await refreshCategories();
+              setActionSuccess("Categoria atualizada com sucesso.");
             } catch (mutationError) {
               const code = getGraphQLErrorCode(mutationError);
               if (code === "CATEGORY_NAME_REQUIRED") {

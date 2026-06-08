@@ -1,5 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { DeleteObjectCommand, PutObjectCommand, type S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  type HeadObjectCommandOutput,
+  PutObjectCommand,
+  type S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { AppError } from "@/lib/errors";
@@ -20,6 +26,14 @@ type RequestUploadUrlResult = {
   key: string;
   publicUrl: string;
   expiresIn: number;
+};
+
+type UploadValidationConfig = {
+  allowedContentTypes: Set<string>;
+  maxSizeBytes: number;
+  invalidContentTypeCode: string;
+  invalidSizeCode: string;
+  invalidKeyCode: string;
 };
 
 const ALLOWED_AVATAR_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -119,6 +133,26 @@ export class StorageService {
     );
   }
 
+  async validateProfileAvatarUpload(key: string): Promise<void> {
+    await this.validateUploadedObject(key, {
+      allowedContentTypes: ALLOWED_AVATAR_CONTENT_TYPES,
+      maxSizeBytes: AVATAR_MAX_SIZE_BYTES,
+      invalidContentTypeCode: "AUTH_INVALID_AVATAR_CONTENT_TYPE",
+      invalidSizeCode: "AUTH_INVALID_AVATAR_SIZE",
+      invalidKeyCode: "AUTH_INVALID_AVATAR_KEY",
+    });
+  }
+
+  async validateReceiptUpload(key: string): Promise<void> {
+    await this.validateUploadedObject(key, {
+      allowedContentTypes: ALLOWED_RECEIPT_CONTENT_TYPES,
+      maxSizeBytes: RECEIPT_MAX_SIZE_BYTES,
+      invalidContentTypeCode: "UPLOAD_INVALID_CONTENT_TYPE",
+      invalidSizeCode: "UPLOAD_INVALID_SIZE",
+      invalidKeyCode: "UPLOAD_INVALID_KEY",
+    });
+  }
+
   publicUrlForKey(key: string): string {
     this.ensureStorageConfigured();
 
@@ -159,6 +193,59 @@ export class StorageService {
       publicUrl: this.publicUrlForKey(key),
       expiresIn: this.expiresIn,
     };
+  }
+
+  private async validateUploadedObject(key: string, config: UploadValidationConfig): Promise<void> {
+    this.ensureStorageConfigured();
+
+    const normalizedKey = key.trim();
+    if (!normalizedKey) {
+      throw new AppError("Invalid object key", 422, config.invalidKeyCode);
+    }
+
+    let metadata: HeadObjectCommandOutput;
+    try {
+      metadata = await this.s3.send(
+        new HeadObjectCommand({
+          Bucket: this.bucket,
+          Key: normalizedKey,
+        }),
+      );
+    } catch {
+      throw new AppError("Uploaded object not found", 422, config.invalidKeyCode);
+    }
+
+    const contentLength = metadata.ContentLength;
+    if (
+      !Number.isFinite(contentLength) ||
+      typeof contentLength !== "number" ||
+      contentLength <= 0 ||
+      contentLength > config.maxSizeBytes
+    ) {
+      await this.deleteInvalidUpload(normalizedKey);
+      throw new AppError("Invalid uploaded object size", 422, config.invalidSizeCode);
+    }
+
+    const contentType = metadata.ContentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+    if (!config.allowedContentTypes.has(contentType)) {
+      await this.deleteInvalidUpload(normalizedKey);
+      throw new AppError(
+        "Invalid uploaded object content type",
+        422,
+        config.invalidContentTypeCode,
+      );
+    }
+  }
+
+  private async deleteInvalidUpload(key: string): Promise<void> {
+    try {
+      await this.deleteObject(key);
+    } catch (error) {
+      console.warn("Invalid upload cleanup failed", {
+        key,
+        error,
+      });
+    }
   }
 
   private buildAvatarObjectKey(userId: string, fileName: string) {

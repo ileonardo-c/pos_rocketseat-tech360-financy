@@ -391,6 +391,16 @@ const run = async () => {
     "Upload key does not match authenticated user namespace",
   );
 
+  const receiptPayload = new TextEncoder().encode("GraphQL smoke receipt payload");
+  const uploadResponse = await fetch(uploadData.requestUploadUrl.url, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/pdf",
+    },
+    body: receiptPayload,
+  });
+  ensure(uploadResponse.ok, `Receipt upload failed with status ${uploadResponse.status}`);
+
   const receiptTransactionData = await request(updateTransactionMutation, token, {
     id: transactionId,
     input: {

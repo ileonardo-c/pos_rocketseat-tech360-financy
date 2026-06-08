@@ -27,7 +27,9 @@ type RepositoryCall =
 type StorageMock = {
   deletedKeys: string[];
   deleteError?: unknown;
+  validationError?: unknown;
   deleteObject: (key: string) => Promise<void>;
+  validateReceiptUpload: (key: string) => Promise<void>;
 };
 
 type TransactionUpdateInput = Parameters<TransactionService["update"]>[2];
@@ -142,6 +144,11 @@ const createStorageMock = (options: { deleteError?: unknown } = {}): StorageMock
         throw storage.deleteError;
       }
     },
+    validateReceiptUpload: async (_key: string) => {
+      if (storage.validationError) {
+        throw storage.validationError;
+      }
+    },
   };
 
   return storage;
@@ -201,6 +208,72 @@ const tests: Array<[string, () => Promise<void>]> = [
       if (!result.receiptKey || !result.receiptKey.includes("new.png")) {
         throw new Error("Expected updated transaction with new receipt");
       }
+    },
+  ],
+  [
+    "rejects oversized receipt before database update",
+    async () => {
+      const repository = new TransactionRepositoryFake({
+        id: "tx-1",
+        userId: "user-1",
+        receiptKey: "users/user-1/receipts/old.png",
+        receiptUrl: "https://storage.local/financy/users/user-1/receipts/old.png",
+      });
+      const storage = createStorageMock();
+      storage.validationError = new Error("Invalid uploaded object size");
+      const service = createService(repository, storage);
+
+      await service
+        .update(createContext(), "tx-1", {
+          receiptKey: "users/user-1/receipts/new.png",
+        })
+        .then(() => {
+          throw new Error("Expected oversized receipt to fail");
+        })
+        .catch((error) => {
+          if (error.message !== "Invalid uploaded object size") {
+            throw error;
+          }
+          if (repository.data?.receiptKey !== "users/user-1/receipts/old.png") {
+            throw new Error("Invalid receipt must not update the database");
+          }
+          if (storage.deletedKeys.length !== 0) {
+            throw new Error("Old receipt must not be cleaned after invalid upload");
+          }
+        });
+    },
+  ],
+  [
+    "rejects invalid receipt content type before database update",
+    async () => {
+      const repository = new TransactionRepositoryFake({
+        id: "tx-1",
+        userId: "user-1",
+        receiptKey: "users/user-1/receipts/old.png",
+        receiptUrl: "https://storage.local/financy/users/user-1/receipts/old.png",
+      });
+      const storage = createStorageMock();
+      storage.validationError = new Error("Invalid uploaded object content type");
+      const service = createService(repository, storage);
+
+      await service
+        .update(createContext(), "tx-1", {
+          receiptKey: "users/user-1/receipts/new.png",
+        })
+        .then(() => {
+          throw new Error("Expected invalid receipt content type to fail");
+        })
+        .catch((error) => {
+          if (error.message !== "Invalid uploaded object content type") {
+            throw error;
+          }
+          if (repository.data?.receiptKey !== "users/user-1/receipts/old.png") {
+            throw new Error("Invalid receipt must not update the database");
+          }
+          if (storage.deletedKeys.length !== 0) {
+            throw new Error("Old receipt must not be cleaned after invalid upload");
+          }
+        });
     },
   ],
   [

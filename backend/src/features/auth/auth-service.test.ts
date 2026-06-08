@@ -7,8 +7,10 @@ type StoredUser = User;
 
 type StorageMock = {
   deletedKeys: string[];
+  validationError?: unknown;
   publicUrlForKey: (key: string) => string;
   deleteObject: (key: string) => Promise<void>;
+  validateProfileAvatarUpload: (key: string) => Promise<void>;
 };
 
 const now = new Date("2026-01-01T00:00:00.000Z");
@@ -77,6 +79,14 @@ const createStorageMock = (options: { deleteError?: unknown } = {}): StorageMock
     this.deletedKeys.push(key);
     if (options.deleteError) {
       throw options.deleteError;
+    }
+  },
+  validateProfileAvatarUpload: async function validateProfileAvatarUpload(
+    this: StorageMock,
+    _key: string,
+  ) {
+    if (this.validationError) {
+      throw this.validationError;
     }
   },
 });
@@ -209,6 +219,67 @@ const tests: Array<[string, () => Promise<void>]> = [
       );
       assert(result.avatarUrl === `http://storage.local/financy/${newAvatarKey}`, "URL mismatch");
       assert(repository.user?.avatarKey === newAvatarKey, "Stored user should point to new avatar");
+    },
+  ],
+  [
+    "rejects oversized avatar before database update",
+    async () => {
+      const repository = new AuthRepositoryFake();
+      const storage = createStorageMock();
+      storage.validationError = new AppError(
+        "Invalid uploaded object size",
+        422,
+        "AUTH_INVALID_AVATAR_SIZE",
+      );
+      const service = createService(repository);
+
+      try {
+        await service.updateProfileAvatar(
+          createContext(),
+          { avatarKey: "users/user-1/avatars/new-avatar.png" },
+          storage as unknown as Parameters<AuthService["updateProfileAvatar"]>[2],
+        );
+      } catch (error) {
+        assert(error instanceof AppError, "Expected AppError for invalid avatar size");
+        assert(error.code === "AUTH_INVALID_AVATAR_SIZE", "Expected avatar size error code");
+        assert(repository.updateCalls.length === 0, "Invalid avatar must not update the user");
+        assert(storage.deletedKeys.length === 0, "Old avatar must not be deleted");
+        return;
+      }
+
+      throw new Error("Expected oversized avatar to fail");
+    },
+  ],
+  [
+    "rejects invalid avatar content type before database update",
+    async () => {
+      const repository = new AuthRepositoryFake();
+      const storage = createStorageMock();
+      storage.validationError = new AppError(
+        "Invalid uploaded object content type",
+        422,
+        "AUTH_INVALID_AVATAR_CONTENT_TYPE",
+      );
+      const service = createService(repository);
+
+      try {
+        await service.updateProfileAvatar(
+          createContext(),
+          { avatarKey: "users/user-1/avatars/new-avatar.png" },
+          storage as unknown as Parameters<AuthService["updateProfileAvatar"]>[2],
+        );
+      } catch (error) {
+        assert(error instanceof AppError, "Expected AppError for invalid avatar content type");
+        assert(
+          error.code === "AUTH_INVALID_AVATAR_CONTENT_TYPE",
+          "Expected avatar content type error code",
+        );
+        assert(repository.updateCalls.length === 0, "Invalid avatar must not update the user");
+        assert(storage.deletedKeys.length === 0, "Old avatar must not be deleted");
+        return;
+      }
+
+      throw new Error("Expected invalid avatar content type to fail");
     },
   ],
   [

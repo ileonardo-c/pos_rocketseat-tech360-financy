@@ -143,6 +143,7 @@ export class TransactionService {
 
     const payload = this.normalizeCreateInput(ctx.userId, input);
     await this.validateCategoryOwnership(ctx.userId, payload.categoryId);
+    await this.validateReceiptUpload(payload.receiptKey);
 
     return this.repository.create(ctx.userId, payload);
   }
@@ -161,6 +162,7 @@ export class TransactionService {
     if (payload.categoryId) {
       await this.validateCategoryOwnership(ctx.userId, payload.categoryId);
     }
+    await this.validateReceiptUpload(payload.receiptKey);
 
     if (Object.keys(payload).length === 0) {
       return transaction;
@@ -206,6 +208,18 @@ export class TransactionService {
         error,
       });
     }
+  }
+
+  private async validateReceiptUpload(receiptKey?: string | null) {
+    if (!receiptKey) {
+      return;
+    }
+
+    if (!this.storageService) {
+      throw new AppError("Receipt storage is not available", 400);
+    }
+
+    await this.storageService.validateReceiptUpload(receiptKey);
   }
 
   async summaryByUser(
