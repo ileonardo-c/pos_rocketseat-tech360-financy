@@ -61,14 +61,6 @@ const extractOriginHost = (origin: string | null | undefined) => {
   }
 };
 
-const extractRequestHost = (requestHost: string | null | undefined) => {
-  if (!requestHost) {
-    return "";
-  }
-
-  return normalizeHost(requestHost);
-};
-
 const parseBooleanEnv = (value: string, name: string) => {
   const normalized = value.trim().toLowerCase();
   if (normalized === "true") {
@@ -151,14 +143,13 @@ export const resolveSigningEndpointForRequest = (input: ResolveSigningEndpointIn
   const {
     config: { endpoint, publicEndpoint, publicOriginHosts },
     requestOrigin,
-    requestHost,
   } = input;
 
   if (!publicEndpoint || publicOriginHosts.length === 0) {
     return endpoint;
   }
 
-  const clientHost = extractOriginHost(requestOrigin) || extractRequestHost(requestHost);
+  const clientHost = extractOriginHost(requestOrigin);
   if (!clientHost) {
     return endpoint;
   }

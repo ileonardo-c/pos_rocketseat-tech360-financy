@@ -259,8 +259,19 @@ export const CategoriesPage = () => {
     fetchPolicy: "cache-and-network",
   });
 
-  const [createCategory, { loading: creating }] = useMutation(CREATE_CATEGORY_MUTATION);
-  const [updateCategory, { loading: updating }] = useMutation(UPDATE_CATEGORY_MUTATION);
+  const categoryRefetchQueries = [
+    { query: CATEGORIES_LIST_QUERY, variables: { page: 1, perPage: ITEMS_PER_PAGE } },
+    { query: CATEGORIES_COUNT_QUERY },
+    { query: CATEGORIES_OVERVIEW_QUERY },
+  ];
+  const [createCategory, { loading: creating }] = useMutation(CREATE_CATEGORY_MUTATION, {
+    awaitRefetchQueries: true,
+    refetchQueries: categoryRefetchQueries,
+  });
+  const [updateCategory, { loading: updating }] = useMutation(UPDATE_CATEGORY_MUTATION, {
+    awaitRefetchQueries: true,
+    refetchQueries: categoryRefetchQueries,
+  });
   const [deleteCategory, { loading: deleting }] = useMutation(DELETE_CATEGORY_MUTATION);
 
   const categories = listData?.categoriesList ?? [];

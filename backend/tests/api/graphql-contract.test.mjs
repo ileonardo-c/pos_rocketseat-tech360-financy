@@ -101,6 +101,44 @@ const ensure = (condition, message) => {
   }
 };
 
+const uploadToSignedUrl = async (signedUrl, contentType, body) => {
+  const upload = (url, headers = {}) =>
+    fetch(url, {
+      method: "PUT",
+      headers: {
+        "content-type": contentType,
+        ...headers,
+      },
+      body,
+    });
+
+  try {
+    const response = await upload(signedUrl);
+    if (response.ok) {
+      return response;
+    }
+    return response;
+  } catch (error) {
+    const publicEndpoint = process.env.AWS_S3_ENDPOINT_PUBLIC?.trim();
+    if (!publicEndpoint) {
+      throw error;
+    }
+
+    const originalUrl = new URL(signedUrl);
+    const publicUrl = new URL(publicEndpoint);
+    if (originalUrl.hostname !== "s3.internal" && originalUrl.hostname !== "minio") {
+      throw error;
+    }
+
+    publicUrl.pathname = originalUrl.pathname;
+    publicUrl.search = originalUrl.search;
+
+    return upload(publicUrl.toString(), {
+      host: originalUrl.host,
+    });
+  }
+};
+
 const requiredDashboardQueryFields = [
   "transactions",
   "transactionSummary",
@@ -392,13 +430,11 @@ const run = async () => {
   );
 
   const receiptPayload = new TextEncoder().encode("GraphQL smoke receipt payload");
-  const uploadResponse = await fetch(uploadData.requestUploadUrl.url, {
-    method: "PUT",
-    headers: {
-      "content-type": "application/pdf",
-    },
-    body: receiptPayload,
-  });
+  const uploadResponse = await uploadToSignedUrl(
+    uploadData.requestUploadUrl.url,
+    "application/pdf",
+    receiptPayload,
+  );
   ensure(uploadResponse.ok, `Receipt upload failed with status ${uploadResponse.status}`);
 
   const receiptTransactionData = await request(updateTransactionMutation, token, {
