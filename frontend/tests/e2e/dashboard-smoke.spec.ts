@@ -48,7 +48,9 @@ const waitForAuthEntry = async (page: Page) => {
 
 const waitForDashboardReady = async (page: Page) => {
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Transações recentes" })).toBeVisible({
+    timeout: 15_000,
+  });
 };
 
 const clearClientState = async (page: Page) => {

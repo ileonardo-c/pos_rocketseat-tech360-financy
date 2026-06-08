@@ -32,8 +32,9 @@ Padronizar contribuição por domínio, reduzir ruído em revisão e manter rast
   - `pnpm check`
   - `pnpm build:backend`
   - `pnpm build:frontend`
-  - `pnpm smoke:graphql`
-  - `pnpm smoke:auth:api`
+  - `pnpm test:backend`
+  - `pnpm dev:check`
+  - `pnpm e2e:smoke-contract:docker`
 - Validar stack local:
   - `pnpm dev:check`
   - `pnpm dev`

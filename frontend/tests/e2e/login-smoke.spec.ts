@@ -17,7 +17,9 @@ const waitForLoginScreen = async (page: Page) => {
 
 const waitForAuthenticatedDashboard = async (page: Page) => {
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Transações recentes")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Transações recentes" })).toBeVisible({
+    timeout: 15_000,
+  });
 };
 
 const waitForRouteTransitionIdle = async (page: Page) => {

@@ -16,7 +16,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
-  <img alt="Node" src="https://img.shields.io/badge/node-20+-339933?style=flat-square&logo=node.js&logoColor=white"/>
+  <img alt="Node" src="https://img.shields.io/badge/node-22+-339933?style=flat-square&logo=node.js&logoColor=white"/>
   <img alt="pnpm" src="https://img.shields.io/badge/pnpm-10.5+-F69220?style=flat-square&logo=pnpm&logoColor=white"/>
   <img alt="Docker" src="https://img.shields.io/badge/docker-compose-2496ED?style=flat-square&logo=docker&logoColor=white"/>
 </p>
@@ -95,7 +95,7 @@ Monorepo gerenciado com `pnpm workspaces`:
 
 ### Pré-requisitos
 
-- [Node.js 20+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
+- [Node.js 22+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
 - [Docker Desktop 24+](https://www.docker.com/products/docker-desktop/)
 - Nenhum `.env` é obrigatório para desenvolvimento local; os scripts carregam `.env.example`.
 
