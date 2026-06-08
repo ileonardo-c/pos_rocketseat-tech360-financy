@@ -3,7 +3,7 @@ import { getOptionalEnv } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import type { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { createTransport } from "nodemailer";
+import { createTransport as createMailTransport } from "nodemailer";
 import type SMTPTransport from "nodemailer/lib/smtp-transport";
 import { AuthRepository } from "./auth-repository";
 
@@ -40,16 +40,31 @@ type PasswordResetCodePersistenceInput = {
   userAgent: string | null;
 };
 
+type PasswordResetMailSettings = {
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecure: boolean;
+  smtpUser?: string;
+  smtpPassword?: string;
+  from: string;
+};
+
+type PasswordResetServiceOptions = {
+  createTransport?: typeof createMailTransport;
+};
+
 const MIN_PASSWORD_LENGTH = 8;
 
 export class PasswordResetService {
   private readonly codeTtlSeconds: number;
   private readonly maxAttempts: number;
   private readonly pepper: string;
+  private readonly createTransport: typeof createMailTransport;
 
   constructor(
     private readonly prisma: PrismaClient,
     private readonly repository: AuthRepository,
+    options: PasswordResetServiceOptions = {},
   ) {
     this.codeTtlSeconds = this.parsePositiveInteger(
       getOptionalEnv("RESET_CODE_TTL_SECONDS") || "900",
@@ -60,10 +75,12 @@ export class PasswordResetService {
       "RESET_CODE_MAX_ATTEMPTS",
     );
     this.pepper = getOptionalEnv("RESET_CODE_PEPPER") || "financy-reset-pepper";
+    this.createTransport = options.createTransport ?? createMailTransport;
   }
 
   async request(input: PasswordResetRequestContext) {
     const email = this.normalizeEmail(input.email);
+    const mailSettings = this.resolveMailSettings();
     const user = await this.repository.findByEmail(email);
     if (!user) {
       return true;
@@ -94,12 +111,13 @@ export class PasswordResetService {
       user.id,
       new Date(Date.now() - 5 * 60 * 1000),
     );
-    await this.repository.createPasswordResetCode(codeToPersist);
+    const createdCode = await this.repository.createPasswordResetCode(codeToPersist);
 
-    const sendResult = await this.sendResetCodeEmail(email, plainCode);
-    if (!sendResult.success) {
-      console.warn("Password reset email delivery failed after code creation", { email });
-      return true;
+    try {
+      await this.sendResetCodeEmail(email, plainCode, mailSettings);
+    } catch (error) {
+      await this.repository.markPasswordResetCodeAsUsed(createdCode.id);
+      throw error;
     }
 
     return true;
@@ -231,7 +249,7 @@ export class PasswordResetService {
     return normalized;
   }
 
-  private async sendResetCodeEmail(email: string, code: string): Promise<{ success: boolean }> {
+  private resolveMailSettings(): PasswordResetMailSettings {
     const smtpHost = getOptionalEnv("SMTP_HOST");
     const smtpPort = Number(getOptionalEnv("SMTP_PORT") || "587");
     const smtpSecure = getOptionalEnv("SMTP_SECURE") === "true";
@@ -241,26 +259,43 @@ export class PasswordResetService {
 
     if (!smtpHost || !from) {
       console.warn("Password reset mail settings are missing.");
-      return { success: false };
+      throw new AppError(
+        "Password reset email delivery is not configured",
+        503,
+        "PASSWORD_RESET_EMAIL_FAILED",
+      );
     }
 
-    const transportOptions: SMTPTransport.Options = {
-      host: smtpHost,
-      port: Number.isFinite(smtpPort) ? smtpPort : 587,
-      secure: smtpSecure,
+    return {
+      smtpHost,
+      smtpPort: Number.isFinite(smtpPort) ? smtpPort : 587,
+      smtpSecure,
+      smtpUser: smtpUser || undefined,
+      smtpPassword: smtpPassword || undefined,
+      from,
     };
-    if (smtpUser && smtpPassword) {
+  }
+
+  private async sendResetCodeEmail(
+    email: string,
+    code: string,
+    mailSettings: PasswordResetMailSettings,
+  ): Promise<void> {
+    const transportOptions: SMTPTransport.Options = {
+      host: mailSettings.smtpHost,
+      port: mailSettings.smtpPort,
+      secure: mailSettings.smtpSecure,
+    };
+    if (mailSettings.smtpUser && mailSettings.smtpPassword) {
       transportOptions.auth = {
-        user: smtpUser,
-        pass: smtpPassword,
+        user: mailSettings.smtpUser,
+        pass: mailSettings.smtpPassword,
       };
     }
 
-    const transporter = createTransport(transportOptions);
-
     const ttlMinutes = Math.max(1, Math.round(this.codeTtlSeconds / 60));
     const mailOptions = {
-      from,
+      from: mailSettings.from,
       to: email,
       subject: "Financy password reset code",
       html: `
@@ -272,11 +307,15 @@ export class PasswordResetService {
     };
 
     try {
+      const transporter = this.createTransport(transportOptions);
       await transporter.sendMail(mailOptions);
-      return { success: true };
     } catch (error) {
       console.error("Failed to send password reset email", { email, error });
-      return { success: false };
+      throw new AppError(
+        "Password reset email delivery failed",
+        503,
+        "PASSWORD_RESET_EMAIL_FAILED",
+      );
     }
   }
 }
