@@ -30,9 +30,12 @@ Padronizar contribuição por domínio, reduzir ruído em revisão e manter rast
 - Confirmar checklist de requisito e checklist do bloco no escopo.
 - Executar:
   - `pnpm check`
+  - `pnpm prisma:generate`
   - `pnpm build:backend`
   - `pnpm build:frontend`
   - `pnpm test:backend`
+  - `pnpm smoke:graphql` com backend em execução
+  - `pnpm smoke:auth` com backend em execução
   - `pnpm dev:check`
   - `pnpm e2e:smoke-contract:docker`
 - Validar stack local:

@@ -1,5 +1,5 @@
-#!/usr/bin/env sh
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
 # Run Biome only for staged files relevant to this monorepo.
 # It avoids checking the full repository on every commit.
@@ -9,7 +9,7 @@ if [ -z "$STAGED_FILES" ]; then
   exit 0
 fi
 
-BIOME_FILES=$(printf "%s\n" "$STAGED_FILES" | grep -E '^(backend/|frontend/|biome\.json|package\.json|pnpm-workspace\.yaml)' | grep -E '\.(ts|tsx|js|jsx|json|css|md|yml|yaml)$' || true)
+BIOME_FILES=$(printf "%s\n" "$STAGED_FILES" | awk '/^(backend\/|frontend\/|biome\.json|package\.json|pnpm-workspace\.yaml)/ && /\.(ts|tsx|js|jsx|json|css|md|yml|yaml)$/')
 
 if [ -z "$BIOME_FILES" ]; then
   exit 0

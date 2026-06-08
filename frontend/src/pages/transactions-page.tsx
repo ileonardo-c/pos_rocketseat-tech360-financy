@@ -441,10 +441,13 @@ export const TransactionsPage = () => {
   const categories = categoriesData?.categories ?? [];
   const transactions = transactionsData?.transactions ?? [];
   const hasTransactionsCountLoaded = typeof transactionsCountData?.transactionsCount === "number";
-  const totalResults = transactionsCountData?.transactionsCount ?? transactions.length;
-  const totalPages = hasTransactionsCountLoaded
-    ? Math.max(1, Math.ceil(totalResults / itemsPerPage))
-    : Math.max(1, page, Math.ceil(transactions.length / itemsPerPage));
+  let totalPages = page;
+  let displayedTotalResults = transactions.length;
+  if (hasTransactionsCountLoaded) {
+    const totalResults = transactionsCountData.transactionsCount;
+    totalPages = Math.max(1, Math.ceil(totalResults / itemsPerPage));
+    displayedTotalResults = totalResults;
+  }
 
   useEffect(() => {
     if (searchInput === filter.query) {
@@ -521,8 +524,8 @@ export const TransactionsPage = () => {
     }
   };
 
-  const tableRowsFrom = totalResults === 0 ? 0 : (page - 1) * itemsPerPage + 1;
-  const tableRowsTo = Math.min(page * itemsPerPage, totalResults);
+  const tableRowsFrom = displayedTotalResults === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+  const tableRowsTo = Math.min(page * itemsPerPage, displayedTotalResults);
 
   if (isInitialLoading && categories.length === 0 && transactions.length === 0) {
     return (
@@ -761,7 +764,7 @@ export const TransactionsPage = () => {
 
             <div className="flex flex-col gap-3 border-t border-financy-border px-[25px] py-5 sm:min-w-[960px] sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-financy-text-secondary">
-                {tableRowsFrom} a {tableRowsTo} | {totalResults} resultados
+                {tableRowsFrom} a {tableRowsTo} | {displayedTotalResults} resultados
               </p>
 
               <div className="flex items-center gap-2">

@@ -326,6 +326,18 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
     await expect(page.getByText("11 a 15 | 15 resultados")).toBeVisible({ timeout: 15_000 });
     await expect(page).toHaveURL(/page=2/, { timeout: 15_000 });
 
+    shouldDelayNextTransactionsCount = true;
+    await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30&page=999`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page).toHaveURL(/page=999/, { timeout: 10_000 });
+    await page.waitForTimeout(500);
+    await expect(page).toHaveURL(/page=999/, { timeout: 1_000 });
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("page"), { timeout: 12_000 })
+      .toBe("2");
+    await expect(page).toHaveURL(/page=2/, { timeout: 12_000 });
+
     await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30`, {
       waitUntil: "domcontentloaded",
     });

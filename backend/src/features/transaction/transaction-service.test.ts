@@ -9,6 +9,7 @@ process.env.AWS_S3_BUCKET = "financy";
 process.env.AWS_ACCESS_KEY_ID = "dev";
 process.env.AWS_SECRET_ACCESS_KEY = "dev";
 process.env.AWS_S3_FORCE_PATH_STYLE = "true";
+process.env.AWS_S3_URL_EXPIRES_IN = "900";
 
 type StoredTransaction = {
   id: string;

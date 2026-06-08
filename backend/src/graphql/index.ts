@@ -584,7 +584,12 @@ export const resolvers = {
   },
   Category: {
     transactionsCount: async (
-      category: { id?: string; transactionsCount?: number; _count?: { transactions?: number } },
+      category: {
+        id?: string;
+        transactionsCount?: number;
+        userId?: string;
+        _count?: { transactions?: number };
+      },
       _args: unknown,
       ctx: GraphQLContext,
     ) => {
@@ -598,10 +603,18 @@ export const resolvers = {
       if (!categoryId) {
         return 0;
       }
+
+      const where = category.userId
+        ? {
+            categoryId,
+            userId: category.userId,
+          }
+        : {
+            categoryId,
+          };
+
       return ctx.prisma.transaction.count({
-        where: {
-          categoryId,
-        },
+        where,
       });
     },
   },

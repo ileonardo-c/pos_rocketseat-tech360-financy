@@ -3,15 +3,14 @@ import { readFile } from "node:fs/promises";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
+const envExample = await readFile(new URL("../../../.env.example", import.meta.url), "utf8");
+const readEnvExampleValue = (name) => {
+  const line = envExample.split(/\r?\n/).find((item) => item.trim().startsWith(`${name}=`));
+  return line?.slice(name.length + 1).trim() ?? "";
+};
+
 if (!process.env.DATABASE_URL) {
-  const envExample = await readFile(new URL("../../../.env.example", import.meta.url), "utf8");
-  const databaseUrlLine = envExample
-    .split(/\r?\n/)
-    .find((line) => line.trim().startsWith("DATABASE_URL="));
-  const databaseUrl = databaseUrlLine
-    ?.slice("DATABASE_URL=".length)
-    .trim()
-    .replace("@localhost:", "@127.0.0.1:");
+  const databaseUrl = readEnvExampleValue("DATABASE_URL").replace("@localhost:", "@127.0.0.1:");
   if (databaseUrl) {
     process.env.DATABASE_URL = databaseUrl;
   }
@@ -22,7 +21,9 @@ const graphqlUrlWithQuery = `${graphqlUrl}?x=1`;
 const textEncoder = new TextEncoder();
 const resetCodePepper = process.env.RESET_CODE_PEPPER ?? "financy-reset-pepper";
 const authRateLimitMaxRequests = Number.parseInt(
-  process.env.RATE_LIMIT_AUTH_MAX_REQUESTS ?? "30",
+  process.env.RATE_LIMIT_AUTH_MAX_REQUESTS ||
+    readEnvExampleValue("RATE_LIMIT_AUTH_MAX_REQUESTS") ||
+    "30",
   10,
 );
 const prisma = new PrismaClient();

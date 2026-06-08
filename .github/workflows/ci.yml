@@ -74,6 +74,14 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter @financy/backend prisma:generate
 
+      - name: Run backend unit regressions
+        run: |
+          set -euo pipefail
+          pnpm test:backend:graphql-security
+          pnpm test:backend:auth-service
+          pnpm test:backend:password-reset-service
+          pnpm test:backend:transaction-service
+
       - name: Build backend
         run: pnpm build:backend
 
@@ -95,8 +103,9 @@ jobs:
           pnpm --filter @financy/backend start &
           SERVER_PID=$!
           cleanup() {
-            kill "$SERVER_PID" >/dev/null 2>&1 || true
-            wait "$SERVER_PID" >/dev/null 2>&1 || true
+            if kill -0 "$SERVER_PID" >/dev/null 2>&1; then
+              kill "$SERVER_PID" >/dev/null 2>&1
+            fi
           }
           trap cleanup EXIT
           for _ in {1..30}; do

@@ -78,7 +78,7 @@ Fluxo de autenticação:
       G --> H[(Mailpit / SMTP Provider)]
 ```
 
-Monorepo gerenciado com `pnpm workspaces`:
+Monorepo gerenciado por workspaces do pnpm:
 
 ```text
 .
@@ -197,6 +197,7 @@ Comandos principais no root:
 pnpm test:e2e:preview
 pnpm e2e:smoke-contract:docker
 pnpm e2e:smoke
+pnpm test:e2e:smoke
 pnpm e2e:contract
 pnpm e2e:journey
 pnpm e2e:transition
@@ -204,6 +205,7 @@ pnpm test:e2e:smoke-contract
 ```
 
 Use `pnpm e2e:smoke-contract:docker` no fluxo Docker-first. O comando `pnpm test:e2e:smoke-contract` roda no host e fica reservado para diagnóstico local quando Playwright estiver instalado fora do container.
+Para rodar apenas o smoke de login a partir da raiz, use `pnpm e2e:smoke` ou o alias `pnpm test:e2e:smoke`; ambos usam o runner da raiz para carregar `.env.example` antes de chamar o pacote `@financy/frontend`.
 
 ## Conta seed para QA e desenvolvimento
 
@@ -229,10 +231,19 @@ O fluxo de recuperação usa o endereço de e-mail cadastrado na conta para soli
 ### Testes de API (backend)
 
 ```bash
+pnpm prisma:generate
 pnpm test:backend
 pnpm test:backend:api-contract
+pnpm test:backend:graphql-security
+pnpm test:backend:auth-service
+pnpm test:backend:password-reset-service
+pnpm test:backend:transaction-service
 pnpm test:backend:auth-regression
+pnpm smoke:graphql
+pnpm smoke:auth
 ```
+
+`pnpm smoke:graphql` e `pnpm smoke:auth` são aliases de smoke para contratos GraphQL e autenticação. Eles exigem o backend disponível em `http://127.0.0.1:4000/graphql`; no fluxo local recomendado, suba a stack com `pnpm dev` antes de executá-los.
 
 Os relatórios E2E ficam em `frontend/playwright-report` após a execução.
 

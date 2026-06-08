@@ -3,6 +3,7 @@ import { resolvers } from "./index";
 
 type TransactionCountInput = {
   where: {
+    userId?: string;
     categoryId: string;
   };
 };
@@ -89,6 +90,26 @@ const tests: Array<[string, () => Promise<void>]> = [
       assert(
         countCalls[0]?.where?.categoryId === "category-3",
         "Count query should filter by category id",
+      );
+    },
+  ],
+  [
+    "filters fallback count by user when category userId is present",
+    async () => {
+      const { ctx, countCalls } = withPrismaCountSpy(9);
+      const result = await createResolver()(
+        {
+          id: "category-4",
+          userId: "user-1",
+        },
+        undefined,
+        ctx,
+      );
+      assert(result === 9, "Resolver should return scoped transaction count");
+      assert(countCalls.length === 1, "Fallback should issue one scoped count query");
+      assert(
+        countCalls[0]?.where?.userId === "user-1",
+        "Count query should include userId from the loaded category",
       );
     },
   ],
