@@ -510,8 +510,19 @@ test.describe("@smoke-dashboard dashboard access flow", () => {
       await route.continue();
     });
 
+    await page.context().clearCookies();
+    await page.evaluate(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+    await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
+    await loginByUi(page, user);
+
     await page.goto(`${APP_URL}/transactions?from=2026-06-01&to=2026-06-30`, {
       waitUntil: "domcontentloaded",
+    });
+    await expect(page).toHaveURL(/\/transactions\?from=2026-06-01&to=2026-06-30/, {
+      timeout: 15_000,
     });
     await waitForTransactionsPage(page);
 
