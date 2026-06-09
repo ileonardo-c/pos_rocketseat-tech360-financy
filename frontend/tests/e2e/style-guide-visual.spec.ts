@@ -1,8 +1,4 @@
-import fs from "node:fs";
-import path from "node:path";
 import { expect, test } from "@playwright/test";
-
-const referenceDir = path.resolve(process.cwd(), "e2e/reference/style-guide");
 
 const requiredSections = [
   "section-fonts-and-tokens",
@@ -20,8 +16,6 @@ const requiredSections = [
 
 test.describe("@visual style guide reference", () => {
   test("@visual captures desktop and mobile style-guide references", async ({ page }) => {
-    fs.mkdirSync(referenceDir, { recursive: true });
-
     await page.setViewportSize({ width: 1440, height: 1200 });
     await page.goto("/style-guide", { waitUntil: "domcontentloaded" });
 
@@ -34,29 +28,23 @@ test.describe("@visual style guide reference", () => {
       await expect(page.getByTestId(section)).toBeVisible({ timeout: 15_000 });
     }
 
-    await expect(page.getByTestId("style-guide-icon-catalog")).toHaveAttribute(
-      "data-icon-count",
-      /^[3-9]\d$/,
+    const iconCount = Number(
+      await page.getByTestId("style-guide-icon-catalog").getAttribute("data-icon-count"),
     );
+    expect(iconCount).toBeGreaterThanOrEqual(33);
 
     const select = page.getByTestId("select-demo");
     await expect(select).toBeVisible({ timeout: 15_000 });
     await select.click();
     await expect(page.locator(".t-dropdown")).toBeVisible({ timeout: 15_000 });
 
-    await page.screenshot({
-      fullPage: true,
-      path: path.join(referenceDir, "desktop.png"),
-    });
+    await expect(page).toHaveScreenshot(["style-guide", "desktop.png"], { fullPage: true });
 
     await page.setViewportSize({ width: 390, height: 1200 });
     await page.goto("/style-guide", { waitUntil: "domcontentloaded" });
     await expect(page.getByTestId("style-guide-page")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("section-icons")).toBeVisible({ timeout: 15_000 });
 
-    await page.screenshot({
-      fullPage: true,
-      path: path.join(referenceDir, "mobile.png"),
-    });
+    await expect(page).toHaveScreenshot(["style-guide", "mobile.png"], { fullPage: true });
   });
 });

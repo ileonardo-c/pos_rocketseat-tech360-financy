@@ -55,11 +55,11 @@ type IconComponent = ComponentType<SVGProps<SVGSVGElement>>;
 const tokenColors = [
   { name: "Primary", value: "#1F6F43", className: "bg-financy-primary" },
   { name: "Primary hover", value: "#124B2B", className: "bg-financy-primary-hover" },
-  { name: "Heading", value: "#09090A", className: "bg-financy-heading" },
-  { name: "Text", value: "#121214", className: "bg-financy-text" },
+  { name: "Heading", value: "#111827", className: "bg-financy-heading" },
+  { name: "Text", value: "#1F2937", className: "bg-financy-text" },
   { name: "Muted", value: "#6B7280", className: "bg-financy-muted" },
-  { name: "Border", value: "#D1D5DB", className: "bg-financy-border" },
-  { name: "Success", value: "#16A34A", className: "bg-financy-success" },
+  { name: "Border", value: "#D8DEE9", className: "bg-financy-border" },
+  { name: "Success", value: "#19AD70", className: "bg-financy-success" },
   { name: "Danger", value: "#DC2626", className: "bg-financy-danger" },
 ];
 
