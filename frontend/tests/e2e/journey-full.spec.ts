@@ -107,10 +107,21 @@ test("@journey-full complete flow with seed account and photo", async ({ page })
   await expect(page.getByRole("heading", { name: updatedCategoryName })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText(categoryDescription)).toBeHidden({ timeout: 20_000 });
   const updatedCategoryCard = page
     .getByTestId(/^category-item-/)
     .filter({ has: page.getByRole("heading", { name: updatedCategoryName }) });
+  await expect.poll(
+    async () => {
+      try {
+        return (await updatedCategoryCard.textContent()) ?? "";
+      } catch {
+        return "";
+      }
+    },
+    {
+      timeout: 20_000,
+    },
+  ).toContain("Sem descrição.");
   await expect(
     updatedCategoryCard.getByRole("button", { name: `Excluir categoria ${updatedCategoryName}` }),
   ).toBeVisible({ timeout: 20_000 });
