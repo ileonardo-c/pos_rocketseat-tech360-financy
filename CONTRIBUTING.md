@@ -29,15 +29,7 @@ Padronizar contribuição por domínio, reduzir ruído em revisão e manter rast
 
 - Confirmar checklist de requisito e checklist do bloco no escopo.
 - Executar:
-  - `pnpm check`
-  - `pnpm prisma:generate`
-  - `pnpm build:backend`
-  - `pnpm build:frontend`
-  - `pnpm test:backend`
-  - `pnpm smoke:graphql` com backend em execução
-  - `pnpm smoke:auth` com backend em execução
-  - `pnpm dev:check`
-  - `pnpm e2e:smoke-contract:docker`
+  - `pnpm verify`
 - Validar stack local:
   - `pnpm dev:check`
   - `pnpm dev`
@@ -46,6 +38,7 @@ Padronizar contribuição por domínio, reduzir ruído em revisão e manter rast
   - Liveness: `http://localhost:4000/health/live`
   - Readiness: `http://localhost:4000/health/ready`
 - Atualizar `.env.example` da raiz quando variáveis novas forem introduzidas.
+- Para diagnóstico focado, use comandos específicos como `pnpm test:backend`, `pnpm e2e:smoke-contract:docker` ou `pnpm e2e:journey:docker`.
 
 ## Idioma e documentação técnica
 
