@@ -197,6 +197,7 @@ Os testes E2E rodam em um container dedicado com Chromium pré-instalado e segue
 - `contract`: validações essenciais de carregamento sem erros globais falsos.
 - `journey`: fluxo completo com bootstrap de dados.
 - `transition`: estabilidade de animações de navegação.
+- `visual`: evidência visual versionada do Style Guide.
 
 Para execução E2E fora do Docker, o runner da raiz carrega `.env.example` automaticamente.
 Use `.env` apenas quando precisar sobrescrever valores locais.
@@ -209,11 +210,24 @@ pnpm test:e2e:smoke
 pnpm e2e:contract
 pnpm e2e:journey
 pnpm e2e:transition
+pnpm e2e:visual
 pnpm test:e2e:smoke-contract
+pnpm test:e2e:visual
 ```
 Use `pnpm e2e:smoke-contract:docker` e `pnpm e2e:journey:docker` no fluxo Docker-first.
 O comando `pnpm test:e2e:smoke-contract` roda no host e fica reservado para diagnóstico local quando o Playwright já estiver instalado fora do container.
 Para rodar apenas o smoke de login a partir da raiz, use `pnpm e2e:smoke` ou o alias `pnpm test:e2e:smoke`; ambos usam o runner da raiz para carregar `.env.example` antes de chamar o pacote `@financy/frontend`.
+
+### Style Guide
+
+A página `/style-guide` fica disponível apenas em desenvolvimento e consolida a referência de componentes do Figma para inspeção visual.
+Para atualizar as evidências do bloco, rode:
+
+```bash
+pnpm e2e:visual
+```
+
+O comando gera as referências desktop e mobile em `frontend/e2e/reference/style-guide/*.png`.
 
 ## Conta seed para QA e desenvolvimento
 

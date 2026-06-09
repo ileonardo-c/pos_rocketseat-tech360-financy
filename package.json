@@ -28,6 +28,7 @@
     "test:e2e:smoke": "pnpm e2e:smoke",
     "test:e2e:smoke-contract": "pnpm e2e:smoke && pnpm e2e:contract",
     "test:e2e:preview": "pnpm e2e:journey",
+    "test:e2e:visual": "pnpm e2e:visual",
     "e2e:smoke-contract:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm test:e2e:smoke-contract\"",
     "e2e:journey:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm e2e:journey\"",
     "dev:verify:journey": "pnpm dev:up && pnpm e2e:journey:docker",
@@ -37,7 +38,8 @@
     "e2e:ownership": "node scripts/e2e-runner.mjs test:e2e:ownership",
     "e2e:journey": "node scripts/e2e-bootstrap.mjs && node scripts/e2e-runner.mjs test:e2e:journey",
     "e2e:contract": "node scripts/e2e-runner.mjs test:e2e:contract",
-    "e2e:transition": "node scripts/e2e-runner.mjs test:e2e:transition"
+    "e2e:transition": "node scripts/e2e-runner.mjs test:e2e:transition",
+    "e2e:visual": "node scripts/e2e-runner.mjs test:e2e:visual"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
