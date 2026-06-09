@@ -146,23 +146,14 @@ Para encerrar: `pnpm dev:down`
 Fluxo rápido do dia a dia (uso no root do repositório):
 
 ```bash
-pnpm dev:check          # valida contratos de env/compose
-pnpm dev                # sobe API, frontend, postgres, minio e mailpit
-pnpm dev:verify:backend # suites de backend (contrato + autenticação)
-pnpm dev:verify:journey # jornada e2e preview em Docker
-pnpm dev:verify:full    # backend + e2e smoke/contract em Docker + jornada preview
-pnpm dev:down           # encerra tudo e limpa volumes nomeados da sessão
-pnpm dev:logs           # acompanha logs da stack de desenvolvimento
+pnpm dev:check # valida contratos de env/compose
+pnpm dev       # sobe API, frontend, postgres, minio e mailpit
+pnpm dev:logs  # acompanha logs da stack de desenvolvimento
+pnpm verify    # executa a validação completa do projeto
+pnpm dev:down  # encerra tudo e limpa volumes nomeados da sessão
 ```
 
-Fluxo E2E Docker-first:
-
-```bash
-pnpm e2e:smoke-contract:docker
-pnpm e2e:journey:docker
-```
-
-Use `pnpm e2e:smoke-contract:docker` como caminho padrão no Docker-first. O comando `pnpm test:e2e:smoke-contract` roda no host e fica reservado para diagnóstico local quando o Playwright já estiver instalado fora do container.
+Use `pnpm verify` antes de abrir ou atualizar PRs relevantes. Ele valida configuração, builds, testes de backend e E2E Docker-first, subindo ou reutilizando a stack local quando necessário.
 
 ### Produção e deploy
 
@@ -191,29 +182,18 @@ Observação de infraestrutura:
 
 ### E2E (Playwright)
 
-Os testes E2E rodam em um container dedicado com Chromium pré-instalado e seguem uma taxonomia única por intenção:
+O projeto usa `pnpm verify` como validação completa padrão. As suítes E2E Docker-first fazem parte desse comando, e execuções focadas ficam reservadas para diagnóstico local a partir dos scripts disponíveis no `package.json`.
 
-- `smoke`: contrato mínimo funcional e proteção de rota.
-- `contract`: validações essenciais de carregamento sem erros globais falsos.
-- `journey`: fluxo completo com bootstrap de dados.
-- `transition`: estabilidade de animações de navegação.
+### Style Guide
 
-Para execução E2E fora do Docker, o runner da raiz carrega `.env.example` automaticamente.
-Use `.env` apenas quando precisar sobrescrever valores locais.
-Comandos principais no root:
+A página `/style-guide` fica disponível apenas em desenvolvimento e consolida a referência de componentes do Figma para inspeção visual.
+Para atualizar as evidências do bloco, rode:
 
 ```bash
-pnpm e2e:smoke-contract:docker
-pnpm e2e:smoke
-pnpm test:e2e:smoke
-pnpm e2e:contract
-pnpm e2e:journey
-pnpm e2e:transition
-pnpm test:e2e:smoke-contract
+pnpm e2e:visual
 ```
-Use `pnpm e2e:smoke-contract:docker` e `pnpm e2e:journey:docker` no fluxo Docker-first.
-O comando `pnpm test:e2e:smoke-contract` roda no host e fica reservado para diagnóstico local quando o Playwright já estiver instalado fora do container.
-Para rodar apenas o smoke de login a partir da raiz, use `pnpm e2e:smoke` ou o alias `pnpm test:e2e:smoke`; ambos usam o runner da raiz para carregar `.env.example` antes de chamar o pacote `@financy/frontend`.
+
+O comando gera as referências desktop e mobile em `frontend/e2e/reference/style-guide/*.png`.
 
 ## Conta seed para QA e desenvolvimento
 
@@ -238,22 +218,7 @@ O fluxo de recuperação usa o endereço de e-mail cadastrado na conta para soli
 
 ### Testes de API (backend)
 
-```bash
-pnpm prisma:generate
-pnpm test:backend
-pnpm test:backend:api-contract
-pnpm test:backend:graphql-security
-pnpm test:backend:auth-service
-pnpm test:backend:password-reset-service
-pnpm test:backend:transaction-service
-pnpm test:backend:auth-regression
-pnpm smoke:graphql    # diagnóstico local
-pnpm smoke:auth       # diagnóstico local
-```
-
-`pnpm smoke:graphql` e `pnpm smoke:auth` são utilitários de diagnóstico para contratos GraphQL e autenticação. Eles exigem o backend disponível em `http://127.0.0.1:4000/graphql`; no fluxo local recomendado, suba a stack com `pnpm dev` antes de executá-los.
-
-Os relatórios E2E ficam em `frontend/playwright-report` após a execução.
+Os testes de backend fazem parte de `pnpm verify`. Os relatórios E2E ficam em `frontend/playwright-report` após execuções locais do Playwright.
 
 ---
 

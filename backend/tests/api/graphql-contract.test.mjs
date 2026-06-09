@@ -1,3 +1,6 @@
+import http from "node:http";
+import https from "node:https";
+
 const graphqlUrl = process.env.GRAPHQL_URL ?? "http://127.0.0.1:4000/graphql";
 const requestDelayMs = 500;
 const maxRequestRetries = 8;
@@ -111,6 +114,32 @@ const uploadToSignedUrl = async (signedUrl, contentType, body) => {
       },
       body,
     });
+  const uploadWithHostHeader = (url, headers = {}) =>
+    new Promise((resolve, reject) => {
+      const target = new URL(url);
+      const client = target.protocol === "https:" ? https : http;
+      const request = client.request(
+        target,
+        {
+          method: "PUT",
+          headers: {
+            "content-type": contentType,
+            ...headers,
+          },
+        },
+        (response) => {
+          response.resume();
+          response.on("end", () => {
+            resolve({
+              ok: response.statusCode >= 200 && response.statusCode < 300,
+              status: response.statusCode,
+            });
+          });
+        },
+      );
+      request.on("error", reject);
+      request.end(body);
+    });
 
   try {
     const response = await upload(signedUrl);
@@ -120,20 +149,29 @@ const uploadToSignedUrl = async (signedUrl, contentType, body) => {
     return response;
   } catch (error) {
     const publicEndpoint = process.env.AWS_S3_ENDPOINT_PUBLIC?.trim();
-    if (!publicEndpoint) {
-      throw error;
-    }
-
     const originalUrl = new URL(signedUrl);
-    const publicUrl = new URL(publicEndpoint);
-    if (originalUrl.hostname !== "s3.internal" && originalUrl.hostname !== "minio") {
+    const shouldUseLoopbackFallback = originalUrl.hostname === "localhost";
+    const shouldUseDockerHostFallback =
+      originalUrl.hostname === "s3.internal" || originalUrl.hostname === "minio";
+    if (!publicEndpoint && !shouldUseLoopbackFallback && !shouldUseDockerHostFallback) {
       throw error;
     }
 
+    if (
+      originalUrl.hostname !== "s3.internal" &&
+      originalUrl.hostname !== "minio" &&
+      !shouldUseLoopbackFallback
+    ) {
+      throw error;
+    }
+
+    const publicUrl = publicEndpoint
+      ? new URL(publicEndpoint)
+      : new URL(`${originalUrl.protocol}//127.0.0.1:${originalUrl.port}`);
     publicUrl.pathname = originalUrl.pathname;
     publicUrl.search = originalUrl.search;
 
-    return upload(publicUrl.toString(), {
+    return uploadWithHostHeader(publicUrl.toString(), {
       host: originalUrl.host,
     });
   }

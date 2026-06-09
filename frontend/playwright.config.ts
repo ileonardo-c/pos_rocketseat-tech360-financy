@@ -10,6 +10,7 @@ export default defineConfig({
   retries: 1,
   workers: 1,
   outputDir,
+  snapshotPathTemplate: "{testDir}/../../e2e/reference/{arg}{ext}",
   reporter: [["list"], ["html", { open: "never", outputFolder: htmlOutputDir }]],
   use: {
     baseURL: frontendUrl,
