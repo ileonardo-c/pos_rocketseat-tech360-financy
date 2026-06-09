@@ -1,11 +1,11 @@
-export const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
+const sessionExpiredMessage = "Sua sessão expirou. Faça login novamente.";
 
-export type AuthErrorRule = {
+type AuthErrorRule = {
   codes: string[];
   toUserMessage: string;
 };
 
-export const AUTH_ERROR_RULES: AuthErrorRule[] = [
+const AUTH_ERROR_RULES: AuthErrorRule[] = [
   {
     codes: [
       "AUTH_UNAUTHENTICATED",
@@ -13,6 +13,7 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
       "AUTH_TOKEN_EXPIRED",
       "AUTH_USER_NOT_FOUND",
       "AUTH_NOT_FOUND",
+      "CATEGORY_UNAUTHENTICATED",
     ],
     toUserMessage: sessionExpiredMessage,
   },
@@ -22,6 +23,9 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
       "AUTH_INVALID_EMAIL",
       "AUTH_INVALID_PASSWORD",
       "AUTH_INVALID_PROFILE_UPDATE",
+      "PASSWORD_RESET_CODE_INVALID",
+      "PASSWORD_RESET_CODE_EXPIRED",
+      "PASSWORD_RESET_CODE_EXHAUSTED",
     ],
     toUserMessage: "Há informações inválidas no formulário.",
   },
@@ -34,8 +38,17 @@ export const AUTH_ERROR_RULES: AuthErrorRule[] = [
     toUserMessage: "Esta conta já está cadastrada.",
   },
   {
-    codes: ["UNPROCESSABLE_ENTITY", "BAD_REQUEST", "VALIDATION_ERROR"],
-    toUserMessage: "Há informações inválidas no formulário.",
+    codes: ["PASSWORD_RESET_EMAIL_FAILED", "CONFIG_ERROR"],
+    toUserMessage: "Não foi possível enviar o e-mail agora. Tente novamente.",
+  },
+  {
+    codes: [
+      "PASSWORD_RESET_REQUEST_COOLDOWN",
+      "UNPROCESSABLE_ENTITY",
+      "BAD_REQUEST",
+      "VALIDATION_ERROR",
+    ],
+    toUserMessage: "Aguarde um momento antes de solicitar um novo código.",
   },
 ];
 
@@ -112,7 +125,7 @@ const pickAuthErrorMessage = (error: unknown): string => {
   return "";
 };
 
-export const normalizeAuthErrorMessage = (error: unknown) => {
+const normalizeAuthErrorMessage = (error: unknown) => {
   return pickAuthErrorMessage(error);
 };
 
@@ -132,8 +145,13 @@ export const resolveAuthErrorMessage = (error: unknown, fallback: string) => {
 
 export const isAuthenticationGraphQLError = (error: unknown) => {
   const code = pickAuthErrorCode(error);
-  const sessionErrorCodes = ["AUTH_UNAUTHENTICATED", "UNAUTHENTICATED", "AUTH_TOKEN_EXPIRED"];
-  if (code && sessionErrorCodes.includes(code)) {
+  const sessionErrorCodes = [
+    "AUTH_UNAUTHENTICATED",
+    "UNAUTHENTICATED",
+    "AUTH_TOKEN_EXPIRED",
+    "CATEGORY_UNAUTHENTICATED",
+  ];
+  if (code && (sessionErrorCodes.includes(code) || code.endsWith("_UNAUTHENTICATED"))) {
     return true;
   }
 

@@ -6,8 +6,57 @@ const service = (ctx: GraphQLContext) =>
   new TransactionService(new TransactionRepository(ctx.prisma));
 
 export const transactionQueries = {
-  transactions: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
-    return service(ctx).listByUser(ctx);
+  transactionsInitialPeriod: async (_: unknown, _args: unknown, ctx: GraphQLContext) => {
+    return service(ctx).initialPeriodByUser(ctx);
+  },
+  transactions: async (
+    _: unknown,
+    args: {
+      filter?: {
+        query?: string | null;
+        type?: string | null;
+        categoryId?: string | null;
+        from?: string | null;
+        to?: string | null;
+      };
+      sort?: {
+        field?: "DATE" | "AMOUNT" | "TITLE" | null;
+        direction?: "ASC" | "DESC" | null;
+      } | null;
+      page?: number | null;
+      perPage?: number | null;
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).listByUser(ctx, args.filter, args.sort, args.page, args.perPage);
+  },
+  transactionsCount: async (
+    _: unknown,
+    args: {
+      filter?: {
+        query?: string | null;
+        type?: string | null;
+        categoryId?: string | null;
+        from?: string | null;
+        to?: string | null;
+      };
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).countByUser(ctx, args.filter);
+  },
+  dashboardRecentTransactions: async (
+    _: unknown,
+    args: {
+      filter?: {
+        from?: string | null;
+        to?: string | null;
+      };
+      limit?: number | null;
+    },
+    ctx: GraphQLContext,
+  ) => {
+    return service(ctx).recentByUser(ctx, args.filter, args.limit);
   },
   transactionSummary: async (
     _: unknown,

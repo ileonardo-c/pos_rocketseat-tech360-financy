@@ -1,7 +1,7 @@
-import { useMemo, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 
-import { IconMail, IconUserRoundPlus } from "@/assets/icons";
+import { IconEyeClosed, IconLock, IconMail, IconUserRoundPlus } from "@/assets/icons";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,19 +10,37 @@ import { ErrorBanner, SuccessBanner } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 
+const MIN_PASSWORD_LENGTH = 8;
+const PASSWORD_MIN_HELPER = `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
+
 export const SigninPage = () => {
   const { user, signin, loading, authError, clearAuthError } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [showRegisteredSuccess, setShowRegisteredSuccess] = useState(
-    searchParams.get("registered") === "1",
-  );
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [focused, setFocused] = useState({ email: false, password: false });
+
+  useEffect(() => {
+    if (searchParams.get("registered") === "1") {
+      setSuccessMessage("Conta criada com sucesso. Faça login para continuar.");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("registered");
+      setSearchParams(nextParams, { replace: true });
+      return;
+    }
+
+    if (searchParams.get("reset") === "1") {
+      setSuccessMessage("Senha redefinida com sucesso. Faça login para continuar.");
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete("reset");
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const getEmailError = (value: string) => {
     if (!value.trim()) {
@@ -35,6 +53,9 @@ export const SigninPage = () => {
   const getPasswordError = (value: string) => {
     if (!value) {
       return "Informe sua senha.";
+    }
+    if (value.length < MIN_PASSWORD_LENGTH) {
+      return `A senha deve ter no mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
     }
     return "";
   };
@@ -79,20 +100,7 @@ export const SigninPage = () => {
           ? "active"
           : "empty";
 
-  const passwordStartIcon = (
-    <span className="text-financy-field-placeholder">
-      <svg aria-hidden="true" fill="none" viewBox="0 0 24 24" className="h-4 w-4">
-        <path
-          d="M8 10V8a4 4 0 1 1 8 0v2"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.6"
-        />
-        <rect x="5" y="10" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
-      </svg>
-    </span>
-  );
+  const passwordStartIcon = <IconLock className="h-4 w-4" />;
 
   const passwordEndIcon = (
     <button
@@ -117,22 +125,7 @@ export const SigninPage = () => {
           <circle cx="8" cy="8" r="1.9" fill="none" stroke="currentColor" strokeWidth="1.2" />
         </svg>
       ) : (
-        <svg aria-hidden="true" viewBox="0 0 16 16" className="h-4 w-4">
-          <path
-            d="M1.3 8c1.2-2.3 3.3-3.5 6.7-3.5s5.5 1.2 6.7 3.5"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="1.2"
-          />
-          <path
-            d="M6.4 10.4a2 2 0 0 0 3.2 0"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeWidth="1.2"
-          />
-        </svg>
+        <IconEyeClosed className="h-[9px] w-4 text-[#374151]" />
       )}
     </button>
   );
@@ -202,7 +195,7 @@ export const SigninPage = () => {
               }}
               onChange={(event) => {
                 clearAuthError();
-                setShowRegisteredSuccess(false);
+                setSuccessMessage(null);
                 setEmail(event.target.value);
               }}
             />
@@ -229,19 +222,13 @@ export const SigninPage = () => {
               }}
               onChange={(event) => {
                 clearAuthError();
-                setShowRegisteredSuccess(false);
+                setSuccessMessage(null);
                 setPassword(event.target.value);
               }}
             />
 
-            <SuccessBanner
-              message={
-                showRegisteredSuccess
-                  ? "Conta criada com sucesso. Faça login para continuar."
-                  : null
-              }
-            />
-            <ErrorBanner message={authError} />
+            <SuccessBanner message={successMessage} />
+            <ErrorBanner title="Falha no login" message={authError} />
 
             <div className="flex items-center justify-between text-sm text-financy-muted">
               <Checkbox
@@ -251,13 +238,16 @@ export const SigninPage = () => {
                 disabled={isBusy}
                 label="Lembrar-me"
                 onChange={(event) => {
-                  setShowRegisteredSuccess(false);
                   setRememberMe(event.target.checked);
                 }}
               />
-              <span className="text-[14px] font-medium leading-[20px] text-financy-primary">
+              <Link
+                className="text-[14px] font-medium leading-[20px] text-financy-primary"
+                data-testid="signin-recover-password-link"
+                to="/forgot-password"
+              >
                 Recuperar senha
-              </span>
+              </Link>
             </div>
 
             <Button
@@ -287,7 +277,7 @@ export const SigninPage = () => {
               data-testid="signin-create-account-link"
               aria-disabled={isBusy}
               tabIndex={isBusy ? -1 : undefined}
-              onClick={(event) => {
+              onClick={(event: MouseEvent<HTMLAnchorElement>) => {
                 if (isBusy) {
                   event.preventDefault();
                 }

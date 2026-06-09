@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "codex-security-audit-skill": {
+      "source": "Kappaemme-git/codex-security-audit-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "b0be578999ab2a777e298e855de04e2f31674c623923a546d6356ec83abe8b7b"
+    }
+  }
+}

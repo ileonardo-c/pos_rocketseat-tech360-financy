@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim
+FROM node:22-bookworm-slim
 WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
@@ -13,7 +13,6 @@ COPY frontend/package.json ./frontend/package.json
 RUN pnpm install --frozen-lockfile --filter @financy/backend...
 
 COPY backend ./backend
-COPY scripts ./scripts
 RUN pnpm --filter @financy/backend prisma:generate
 
 CMD ["pnpm", "--filter", "@financy/backend", "dev"]

@@ -1,10 +1,8 @@
 {
+  "extends": "../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "ignoreDeprecations": "5.0",
-    "strict": true,
+    "module": "Node16",
+    "moduleResolution": "Node16",
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]
@@ -12,11 +10,8 @@
     "outDir": "dist",
     "rootDir": "src",
     "types": ["node"],
-    "sourceMap": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true
+    "sourceMap": true
   },
-  "include": ["src/**/*.ts", "prisma/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": ["dist", "node_modules"]
 }

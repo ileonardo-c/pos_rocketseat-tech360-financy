@@ -1,4 +1,4 @@
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, type Response, expect, test } from "@playwright/test";
 
 import { buildTransientE2EUser } from "./support/e2e-users";
 
@@ -7,6 +7,7 @@ const APP_BASE_URL = new URL(APP_URL);
 const API_BASE_HOST = process.env.E2E_API_HOST ?? APP_BASE_URL.hostname;
 const API_URL =
   process.env.E2E_API_URL ?? `${APP_BASE_URL.protocol}//${API_BASE_HOST}:4000/graphql`;
+const APP_HOST = APP_BASE_URL.hostname;
 
 const waitForLoginScreen = async (page: Page) => {
   await expect(page.getByRole("heading", { name: "Fazer login" })).toBeVisible({
@@ -15,19 +16,68 @@ const waitForLoginScreen = async (page: Page) => {
 };
 
 const waitForAuthenticatedDashboard = async (page: Page) => {
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible({
+  await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("heading", { name: "Transações recentes" })).toBeVisible({
     timeout: 15_000,
   });
 };
 
-const readStoredAuthToken = async (page: Page) => {
-  return page.evaluate(() => {
-    return {
-      local: window.localStorage.getItem("financy.token"),
-      session: window.sessionStorage.getItem("financy.token"),
-    };
+const waitForRouteTransitionIdle = async (page: Page) => {
+  await page.waitForFunction(
+    () => {
+      const node = document.querySelector("[data-testid='route-transition-root']");
+      return !node?.className || !/t-route-(enter|exit)/.test(node.className);
+    },
+    undefined,
+    { timeout: 2_000 },
+  );
+};
+
+const getGraphqlOperationName = (requestBody: unknown) => {
+  if (!requestBody || typeof requestBody !== "object") {
+    return null;
+  }
+
+  const body = requestBody as { operationName?: string; query?: string };
+  return body.operationName ?? body.query?.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? null;
+};
+
+const isGraphqlOperationResponse = (response: Response, operationName: string) => {
+  if (!response.url().includes("/graphql") || response.request().method() !== "POST") {
+    return false;
+  }
+
+  const rawBody = response.request().postData() ?? "";
+  if (
+    rawBody.includes(`"operationName":"${operationName}"`) ||
+    rawBody.includes(`mutation ${operationName}`) ||
+    rawBody.includes(`query ${operationName}`)
+  ) {
+    return true;
+  }
+
+  try {
+    return getGraphqlOperationName(response.request().postDataJSON?.()) === operationName;
+  } catch {
+    return false;
+  }
+};
+
+const submitLoginForm = async (page: Page, user: { email: string; password: string }) => {
+  await page.getByTestId("signin-email").fill(user.email);
+  await page.getByTestId("signin-password").fill(user.password);
+
+  const submitButton = page.getByRole("button", { name: "Entrar" });
+  const loginResponse = page.waitForResponse((response) => {
+    return isGraphqlOperationResponse(response, "Login");
   });
+
+  await expect(submitButton).toBeEnabled({ timeout: 15_000 });
+  await submitButton.click({ timeout: 15_000 });
+  const response = await loginResponse;
+  const payload = await response.json();
+  expect(payload.errors).toBeFalsy();
+  expect(payload.data?.login?.token).toBeTruthy();
 };
 
 const createTransientUser = async (
@@ -67,17 +117,56 @@ const createTransientUserViaUi = async (
   page: Page,
   user: { name: string; email: string; password: string },
 ) => {
-  await page.goto(`${APP_URL}/signup`, { waitUntil: "domcontentloaded" });
+  await page.context().clearCookies();
+  await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
+  await waitForLoginScreen(page);
+  await waitForRouteTransitionIdle(page);
+  await page.getByRole("link", { name: "Criar conta" }).click();
+  await page.waitForURL(/\/signup/, { timeout: 15_000, waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Criar conta" })).toBeVisible({
     timeout: 15_000,
   });
+  await waitForRouteTransitionIdle(page);
 
-  await page.getByTestId("signup-name").fill(user.name);
-  await page.getByTestId("signup-email").fill(user.email);
-  await page.getByTestId("signup-password").fill(user.password);
-  await page.getByRole("button", { name: "Criar conta" }).click();
+  const nameInput = page.getByTestId("signup-name");
+  const emailInput = page.getByTestId("signup-email");
+  const passwordInput = page.getByTestId("signup-password");
+  const signupForm = page.getByTestId("signup-form");
+
+  await expect(nameInput).toBeVisible({ timeout: 15_000 });
+  await expect(emailInput).toBeVisible({ timeout: 15_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 15_000 });
+  await expect(nameInput).toBeEnabled({ timeout: 15_000 });
+  await expect(emailInput).toBeEnabled({ timeout: 15_000 });
+  await expect(passwordInput).toBeEnabled({ timeout: 15_000 });
+  await expect(nameInput).toBeEditable({ timeout: 15_000 });
+  await expect(emailInput).toBeEditable({ timeout: 15_000 });
+  await expect(passwordInput).toBeEditable({ timeout: 15_000 });
+
+  await nameInput.fill(user.name);
+  await emailInput.fill(user.email);
+  await passwordInput.fill(user.password);
+  await expect(nameInput).toHaveValue(user.name);
+  await expect(emailInput).toHaveValue(user.email);
+  await expect(passwordInput).toHaveValue(user.password);
+  await waitForRouteTransitionIdle(page);
+
+  const submitButton = page.getByRole("button", { name: "Cadastrar" });
+  const registerResponse = page.waitForResponse((response) => {
+    return response.ok() && isGraphqlOperationResponse(response, "Register");
+  });
+
+  await expect(submitButton).toBeEnabled({ timeout: 15_000 });
+  await submitButton.click({ timeout: 15_000 });
+  const response = await registerResponse;
+  expect(response.ok()).toBeTruthy();
+  const payload = await response.json();
+  expect(payload.errors).toBeFalsy();
+  expect(payload.data?.register?.created).toBeTruthy();
+  await expect(signupForm).toBeHidden({ timeout: 15_000 });
+  await page.waitForURL(/\/login/, { timeout: 15_000, waitUntil: "domcontentloaded" });
   await waitForLoginScreen(page);
-  await expect(page.getByText(/conta criada com sucesso/i)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible({ timeout: 15_000 });
 };
 
 const clearClientState = async (page: Page) => {
@@ -89,9 +178,7 @@ const clearClientState = async (page: Page) => {
   });
 };
 
-test("@smoke-login @smoke-dashboard fluxo de login funcional com usuário transitório", async ({
-  page,
-}) => {
+test("@smoke-login functional login flow with a transient user", async ({ page }) => {
   const user = buildTransientE2EUser();
 
   await clearClientState(page);
@@ -107,81 +194,66 @@ test("@smoke-login @smoke-dashboard fluxo de login funcional com usuário transi
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Criar conta" })).toBeVisible();
 
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await submitLoginForm(page, user);
 
   await waitForAuthenticatedDashboard(page);
-  await expect(page.getByRole("link", { name: "Gerenciar categorias" })).toBeVisible({
-    timeout: 15_000,
-  });
-
-  const tokens = await readStoredAuthToken(page);
-  const hasToken = !!tokens.local || !!tokens.session;
-  expect(hasToken).toBe(true);
-  expect(typeof tokens.local === "string" ? tokens.local : tokens.session).toContain("ey");
 
   await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Categorias" })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page.getByText("Nenhuma categoria encontrada.")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("Não foi possível carregar categorias.")).toHaveCount(0);
 });
 
-test("@smoke-login fluxo de cadastro funcional com usuário transitório", async ({ page }) => {
+test("@smoke-login functional signup flow with a transient user", async ({ page }) => {
+  test.setTimeout(90_000);
   const user = buildTransientE2EUser();
 
   await clearClientState(page);
 
   await createTransientUserViaUi(page, user);
 
-  const signupTokens = await readStoredAuthToken(page);
-  expect(signupTokens.local).toBeNull();
-  expect(signupTokens.session).toBeNull();
-
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await submitLoginForm(page, user);
   await waitForAuthenticatedDashboard(page);
 });
 
-test("@smoke-login remember-me persiste token em localStorage", async ({ page }) => {
-  const user = buildTransientE2EUser();
-
+test("@smoke-login public routes stay accessible without a session", async ({ page }) => {
   await clearClientState(page);
-  await createTransientUser(page, user);
 
-  await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
-  await waitForLoginScreen(page);
+  await page.goto(`${APP_URL}/signup`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/signup/);
+  await expect(page.getByRole("heading", { name: "Criar conta" })).toBeVisible({
+    timeout: 15_000,
+  });
 
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByTestId("signin-remember").check({ force: true });
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  await waitForAuthenticatedDashboard(page);
-
-  const rememberTokens = await readStoredAuthToken(page);
-  expect(rememberTokens.local).toContain("ey");
-  expect(rememberTokens.session).toBeNull();
+  await page.goto(`${APP_URL}/forgot-password`, { waitUntil: "domcontentloaded" });
+  await expect(page).toHaveURL(/\/forgot-password/);
+  await expect(page.getByRole("heading", { name: "Recuperar senha" })).toBeVisible({
+    timeout: 15_000,
+  });
 });
 
-test("@smoke-login remember-me sem persistência usa sessionStorage", async ({ page }) => {
-  const user = buildTransientE2EUser();
-
+test("@smoke-login invalid session on /categories redirects to /login without banner", async ({
+  page,
+}) => {
   await clearClientState(page);
-  await createTransientUser(page, user);
 
   await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
+  await page.context().addCookies([
+    {
+      name: "financy_session",
+      value: "invalid.token.here",
+      domain: APP_HOST,
+      path: "/",
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: false,
+    },
+  ]);
+
+  await page.goto(`${APP_URL}/categories`, { waitUntil: "domcontentloaded" });
   await waitForLoginScreen(page);
-
-  await page.getByTestId("signin-email").fill(user.email);
-  await page.getByTestId("signin-password").fill(user.password);
-  await page.getByTestId("signin-remember").uncheck({ force: true });
-  await page.getByRole("button", { name: "Entrar" }).click();
-
-  await waitForAuthenticatedDashboard(page);
-
-  const sessionTokens = await readStoredAuthToken(page);
-  expect(sessionTokens.local).toBeNull();
-  expect(sessionTokens.session).toContain("ey");
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByText("Não foi possível carregar categorias.")).toHaveCount(0);
 });

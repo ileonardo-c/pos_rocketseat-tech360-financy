@@ -6,12 +6,25 @@ export const buildTransientE2EUser = () => {
   const password = "E2E_UserPass123!";
 
   return {
-    name: `E2E User ${suffix}`,
-    updatedName: `E2E User Updated ${suffix}`,
+    name: "Teste User",
+    updatedName: "Teste User Updated",
     email: `e2e.${suffix}@financy.local`,
     password,
     categoryName: `Categoria E2E ${suffix}`,
     transactionTitle: `Transação E2E ${suffix}`,
+  };
+};
+
+export const buildSeedE2EUser = () => {
+  const email = process.env.E2E_SEED_EMAIL?.trim() || "admin@financy.local";
+  const name = process.env.E2E_SEED_NAME?.trim() || "Financy Admin";
+  const password = process.env.E2E_SEED_PASSWORD?.trim() || "TestAdmin123!";
+
+  return {
+    name,
+    email,
+    password,
+    updatedName: `${name} Padrão`,
   };
 };
 

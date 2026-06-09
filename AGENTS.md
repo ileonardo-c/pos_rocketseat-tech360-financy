@@ -12,12 +12,13 @@ Todo o ecossistema (Frontend e Backend) é baseado exclusivamente em Node.js.
 
 O projeto opera exclusivamente via Docker Compose. **Nunca execute serviços diretamente no host.**
 
-Dois arquivos Compose coexistem — use o correto para cada contexto:
+O arquivo Compose versionado é focado em desenvolvimento local:
 
 | Arquivo                          | Contexto                                                     | Script raiz            |
 | -------------------------------- | ------------------------------------------------------------ | ---------------------- |
-| `docker-compose.development.yml` | Desenvolvimento — hot reload, volumes montados, perfil `e2e` | `pnpm compose:up`      |
-| `docker-compose.yml`             | Produção — imagens compiladas, sem volumes de código         | `pnpm compose:up:prod` |
+| `docker-compose.yml`             | Desenvolvimento e CI — hot reload, volumes montados, perfil `e2e` | `pnpm dev`             |
+
+Produção não deve usar o compose local; configure o deploy na plataforma alvo com secrets reais.
 
 Todos os comandos de ciclo de vida, testes e smoke estão definidos em `package.json` (raiz). Consulte os scripts disponíveis antes de invocar `docker compose` diretamente.
 
@@ -46,6 +47,7 @@ Nunca use `|| true` para suprimir falhas de containers ou serviços. Qualquer sa
 - **Nomenclatura de Plugins:** Use "plugin" / "plugins" na documentação, interface do usuário e registros de alterações. A árvore de diretórios do espaço de trabalho permanece inalterada para evitar refatorações em massa.
 - **Estilo TypeScript:** Prefira tipagem estrita. Evite o uso de `any`. Nunca adicione `@ts-nocheck` e não desabilite `no-explicit-any`; corrija a causa raiz e mantenha a tipagem segura.
 - **Boas Práticas de Classes:** Nunca compartilhe comportamento de classe via mutação de protótipo (`Object.defineProperty` em `.prototype`). Use herança ou composição explícitas para que o TypeScript possa validar os tipos.
+- **Regra permanente de consistência com recursos externos:** Sempre que o PR alterar avatar, upload, receipt, storage, S3, MinIO, delete de arquivo ou qualquer side effect externo combinado com Prisma, audite a ordem das operações. O banco é a fonte de verdade. Recurso externo antigo só pode ser apagado depois que o banco deixar de apontar para ele. Falha de banco bloqueia side effect destrutivo; falha de cleanup externo não pode corromper referência persistida.
 
 ------
 
@@ -152,6 +154,10 @@ Qualquer ocorrência encontrada nessa busca é um bug **P1** e bloqueia o envio.
 - Prefixe cada apontamento com seu rótulo de severidade. Levante apenas apontamentos de nível P0, P1, P2 ou P3.
 - Se nenhum problema relevante for encontrado, responda apenas: `Nenhum problema relevante encontrado.`
 - Não explique o comportamento geral do agente, não adicione seções de próximos passos, nem encerre com perguntas abertas.
+
+## Regra permanente de consistência com recursos externos
+
+Sempre que o PR alterar avatar, upload, receipt, storage, S3, MinIO, delete de arquivo ou qualquer side effect externo combinado com Prisma, audite a ordem das operações. O banco é a fonte de verdade. Recurso externo antigo só pode ser apagado depois que o banco deixar de apontar para ele. Falha de banco bloqueia side effect destrutivo; falha de cleanup externo não pode corromper a referência persistida.
 
 ### Níveis de Severidade
 

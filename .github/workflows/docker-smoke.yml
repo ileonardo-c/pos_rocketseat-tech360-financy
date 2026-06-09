@@ -1,4 +1,4 @@
-name: docker-smoke
+name: docker-verification
 
 on:
   pull_request:
@@ -6,28 +6,41 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: docker-smoke-${{ github.workflow }}-${{ github.ref }}
+  group: docker-verification-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  docker-smoke:
-    name: docker-smoke
+  docker-verification:
+    name: Verify Docker suite
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
+    env:
+      PROJECT_NAME: financy-ci-${{ github.run_id }}-${{ github.run_attempt }}
+      RATE_LIMIT_GLOBAL_MAX_REQUESTS: 1000
+      RATE_LIMIT_AUTH_MAX_REQUESTS: 200
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Copy environment file
-        run: cp .env.example .env
-
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and start CI compose stack
-        run: docker compose -p financy-ci -f docker-compose.ci.yml up -d --build --wait --wait-timeout 120
+      - name: Clean previous CI compose stack
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v --remove-orphans
 
-      - name: Wait for backend readiness
+      - name: Build and start CI compose stack
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml up -d --build --wait --wait-timeout 120
+
+      - name: Build E2E runner image
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e build e2e
+
+      - name: Wait for backend
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
@@ -56,50 +69,132 @@ jobs:
       - name: Validate pnpm runtime toolchain
         run: |
           set -euo pipefail
-          docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
-          docker compose -p financy-ci -f docker-compose.ci.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --version && pnpm --filter @financy/backend exec prisma --version >/dev/null"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --version && pnpm --filter @financy/frontend exec vite --version >/dev/null"
 
-      - name: Run E2E smoke flow
-        run: docker compose -p financy-ci -f docker-compose.ci.yml --profile e2e run --name financy-ci-e2e-smoke e2e
+      - name: Validate application builds
+        run: |
+          set -euo pipefail
+          backend_log="$(mktemp)"
+          frontend_log="$(mktemp)"
+          status=0
 
-      - name: Collect E2E artifacts from container
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend build" >"${backend_log}" 2>&1 &
+          backend_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T frontend sh -lc "pnpm --filter @financy/frontend build" >"${frontend_log}" 2>&1 &
+          frontend_pid="$!"
+
+          if ! wait "${backend_pid}"; then
+            status=1
+          fi
+          echo "Backend build output"
+          cat "${backend_log}"
+
+          if ! wait "${frontend_pid}"; then
+            status=1
+          fi
+          echo "Frontend build output"
+          cat "${frontend_log}"
+
+          exit "${status}"
+
+      - name: Verify backend contracts
+        id: backend_contracts
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          api_log="$(mktemp)"
+          auth_log="$(mktemp)"
+          status=0
+
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "pnpm --filter @financy/backend test:api-contract" >"${api_log}" 2>&1 &
+          api_pid="$!"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql pnpm --filter @financy/backend test:auth-regression" >"${auth_log}" 2>&1 &
+          auth_pid="$!"
+
+          if ! wait "${api_pid}"; then
+            status=1
+          fi
+          echo "Backend API contract output"
+          cat "${api_log}"
+
+          if ! wait "${auth_pid}"; then
+            status=1
+          fi
+          echo "Backend auth regression output"
+          cat "${auth_log}"
+
+          exit "${status}"
+
+      - name: Verify e2e smoke-contract
+        id: e2e_smoke_contract
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-login PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-login pnpm e2e:smoke && PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-dashboard PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-dashboard pnpm e2e:contract"
+
+      - name: Verify e2e journey-preview
+        id: e2e_journey_preview
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-journey-preview PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-journey-preview pnpm e2e:journey"
+
+      - name: Collect E2E artifacts
         if: always()
         run: |
           set -euo pipefail
-          rm -rf frontend/playwright-report frontend/test-results
-          mkdir -p frontend
-          if docker ps -a --format '{{.Names}}' | grep -qx 'financy-ci-e2e-smoke'; then
-            if docker exec financy-ci-e2e-smoke test -d /app/frontend/playwright-report; then
-              docker cp financy-ci-e2e-smoke:/app/frontend/playwright-report frontend/playwright-report
-            fi
-            if docker exec financy-ci-e2e-smoke test -d /app/frontend/test-results; then
-              docker cp financy-ci-e2e-smoke:/app/frontend/test-results frontend/test-results
-            fi
+          mkdir -p "frontend/.artifacts"
+          if [ -d "frontend/playwright-report" ]; then
+            rm -rf "frontend/.artifacts/playwright-report"
+            cp -R "frontend/playwright-report" "frontend/.artifacts/playwright-report"
           fi
-
-      - name: Run auth smoke flow
-        run: docker compose -p financy-ci -f docker-compose.ci.yml exec -T backend sh -lc "GRAPHQL_URL=http://127.0.0.1:4000/graphql node scripts/auth-regression.mjs"
+          if [ -d "frontend/test-results" ]; then
+            rm -rf "frontend/.artifacts/test-results"
+            cp -R "frontend/test-results" "frontend/.artifacts/test-results"
+          fi
 
       - name: Upload E2E artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-artifacts
-          path: |
-            frontend/playwright-report
-            frontend/test-results
+          path: frontend/.artifacts
           if-no-files-found: ignore
+
+      - name: Fail on verification errors
+        if: always()
+        run: |
+          set -euo pipefail
+          status=0
+          if [ "${{ steps.backend_contracts.outcome }}" != "success" ]; then
+            echo "Backend contract verification failed"
+            status=1
+          fi
+          if [ "${{ steps.e2e_smoke_contract.outcome }}" != "success" ]; then
+            echo "E2E smoke-contract verification failed"
+            status=1
+          fi
+          if [ "${{ steps.e2e_journey_preview.outcome }}" != "success" ]; then
+            echo "E2E journey-preview verification failed"
+            status=1
+          fi
+          exit "${status}"
 
       - name: Show compose status
         if: always()
-        run: docker compose -p financy-ci -f docker-compose.ci.yml ps
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml ps
 
       - name: Show compose logs
-        if: failure()
+        if: always() && (steps.backend_contracts.outcome != 'success' || steps.e2e_smoke_contract.outcome != 'success' || steps.e2e_journey_preview.outcome != 'success')
         run: |
-          docker compose -p financy-ci -f docker-compose.ci.yml logs --no-color backend backend-init frontend postgres minio
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml logs --no-color backend frontend postgres minio minio-init mailpit
 
       - name: Tear down compose stack
         if: always()
-        run: docker compose -p financy-ci -f docker-compose.ci.yml down -v
-
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml down -v

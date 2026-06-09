@@ -42,7 +42,7 @@ export const IconButton = ({
     <button
       className={cx(
         // Figma: size 32px, rounded-lg, p-8px
-        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-[color,background-color,border-color,opacity] duration-150 cursor-pointer",
+        "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-[color,background-color,border-color,opacity,box-shadow] duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-financy-primary/60 focus-visible:ring-offset-2",
         variantClasses[variant],
         stateClass,
         className,

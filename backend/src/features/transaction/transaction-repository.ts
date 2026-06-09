@@ -1,8 +1,35 @@
+import type { Prisma } from "@prisma/client";
 import type { PrismaClient, TransactionType } from "@prisma/client";
 import type { Transaction } from "@prisma/client";
 
 export class TransactionRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  private getCategoryInclude() {
+    return {
+      include: {
+        _count: {
+          select: {
+            transactions: true,
+          },
+        },
+      },
+    };
+  }
+
+  findLatestByUser(userId: string): Promise<{ date: Date } | null> {
+    return this.prisma.transaction.findFirst({
+      where: {
+        userId,
+      },
+      select: {
+        date: true,
+      },
+      orderBy: {
+        date: "desc",
+      },
+    });
+  }
 
   findAllByUser(userId: string): Promise<Transaction[]> {
     return this.prisma.transaction.findMany({
@@ -10,11 +37,61 @@ export class TransactionRepository {
         userId,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
       orderBy: {
         date: "desc",
       },
+    });
+  }
+
+  findListByUser(
+    userId: string,
+    options: {
+      query?: string;
+      type?: TransactionType;
+      categoryId?: string;
+      from?: Date;
+      to?: Date;
+      sortField: "DATE" | "AMOUNT" | "TITLE";
+      sortDirection: "ASC" | "DESC";
+      page: number;
+      perPage: number;
+    },
+  ): Promise<Transaction[]> {
+    const where = this.buildListWhere(userId, options);
+
+    const direction = options.sortDirection === "ASC" ? "asc" : "desc";
+    const orderBy: Prisma.TransactionOrderByWithRelationInput[] =
+      options.sortField === "AMOUNT"
+        ? [{ amount: direction }, { createdAt: direction }, { id: direction }]
+        : options.sortField === "TITLE"
+          ? [{ title: direction }, { createdAt: direction }, { id: direction }]
+          : [{ date: direction }, { createdAt: direction }, { id: direction }];
+
+    return this.prisma.transaction.findMany({
+      where,
+      include: {
+        category: this.getCategoryInclude(),
+      },
+      orderBy,
+      skip: (options.page - 1) * options.perPage,
+      take: options.perPage,
+    });
+  }
+
+  countListByUser(
+    userId: string,
+    options: {
+      query?: string;
+      type?: TransactionType;
+      categoryId?: string;
+      from?: Date;
+      to?: Date;
+    },
+  ): Promise<number> {
+    return this.prisma.transaction.count({
+      where: this.buildListWhere(userId, options),
     });
   }
 
@@ -25,7 +102,7 @@ export class TransactionRepository {
         userId,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -132,6 +209,30 @@ export class TransactionRepository {
     });
   }
 
+  findRecentByUser(
+    userId: string,
+    filters: {
+      from: Date;
+      to: Date;
+    },
+    limit: number,
+  ): Promise<Transaction[]> {
+    return this.prisma.transaction.findMany({
+      where: {
+        userId,
+        date: {
+          gte: filters.from,
+          lte: filters.to,
+        },
+      },
+      include: {
+        category: this.getCategoryInclude(),
+      },
+      orderBy: [{ date: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+      take: limit,
+    });
+  }
+
   create(
     userId: string,
     data: {
@@ -151,7 +252,7 @@ export class TransactionRepository {
         ...data,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -175,7 +276,7 @@ export class TransactionRepository {
       },
       data,
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
   }
@@ -186,8 +287,40 @@ export class TransactionRepository {
         id,
       },
       include: {
-        category: true,
+        category: this.getCategoryInclude(),
       },
     });
+  }
+
+  private buildListWhere(
+    userId: string,
+    options: {
+      query?: string;
+      type?: TransactionType;
+      categoryId?: string;
+      from?: Date;
+      to?: Date;
+    },
+  ): Prisma.TransactionWhereInput {
+    const searchQuery = options.query?.trim();
+
+    return {
+      userId,
+      ...(options.type ? { type: options.type } : {}),
+      ...(options.categoryId ? { categoryId: options.categoryId } : {}),
+      date: {
+        ...(options.from ? { gte: options.from } : {}),
+        ...(options.to ? { lte: options.to } : {}),
+      },
+      ...(searchQuery
+        ? {
+            OR: [
+              { title: { contains: searchQuery, mode: "insensitive" } },
+              { description: { contains: searchQuery, mode: "insensitive" } },
+              { category: { is: { name: { contains: searchQuery, mode: "insensitive" } } } },
+            ],
+          }
+        : {}),
+    };
   }
 }

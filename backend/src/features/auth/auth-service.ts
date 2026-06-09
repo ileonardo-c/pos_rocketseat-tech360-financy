@@ -1,4 +1,5 @@
 import type { GraphQLContext } from "@/context";
+import type { StorageService } from "@/features/storage/storage-service";
 import { getRequiredEnv } from "@/lib/env";
 import { AppError } from "@/lib/errors";
 import { Prisma } from "@prisma/client";
@@ -8,9 +9,19 @@ import type { SignOptions } from "jsonwebtoken";
 import type { AuthRepository } from "./auth-repository";
 
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const MIN_PASSWORD_LENGTH = 8;
 
 export class AuthService {
   constructor(private readonly repository: AuthRepository) {}
+
+  private mapUser(user: { id: string; name: string; email: string; avatarUrl: string | null }) {
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+    };
+  }
 
   async register(name: string, email: string, password: string) {
     const normalizedName = name.trim();
@@ -31,7 +42,7 @@ export class AuthService {
     }
 
     const normalizedPassword = password.trim();
-    if (normalizedPassword.length < 6) {
+    if (normalizedPassword.length < MIN_PASSWORD_LENGTH) {
       throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
 
@@ -51,10 +62,10 @@ export class AuthService {
       }
       throw error;
     }
-    return { created: true, user: { id: user.id, name: user.name, email: user.email } };
+    return { created: true, user: this.mapUser(user) };
   }
 
-  async login(email: string, password: string) {
+  async login(email: string, password: string, rememberMe = false) {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail) {
       throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
@@ -66,7 +77,6 @@ export class AuthService {
     if (!normalizedPassword.length) {
       throw new AppError("Invalid password", 422, "AUTH_INVALID_PASSWORD");
     }
-
     const user = await this.repository.findByEmail(normalizedEmail);
     if (!user) {
       throw new AppError("Invalid credentials", 401, "AUTH_INVALID_CREDENTIALS");
@@ -87,7 +97,11 @@ export class AuthService {
       ...signOptions,
     });
 
-    return { token, user: { id: user.id, name: user.name, email: user.email } };
+    return {
+      rememberMe,
+      token,
+      user: this.mapUser(user),
+    };
   }
 
   async me(ctx: GraphQLContext) {
@@ -100,7 +114,7 @@ export class AuthService {
       throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
     }
 
-    return { id: user.id, name: user.name, email: user.email };
+    return this.mapUser(user);
   }
 
   async updateProfile(ctx: GraphQLContext, input: { name?: string | null; email?: string | null }) {
@@ -108,7 +122,12 @@ export class AuthService {
       throw new AppError("Unauthenticated", 401, "AUTH_UNAUTHENTICATED");
     }
 
-    const data: { name?: string; email?: string } = {};
+    const user = await this.repository.findById(ctx.userId);
+    if (!user) {
+      throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+    }
+
+    const data: { name?: string } = {};
 
     if (typeof input.name === "string") {
       const normalizedName = input.name.trim();
@@ -128,14 +147,12 @@ export class AuthService {
         throw new AppError("Invalid email", 422, "AUTH_INVALID_EMAIL");
       }
 
-      const existingUser = await this.repository.findByEmail(normalizedEmail);
-      if (existingUser && existingUser.id !== ctx.userId) {
-        throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
+      if (normalizedEmail !== user.email.toLowerCase()) {
+        throw new AppError("Email update is not allowed", 422, "AUTH_EMAIL_UPDATE_NOT_ALLOWED");
       }
-      data.email = normalizedEmail;
     }
 
-    if (!data.name && !data.email) {
+    if (!data.name) {
       throw new AppError("No profile updates provided", 422, "AUTH_INVALID_PROFILE_UPDATE");
     }
 
@@ -143,15 +160,109 @@ export class AuthService {
     try {
       updated = await this.repository.updateUser(ctx.userId, data);
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        throw new AppError("Email already registered", 409, "AUTH_EMAIL_ALREADY_REGISTERED");
-      }
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
         throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
       }
       throw error;
     }
 
-    return { id: updated.id, name: updated.name, email: updated.email };
+    return this.mapUser(updated);
+  }
+
+  async updateProfileAvatar(
+    ctx: GraphQLContext,
+    input: { avatarKey: string },
+    storageService: StorageService,
+  ) {
+    if (!ctx.userId) {
+      throw new AppError("Unauthenticated", 401, "AUTH_UNAUTHENTICATED");
+    }
+
+    const avatarKey = input.avatarKey.trim();
+    if (!avatarKey) {
+      throw new AppError("Invalid avatar key", 422, "AUTH_INVALID_AVATAR_KEY");
+    }
+
+    const avatarPrefix = `users/${ctx.userId}/avatars/`;
+    if (!avatarKey.startsWith(avatarPrefix)) {
+      throw new AppError("Invalid avatar key", 422, "AUTH_INVALID_AVATAR_KEY");
+    }
+
+    const user = await this.repository.findById(ctx.userId);
+    if (!user) {
+      throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+    }
+
+    await storageService.validateProfileAvatarUpload(avatarKey);
+
+    const avatarUrl = storageService.publicUrlForKey(avatarKey);
+
+    let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;
+    try {
+      updated = await this.repository.updateUser(ctx.userId, {
+        avatarKey,
+        avatarUrl,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+      }
+      throw error;
+    }
+
+    await this.cleanupAvatarObject(storageService, user.avatarKey, avatarKey, ctx.userId);
+
+    return this.mapUser(updated);
+  }
+
+  async removeProfileAvatar(ctx: GraphQLContext, storageService: StorageService) {
+    if (!ctx.userId) {
+      throw new AppError("Unauthenticated", 401, "AUTH_UNAUTHENTICATED");
+    }
+
+    const user = await this.repository.findById(ctx.userId);
+    if (!user) {
+      throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+    }
+
+    const previousAvatarKey = user.avatarKey;
+
+    let updated: Awaited<ReturnType<AuthRepository["updateUser"]>>;
+    try {
+      updated = await this.repository.updateUser(ctx.userId, {
+        avatarKey: null,
+        avatarUrl: null,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+        throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+      }
+      throw error;
+    }
+
+    await this.cleanupAvatarObject(storageService, previousAvatarKey, null, ctx.userId);
+
+    return this.mapUser(updated);
+  }
+
+  private async cleanupAvatarObject(
+    storageService: StorageService,
+    previousAvatarKey: string | null,
+    currentAvatarKey: string | null,
+    userId: string,
+  ) {
+    if (!previousAvatarKey || previousAvatarKey === currentAvatarKey) {
+      return;
+    }
+
+    try {
+      await storageService.deleteObject(previousAvatarKey);
+    } catch (error) {
+      console.warn("Avatar cleanup failed", {
+        userId,
+        key: previousAvatarKey,
+        error,
+      });
+    }
   }
 }

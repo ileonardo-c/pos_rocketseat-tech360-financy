@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       dry_run:
-        description: "Executa sem deletar branches"
+        description: "Run without deleting branches"
         required: true
         default: "true"
         type: choice
@@ -64,7 +64,7 @@ jobs:
 
             for (const head of mergedHeads) {
               if (openHeads.has(head)) {
-                skipped.push({ head, reason: "branch com PR aberto" });
+                skipped.push({ head, reason: "branch with open PR" });
                 continue;
               }
 
@@ -76,7 +76,7 @@ jobs:
                 });
               } catch (error) {
                 if (error.status === 404) {
-                  skipped.push({ head, reason: "branch já removida" });
+                  skipped.push({ head, reason: "branch already removed" });
                   continue;
                 }
                 throw error;
@@ -89,7 +89,7 @@ jobs:
               });
 
               if (branchInfo.data.protected) {
-                skipped.push({ head, reason: "branch protegida" });
+                skipped.push({ head, reason: "protected branch" });
                 continue;
               }
 
@@ -107,24 +107,24 @@ jobs:
             }
 
             core.info(`dry_run=${dryRun}`);
-            core.info(`branches removidas/simuladas: ${deleted.length}`);
-            core.info(`branches ignoradas: ${skipped.length}`);
+            core.info(`branches removed/simulated: ${deleted.length}`);
+            core.info(`branches skipped: ${skipped.length}`);
 
             await core.summary
-              .addHeading("Cleanup de branches mergeadas")
+              .addHeading("Merged branch cleanup")
               .addRaw(`dry_run: ${dryRun}\n\n`)
-              .addHeading("Removidas (ou simuladas)", 3)
+              .addHeading("Removed (or simulated)", 3)
               .addCodeBlock(
                 deleted.length
                   ? deleted.map((item) => `${item.head} (${item.mode})`).join("\n")
-                  : "nenhuma",
+                  : "none",
                 "text",
               )
-              .addHeading("Ignoradas", 3)
+              .addHeading("Skipped", 3)
               .addCodeBlock(
                 skipped.length
                   ? skipped.map((item) => `${item.head} (${item.reason})`).join("\n")
-                  : "nenhuma",
+                  : "none",
                 "text",
               )
               .write();
