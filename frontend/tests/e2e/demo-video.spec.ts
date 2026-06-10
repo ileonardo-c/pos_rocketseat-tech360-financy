@@ -88,7 +88,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
   let tokenA = "";
   let tokenB = "";
 
-  // ─── 1. Introdução ───
+  // ─── 1. Introduction ───
   await test.step("1. Introdução — abrir o app", async () => {
     await page.goto(`${APP_URL}/login`, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: "Fazer login" })).toBeVisible({
@@ -102,7 +102,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     await checkCaption(page, "✅ Check: App carregado com sucesso.");
   });
 
-  // ─── 2. Criar conta do Usuário A ───
+  // ─── 2. Register User A ───
   await test.step("2. Criar conta do Usuário A", async () => {
     await caption(page, "Criando a conta do Usuário A pela interface.");
     await waitForRouteTransitionIdle(page);
@@ -157,7 +157,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 3. Login do Usuário A ───
+  // ─── 3. Login User A ───
   await test.step("3. Login do Usuário A", async () => {
     await caption(page, "Fazendo login com o Usuário A.");
 
@@ -181,7 +181,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 4. Criar categoria do Usuário A ───
+  // ─── 4. Create category for User A ───
   await test.step("4. Criar categoria do Usuário A", async () => {
     await caption(page, "Criando uma categoria exclusiva do Usuário A.");
 
@@ -219,7 +219,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 5. Listar categorias ───
+  // ─── 5. List categories ───
   await test.step("5. Listar categorias do Usuário A", async () => {
     await caption(page, "Listando categorias do Usuário A.");
 
@@ -239,7 +239,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 6. Editar categoria ───
+  // ─── 6. Edit category ───
   await test.step("6. Editar categoria do Usuário A", async () => {
     await caption(page, "Editando a categoria criada pelo Usuário A.");
 
@@ -277,7 +277,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 7. Criar transação do Usuário A ───
+  // ─── 7. Create transaction for User A ───
   await test.step("7. Criar transação do Usuário A", async () => {
     await caption(page, "Criando uma transação vinculada à categoria do Usuário A.");
 
@@ -339,7 +339,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 8. Listar transações ───
+  // ─── 8. List transactions ───
   await test.step("8. Listar transações do Usuário A", async () => {
     await caption(page, "Listando transações do Usuário A.");
 
@@ -357,7 +357,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 9. Editar transação ───
+  // ─── 9. Edit transaction ───
   await test.step("9. Editar transação do Usuário A", async () => {
     await caption(page, "Editando a transação criada pelo Usuário A.");
 
@@ -395,7 +395,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 10. Validar isolamento por usuário ───
+  // ─── 10. Validate user isolation ───
   await test.step("10. Validar isolamento por usuário", async () => {
     await caption(
       page,
@@ -477,7 +477,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 11. Voltar ao Usuário A ───
+  // ─── 11. Switch back to User A ───
   await test.step("11. Voltar ao Usuário A", async () => {
     await caption(page, "Voltando ao Usuário A para finalizar exclusões dos dados criados.");
 
@@ -519,7 +519,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 12. Deletar transação ───
+  // ─── 12. Delete transaction ───
   await test.step("12. Deletar transação do Usuário A", async () => {
     await caption(page, "Deletando a transação criada no vídeo.");
 
@@ -546,7 +546,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 13. Deletar categoria ───
+  // ─── 13. Delete category ───
   await test.step("13. Deletar categoria do Usuário A", async () => {
     await caption(page, "Deletando a categoria criada no vídeo.");
 
@@ -585,7 +585,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
     );
   });
 
-  // ─── 14. Encerramento ───
+  // ─── 14. Closing ───
   await test.step("14. Encerramento", async () => {
     await checkCaption(page, "✅ Vídeo de evidência gerado com sucesso.");
     await page.waitForTimeout(2000);
