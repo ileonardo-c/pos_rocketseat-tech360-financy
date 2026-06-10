@@ -7,6 +7,7 @@
 
     "format": "biome format .",
     "check": "biome check --fix --unsafe .",
+    "lint": "biome check .",
 
     "prisma:generate": "pnpm --filter @financy/backend prisma:generate",
     "build:backend": "pnpm --filter @financy/backend build",
@@ -19,7 +20,7 @@
     "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
 
     "test:backend": "pnpm --filter @financy/backend test",
-    "test:backend:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml exec backend pnpm --filter @financy/backend test",
+    "test:backend:docker": "pnpm dev:up && docker compose --env-file .env.example -p financy-dev -f docker-compose.yml exec backend pnpm --filter @financy/backend test",
     "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
     "test:backend:graphql-security": "pnpm --filter @financy/backend test:graphql-security",
     "test:backend:auth-service": "pnpm --filter @financy/backend test:auth-service",
@@ -34,7 +35,7 @@
     "test:frontend:demo-video": "node scripts/e2e-demo-video.mjs",
     "test:frontend:demo-video:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"E2E_DEMO_VIDEO=true pnpm --filter @financy/frontend test:e2e:demo-video && node scripts/e2e-demo-video-postprocess.mjs\"",
 
-    "verify": "pnpm check && pnpm dev:check && pnpm test:backend && pnpm test:frontend",
+    "verify": "pnpm lint && pnpm dev:check && pnpm test:backend && pnpm test:frontend",
     "verify:docker": "pnpm dev:up && pnpm test:backend:docker && pnpm test:frontend:docker",
 
     "e2e:smoke": "node scripts/e2e-runner.mjs test:e2e:smoke",
