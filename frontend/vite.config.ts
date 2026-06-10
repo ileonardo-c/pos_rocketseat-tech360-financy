@@ -47,7 +47,7 @@ export default defineConfig({
       },
     },
     watch: {
-      ignored: ["**/.artifacts/**", "**/playwright-report/**", "**/test-results/**"],
+      ignored: ["**/.artifacts/**", "**/tests/e2e/report/**", "**/tests/e2e/results/**"],
       usePolling: true,
       interval: 1000,
     },

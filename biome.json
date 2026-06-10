@@ -27,8 +27,8 @@
       "**/.tmp-run/**",
       ".github/**",
       "**/.next/**",
-      "**/test-results/**",
-      "**/playwright-report/**"
+      "**/tests/e2e/results/**",
+      "**/tests/e2e/report/**"
     ]
   }
 }

@@ -13,7 +13,8 @@
     "test:e2e:ownership": "playwright test --workers=1 --grep \"@ownership\"",
     "test:e2e:transition": "playwright test --workers=1 --grep \"@transition\"",
     "test:e2e:contract": "playwright test --workers=1 --grep \"@smoke-dashboard\"",
-    "test:e2e:visual": "playwright test --workers=1 --grep \"@visual\""
+    "test:e2e:visual": "playwright test --workers=1 --grep \"@visual\"",
+    "test:e2e:demo-video": "playwright test --workers=1 --grep \"@demo-video-checklist\""
   },
   "dependencies": {
     "@apollo/client": "^3.12.4",

@@ -131,27 +131,27 @@ jobs:
         continue-on-error: true
         run: |
           set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-login PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-login pnpm e2e:smoke && PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-smoke-dashboard PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-smoke-dashboard pnpm e2e:contract"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./tests/e2e/results/e2e-smoke-login PLAYWRIGHT_HTML_OUTPUT_DIR=./tests/e2e/report/e2e-smoke-login pnpm e2e:smoke && PLAYWRIGHT_OUTPUT_DIR=./tests/e2e/results/e2e-smoke-dashboard PLAYWRIGHT_HTML_OUTPUT_DIR=./tests/e2e/report/e2e-smoke-dashboard pnpm e2e:contract"
 
       - name: Verify e2e journey-preview
         id: e2e_journey_preview
         continue-on-error: true
         run: |
           set -euo pipefail
-          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./test-results/e2e-journey-preview PLAYWRIGHT_HTML_OUTPUT_DIR=./playwright-report/e2e-journey-preview pnpm e2e:journey"
+          docker compose --env-file .env.example -p "${PROJECT_NAME}" -f docker-compose.yml --profile e2e run --rm --no-deps e2e sh -lc "PLAYWRIGHT_OUTPUT_DIR=./tests/e2e/results/e2e-journey-preview PLAYWRIGHT_HTML_OUTPUT_DIR=./tests/e2e/report/e2e-journey-preview pnpm e2e:journey"
 
       - name: Collect E2E artifacts
         if: always()
         run: |
           set -euo pipefail
           mkdir -p "frontend/.artifacts"
-          if [ -d "frontend/playwright-report" ]; then
+          if [ -d "frontend/tests/e2e/report" ]; then
             rm -rf "frontend/.artifacts/playwright-report"
-            cp -R "frontend/playwright-report" "frontend/.artifacts/playwright-report"
+            cp -R "frontend/tests/e2e/report" "frontend/.artifacts/playwright-report"
           fi
-          if [ -d "frontend/test-results" ]; then
+          if [ -d "frontend/tests/e2e/results" ]; then
             rm -rf "frontend/.artifacts/test-results"
-            cp -R "frontend/test-results" "frontend/.artifacts/test-results"
+            cp -R "frontend/tests/e2e/results" "frontend/.artifacts/test-results"
           fi
 
       - name: Upload E2E artifacts
