@@ -35,7 +35,7 @@
     "test:frontend:demo-video": "node scripts/e2e-demo-video.mjs",
     "test:frontend:demo-video:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"E2E_DEMO_VIDEO=true pnpm --filter @financy/frontend test:e2e:demo-video && node scripts/e2e-demo-video-postprocess.mjs\"",
 
-    "verify": "pnpm lint && pnpm dev:check && pnpm build:backend && pnpm build:frontend && pnpm test:backend && pnpm test:frontend",
+    "verify": "pnpm lint && pnpm dev:check && pnpm prisma:generate && pnpm build:backend && pnpm build:frontend && pnpm test:backend && pnpm test:frontend",
     "verify:docker": "pnpm dev:up && pnpm test:backend:docker && pnpm test:frontend:docker",
 
     "e2e:smoke": "node scripts/e2e-runner.mjs test:e2e:smoke",
