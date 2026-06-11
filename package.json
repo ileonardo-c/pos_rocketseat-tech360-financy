@@ -4,17 +4,23 @@
   "packageManager": "pnpm@10.5.0",
   "scripts": {
     "prepare": "node -e \"const fs=require('node:fs');const source='.github/hooks/pre-commit';const target='.git/hooks/pre-commit';if(fs.existsSync(source)&&fs.existsSync('.git/hooks')){fs.copyFileSync(source,target);fs.chmodSync(target,0o755);}\"",
+
     "format": "biome format .",
-    "check": "biome check .",
-    "verify": "pnpm check && pnpm prisma:generate && pnpm build:backend && pnpm build:frontend && pnpm dev:check && pnpm dev:up && pnpm test:backend && pnpm e2e:smoke-contract:docker && pnpm e2e:journey:docker",
+    "check": "biome check --fix --unsafe .",
+    "lint": "biome check .",
+
     "prisma:generate": "pnpm --filter @financy/backend prisma:generate",
     "build:backend": "pnpm --filter @financy/backend build",
     "build:frontend": "pnpm --filter @financy/frontend build",
+
     "dev": "pnpm dev:up",
     "dev:check": "node scripts/compose-check.mjs",
     "dev:up": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml up -d --build && node -e \"console.log()\" && echo Development environments: && echo Frontend: http://localhost:5173 && echo Backend GraphQL: http://localhost:4000/graphql && echo Mailpit: http://localhost:8025 && echo MinIO Console: http://localhost:9001",
     "dev:down": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml down --remove-orphans -v",
     "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
+
+    "test:backend": "pnpm --filter @financy/backend test",
+    "test:backend:docker": "pnpm dev:up && docker compose --env-file .env.example -p financy-dev -f docker-compose.yml exec -T backend pnpm --filter @financy/backend test",
     "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
     "test:backend:graphql-security": "pnpm --filter @financy/backend test:graphql-security",
     "test:backend:auth-service": "pnpm --filter @financy/backend test:auth-service",
@@ -22,19 +28,23 @@
     "test:backend:password-reset-service": "pnpm --filter @financy/backend test:password-reset-service",
     "test:backend:transaction-service": "pnpm --filter @financy/backend test:transaction-service",
     "test:backend:auth-regression": "pnpm --filter @financy/backend test:auth-regression",
-    "test:backend": "pnpm test:backend:api-contract && pnpm test:backend:graphql-security && pnpm test:backend:auth-service && pnpm test:backend:storage-service && pnpm test:backend:password-reset-service && pnpm test:backend:transaction-service && pnpm test:backend:auth-regression && pnpm --filter @financy/backend test:env-production",
-    "dev:verify:backend": "pnpm dev:up && pnpm test:backend",
-    "e2e:smoke-contract:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm e2e:smoke && pnpm e2e:contract\"",
-    "e2e:journey:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm e2e:journey\"",
-    "dev:verify:journey": "pnpm dev:up && pnpm e2e:journey:docker",
-    "dev:verify:preview": "pnpm dev:up && pnpm e2e:journey:docker && pnpm e2e:smoke-contract:docker",
-    "dev:verify:full": "pnpm dev:up && pnpm test:backend && pnpm e2e:smoke-contract:docker && pnpm e2e:journey:docker",
+
+    "test:frontend": "node scripts/e2e-runner.mjs test:e2e:smoke && node scripts/e2e-runner.mjs test:e2e:contract && node scripts/e2e-bootstrap.mjs && node scripts/e2e-runner.mjs test:e2e:journey",
+    "test:frontend:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"pnpm e2e:smoke && pnpm e2e:contract && pnpm e2e:journey\"",
+
+    "test:frontend:demo-video": "node scripts/e2e-demo-video.mjs",
+    "test:frontend:demo-video:docker": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml --profile e2e run --rm e2e sh -lc \"E2E_DEMO_VIDEO=true pnpm --filter @financy/frontend test:e2e:demo-video && node scripts/e2e-demo-video-postprocess.mjs\"",
+
+    "verify": "pnpm lint && pnpm dev:check && pnpm prisma:generate && pnpm build:backend && pnpm build:frontend && pnpm test:backend && pnpm test:frontend",
+    "verify:docker": "pnpm dev:up && pnpm test:backend:docker && pnpm test:frontend:docker",
+
     "e2e:smoke": "node scripts/e2e-runner.mjs test:e2e:smoke",
-    "e2e:ownership": "node scripts/e2e-runner.mjs test:e2e:ownership",
-    "e2e:journey": "node scripts/e2e-bootstrap.mjs && node scripts/e2e-runner.mjs test:e2e:journey",
     "e2e:contract": "node scripts/e2e-runner.mjs test:e2e:contract",
+    "e2e:journey": "node scripts/e2e-bootstrap.mjs && node scripts/e2e-runner.mjs test:e2e:journey",
+    "e2e:ownership": "node scripts/e2e-runner.mjs test:e2e:ownership",
     "e2e:transition": "node scripts/e2e-runner.mjs test:e2e:transition",
-    "e2e:visual": "node scripts/e2e-runner.mjs test:e2e:visual"
+    "e2e:visual": "node scripts/e2e-runner.mjs test:e2e:visual",
+    "e2e:demo-video": "node scripts/e2e-demo-video.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",

@@ -51,17 +51,13 @@
 
 ## ✨ Funcionalidades
 
-- 🔐 Autenticação completa — cadastro, login e logout com sessão JWT
-- 👤 Dados isolados por usuário em todas as operações
-- 🗂️ CRUD completo de categorias
-- 💸 CRUD completo de transações (receitas e despesas)
-- 📊 Dashboard com resumo por período, por categoria e timeline
-- 🧾 Upload de comprovantes via URL assinada (AWS S3 / MinIO)
-- 🧪 Testes E2E e evidência visual automatizados com Playwright
-
-Fluxo de autenticação:
-- cadastro cria a conta e redireciona para `/login` com confirmação;
-- somente `login` emite e persiste JWT de sessão.
+- Autenticação completa — cadastro, login/logout com sessão JWT
+- Dados isolados por usuário em todas as operações
+- CRUD completo de categorias e transações (receitas/despesas)
+- Dashboard com resumo por período, por categoria e timeline
+- Upload de comprovantes via URL assinada (AWS S3 / MinIO)
+- Recuperação de senha por OTP via e-mail
+- Testes E2E e evidência visual automatizados com Playwright
 
 ---
 
@@ -78,15 +74,20 @@ Fluxo de autenticação:
       G --> H[(Mailpit / SMTP Provider)]
 ```
 
-Monorepo gerenciado por workspaces do pnpm:
-
 ```text
 .
-├── backend/     # API GraphQL, Prisma, domínios (auth, category, transaction, storage)
-├── frontend/    # App React, páginas protegidas, testes E2E
-├── scripts/     # Orquestração E2E e utilitários de ambiente
-├── backend/tests # Testes automatizados de API (suítes de backend)
-└── .github/     # Workflows de CI, hooks e template de PR
+├── backend/            # API GraphQL, Prisma, domínios (auth, category, transaction, storage)
+│   └── tests/          # Testes automatizados de API
+├── frontend/           # App React, páginas protegidas
+│   └── tests/e2e/      # Testes E2E unificados
+│       ├── fixtures/   # Dados de seed (avatar, etc.)
+│       ├── helpers/    # Utilitários (GraphQL client, video captions)
+│       ├── support/    # Setup global e hooks de teste
+│       ├── reference/  # Snapshots visuais de referência (versionados)
+│       ├── results/    # Artefatos de execução (gitignored)
+│       └── report/     # Relatório HTML do Playwright (gitignored)
+├── scripts/            # Orquestração E2E e utilitários de ambiente
+└── .github/            # Workflows de CI, hooks e template de PR
 ```
 
 ---
@@ -97,128 +98,94 @@ Monorepo gerenciado por workspaces do pnpm:
 
 - [Node.js 22+](https://nodejs.org) + [pnpm 10.5+](https://pnpm.io) — `corepack enable`
 - [Docker Desktop 24+](https://www.docker.com/products/docker-desktop/)
-- Nenhum `.env` é obrigatório para desenvolvimento local; os scripts carregam `.env.example`.
+- Nenhum `.env` obrigatório; os scripts carregam `.env.example` automaticamente.
 
 ### Desenvolvimento
 
 ```bash
-# 1. Valide a configuração dos Compose (sem subir serviços)
-pnpm dev:check
-
-# 2. Suba o ambiente completo de desenvolvimento (um único comando na raiz)
-pnpm dev
+pnpm dev:check   # valida contratos de env/compose (sem subir serviços)
+pnpm dev         # sobe API, frontend, postgres, minio e mailpit
+pnpm dev:logs    # acompanha logs da stack
+pnpm dev:down    # encerra tudo e limpa volumes
 ```
-
-Uso de `.env` no desenvolvimento:
-- `.env.example` é versionado e carregado automaticamente pelos scripts Docker.
-- `.env` é opcional e deve ser usado apenas para sobrescrever valores locais.
-
-Artefatos temporários locais:
-- qualquer arquivo/script de debug/refatoração manual deve ser criado em `/.tmp-run/manual/`.
-- não criar arquivos temporários no root do repositório.
-
-Política de dependências:
-- `node_modules` Linux roda apenas em volumes Docker nomeados.
-- `node_modules` do host Windows não é compartilhado com os containers.
-- `pnpm-lock.yaml` permanece como lockfile único entre host e Docker.
 
 | Serviço | URL |
-|---|---|
+|---------|-----|
 | Frontend | http://localhost:5173 |
 | Style Guide | http://localhost:5173/style-guide |
-| Backend / GraphQL | http://localhost:4000/graphql |
+| Backend GraphQL | http://localhost:4000/graphql |
+| Mailpit | http://localhost:8025 |
 | MinIO Console | http://localhost:9001 |
 
-No ambiente de desenvolvimento, o backend executa `prisma migrate deploy` e `prisma db seed` automaticamente no startup do container, deixando a conta de seed padrão e dados iniciais disponíveis antes da primeira execução da aplicação.
+O backend executa `prisma migrate deploy` e `prisma db seed` automaticamente no startup, criando a conta seed e dados iniciais.
 
-Fluxo Prisma:
-- `backend/prisma/schema.prisma` define o modelo declarativo.
-- `backend/prisma/migrations/**/migration.sql` é gerado pelo Prisma Migrate e deve ser versionado.
-- `prisma migrate deploy` aplica o histórico de migrations no banco.
-- `prisma db seed` cria o usuário local padrão, categorias e transações iniciais.
+**Políticas de ambiente:**
+- `.env` é opcional — apenas para sobrescrever valores locais.
+- `node_modules` Linux roda em volumes Docker nomeados (não compartilhado com host Windows).
+- Frontend usa proxy Vite (`/graphql` → `http://backend:4000`).
+- Arquivos temporários de debug devem ficar em `/.tmp-run/manual/`.
 
-Contrato de chamadas do frontend no desenvolvimento:
-- o browser usa `/graphql`;
-- o Vite faz proxy para `http://backend:4000` na rede Docker.
+### Produção
 
-Para encerrar: `pnpm dev:down`
-
-Fluxo rápido do dia a dia (uso no root do repositório):
-
-```bash
-pnpm dev:check # valida contratos de env/compose
-pnpm dev       # sobe API, frontend, postgres, minio e mailpit
-pnpm dev:logs  # acompanha logs da stack de desenvolvimento
-pnpm verify    # executa a validação completa do projeto
-pnpm dev:down  # encerra tudo e limpa volumes nomeados da sessão
-```
-
-Use `pnpm verify` antes de abrir ou atualizar PRs relevantes. Ele valida configuração, builds, testes de backend e E2E Docker-first, subindo ou reutilizando a stack local quando necessário.
-
-### Produção e deploy
-
-O `docker-compose.yml` deste repositório é exclusivo para desenvolvimento local e CI.
-Produção não deve usar os valores de `.env.example`; configure o deploy na plataforma alvo com secrets reais e variáveis equivalentes.
-
-Contrato de chamadas do frontend fora do desenvolvimento:
-- o frontend deve usar `VITE_BACKEND_URL` explícita;
-- as chamadas seguem `${VITE_BACKEND_URL}/graphql` (sem proxy de desenvolvimento).
-
-Contrato de upload assinado (S3/MinIO):
-- `AWS_S3_ENDPOINT_INTERNAL`: endpoint interno da rede Docker/VPC usado pelo backend.
-- `AWS_S3_ENDPOINT_PUBLIC`: endpoint público acessível pelo navegador.
-- `S3_PUBLIC_ORIGIN_HOSTS`: lista CSV de hosts que devem receber URL assinada com `AWS_S3_ENDPOINT_PUBLIC`.
-- Para hosts fora da lista, o backend assina com `AWS_S3_ENDPOINT_INTERNAL`.
-- A rede Docker usa alias interno `s3.internal` para o serviço de storage.
-- Em ECS/ECR, configure os mesmos nomes de env na Task Definition (sem fallback de código).
-
-Observação de infraestrutura:
-- os comandos Docker usam projetos isolados: `financy-dev` no desenvolvimento e `financy-ci-<suite>` no CI.
-- o ambiente Docker usa store dedicado via `PNPM_STORE_DIR=/pnpm/store`.
+O `docker-compose.yml` é exclusivo para desenvolvimento e CI. Em produção:
+- Configure secrets reais na plataforma alvo.
+- O frontend usa `VITE_BACKEND_URL` explícita (sem proxy Vite).
+- Upload assinado requer `AWS_S3_ENDPOINT_INTERNAL`, `AWS_S3_ENDPOINT_PUBLIC` e `S3_PUBLIC_ORIGIN_HOSTS`.
 
 ---
 
 ## 🧪 Testes
 
-### E2E (Playwright)
+### Validação completa
 
-O projeto usa `pnpm verify` como validação completa padrão. As suítes E2E Docker-first fazem parte desse comando, e execuções focadas ficam reservadas para diagnóstico local a partir dos scripts disponíveis no `package.json`.
+| Comando | O que faz |
+|---------|-----------|
+| `pnpm verify` | Lint + fix, validação de compose, backend e E2E — local (requer deps e stack de pé) |
+| `pnpm verify:docker` | Sobe a stack e roda backend + E2E inteiramente via Docker |
 
-### Style Guide
+### Comandos principais
 
-A página `/style-guide` fica disponível apenas em desenvolvimento e consolida a referência de componentes do Figma para inspeção visual.
-Para atualizar as evidências do bloco, rode:
+| Comando | Escopo | Ambiente |
+|---------|--------|----------|
+| `pnpm test:backend` | Todas as suítes de backend | Local (requer stack de pé) |
+| `pnpm test:backend:docker` | Todas as suítes de backend | Docker (sobe a stack) |
+| `pnpm test:frontend` | Smoke + Contract + Journey | Local (requer stack de pé) |
+| `pnpm test:frontend:docker` | Smoke + Contract + Journey | Docker |
+| `pnpm test:frontend:demo-video` | Gera vídeo de evidência | Local |
+| `pnpm test:frontend:demo-video:docker` | Gera vídeo de evidência | Docker |
+
+O vídeo de evidência é salvo em `frontend/tests/e2e/results/` como `financy-demo-YYYY-MM-DD_HH-mm-ss.webm`.
+
+### Suítes E2E individuais
+
+Para diagnóstico ou execução focada (rodam localmente, requerem stack de pé):
+
+| Comando | Tag | Descrição |
+|---------|-----|-----------|
+| `pnpm e2e:smoke` | `@smoke-login` | Login, signup e rotas públicas |
+| `pnpm e2e:contract` | `@smoke-dashboard` | Dashboard, paginação e modais |
+| `pnpm e2e:journey` | `@journey-full` | Jornada completa (com seed) |
+| `pnpm e2e:ownership` | `@ownership` | Isolamento de dados por usuário |
+| `pnpm e2e:transition` | `@transition` | Transições de rota animadas |
+| `pnpm e2e:visual` | `@visual` | Comparação visual do style guide |
+
+Para atualizar snapshots visuais de referência:
 
 ```bash
-pnpm e2e:visual
+docker compose --env-file .env.example -p financy-dev -f docker-compose.yml \
+  --profile e2e run --rm e2e sh -lc \
+  "pnpm --filter @financy/frontend exec playwright test --workers=1 --grep @visual --update-snapshots"
 ```
 
-O comando gera as referências desktop e mobile em `frontend/e2e/reference/style-guide/*.png`.
+### Conta seed (QA)
 
-## Conta seed para QA e desenvolvimento
+| Campo | Valor |
+|-------|-------|
+| Nome | `Financy Admin` |
+| E-mail | `admin@financy.local` |
+| Senha | `TestAdmin123!` |
 
-Essas credenciais são usadas como conta padrão em ambiente local:
-
-- Nome: `Financy Admin`
-- E-mail: `admin@financy.local`
-- Senha: `TestAdmin123!`
-
-Elas são usadas pelo `prisma db seed` no startup de desenvolvimento e por `e2e-bootstrap` como base da jornada.
-O seed também cria categorias e transações locais para que o dashboard abra com dados úteis em um banco limpo.
-Essa conta é apenas para ambiente local/QA e não representa usuário de produção.
-
-## Recuperação de acesso por e-mail (OTP)
-
-O fluxo de recuperação usa o endereço de e-mail cadastrado na conta para solicitar o código:
-
-- Em `/login`, clique em `Recuperar senha`.
-- Em `/forgot-password` (etapa 1), informe o **e-mail de cadastro**.
-- Verifique o código recebido no e-mail configurado no backend (`SMTP_*`) e valide com a etapa de nova senha.
-- O e-mail pode ser visualizado no SMTP local (`mailpit`) quando rodando em `development`.
-
-### Testes de API (backend)
-
-Os testes de backend fazem parte de `pnpm verify`. Os relatórios E2E ficam em `frontend/playwright-report` após execuções locais do Playwright.
+Criada pelo `prisma db seed` no startup. Usada pelo `e2e-bootstrap` como base da jornada. Apenas para ambiente local.
 
 ---
 
@@ -226,5 +193,5 @@ Os testes de backend fazem parte de `pnpm verify`. Os relatórios E2E ficam em `
 
 - Licença: [MIT](LICENSE)
 - Template de PR: [`.github/pull_request_template.md`](.github/pull_request_template.md)
-- Revisões e aprovação: [`.github/CODEOWNERS`](.github/CODEOWNERS)
-- Convenções de branch e contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Code owners: [`.github/CODEOWNERS`](.github/CODEOWNERS)
+- Contribuição: [CONTRIBUTING.md](CONTRIBUTING.md)

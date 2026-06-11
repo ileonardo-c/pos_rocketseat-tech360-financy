@@ -10,5 +10,7 @@ frontend/.pnpm-store
 dist
 build
 coverage
-playwright-report
-test-results
+**/tests/e2e/report
+**/tests/e2e/results
+frontend/playwright-report
+frontend/test-results
