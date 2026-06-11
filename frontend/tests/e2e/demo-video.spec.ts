@@ -83,6 +83,7 @@ test("@demo-video-checklist Financy: evidência visual do checklist completo", a
   page,
   request,
 }) => {
+  test.skip(!process.env.E2E_DEMO_VIDEO, "Skipped unless E2E_DEMO_VIDEO is set");
   test.setTimeout(300_000);
 
   let tokenA = "";
