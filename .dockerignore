@@ -10,5 +10,5 @@ frontend/.pnpm-store
 dist
 build
 coverage
-tests/e2e/report
-tests/e2e/results
+**/tests/e2e/report
+**/tests/e2e/results

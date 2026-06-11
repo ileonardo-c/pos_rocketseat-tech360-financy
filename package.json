@@ -20,7 +20,7 @@
     "dev:logs": "docker compose --env-file .env.example -p financy-dev -f docker-compose.yml logs -f",
 
     "test:backend": "pnpm --filter @financy/backend test",
-    "test:backend:docker": "pnpm dev:up && docker compose --env-file .env.example -p financy-dev -f docker-compose.yml exec backend pnpm --filter @financy/backend test",
+    "test:backend:docker": "pnpm dev:up && docker compose --env-file .env.example -p financy-dev -f docker-compose.yml exec -T backend pnpm --filter @financy/backend test",
     "test:backend:api-contract": "pnpm --filter @financy/backend test:api-contract",
     "test:backend:graphql-security": "pnpm --filter @financy/backend test:graphql-security",
     "test:backend:auth-service": "pnpm --filter @financy/backend test:auth-service",
