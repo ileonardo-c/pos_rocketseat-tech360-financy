@@ -12,3 +12,5 @@ build
 coverage
 **/tests/e2e/report
 **/tests/e2e/results
+frontend/playwright-report
+frontend/test-results
